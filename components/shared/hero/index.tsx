@@ -56,7 +56,7 @@ function HeroSection() {
   const CurrentHeroComponent = heroComponents[currentSlide];
 
   return (
-    <div className="relative h-screen">
+    <div className="relative h-screen -mt-29  ">
       {/* Navigation Arrows */}
       <button
         onClick={goToPrevious}

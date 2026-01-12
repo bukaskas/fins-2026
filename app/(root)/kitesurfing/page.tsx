@@ -26,7 +26,7 @@ function HeroSection() {
       <Image
         src={heroKiteImage}
         alt="Kitesurfing"
-        className="absolute inset-0 -z-10 min-h-[600px] max-h-[600px] object-cover"
+        className="absolute inset-0 -z-10 min-h-150 max-h-150 object-cover"
         priority
       />
       <h4 className="text-center text-white font-semibold mt-100 text-4xl font-[family-name:var(--font-raleway)] ">
@@ -71,7 +71,7 @@ function ContentSection() {
                 What is duration of the course?{" "}
               </AccordionTrigger>
               <AccordionContent>
-                <div className=" mx-8 mb-2">
+                <div className=" mx-12 mb-2">
                   Duration is <strong className="text-xl">2 hours</strong> done
                   in one session.
                 </div>
@@ -79,10 +79,10 @@ function ContentSection() {
             </AccordionItem>
           </Accordion>
           <div className="flex flex-col">
-            <div className="">
+            <div className="mx-12 mb-2">
               Private: <strong className="text-xl">7,500</strong> EGP
             </div>
-            <div className="">
+            <div className="mx-12 mb-2">
               <span>
                 Group: <strong className="text-xl">5,000</strong> EGP per pax
               </span>

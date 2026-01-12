@@ -57,9 +57,21 @@ function Menu() {
           <Link href="/day-use">Restaurant</Link>
         </Button>
       </nav>
-      <nav className="md:hidden flex justify-end w-full p-4">
+      <nav className="md:hidden flex justify-center w-full p-4 relative">
+        <Link className="flex flex-col items-center" href="/">
+          <Image
+            className="rounded-full"
+            src={logo}
+            width={84}
+            height={84}
+            alt={`${APP_NAME}`}
+          />
+          <span className="hidden lg:block text-2xl whitespace-nowrap font-[family-name:var(--font-raleway)]">
+            kite surfing center
+          </span>
+        </Link>
         <Sheet>
-          <SheetTrigger>
+          <SheetTrigger className="absolute right-4">
             <EllipsisVertical />
           </SheetTrigger>
           <SheetContent className="[&>button:first-of-type]:hidden flex flex-col items-end py-4 px-4 ">
