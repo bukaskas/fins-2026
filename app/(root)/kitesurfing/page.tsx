@@ -14,7 +14,6 @@ function KitesurfingPage() {
     <>
       <HeroSection />
       <ContentSection />
-      <BeginnerCourses />
     </>
   );
 }
@@ -41,7 +40,7 @@ function ContentSection() {
   return (
     <section className="mt-4 flex flex-wrap w-full">
       {/*Intro course section */}
-      <div className="flex flex-col md:flex-row items-center gap-6 max-w-6xl mb-4 transition-all duration-300 ease-in">
+      <div className="flex flex-col md:flex-row  gap-6 max-w-6xl mb-4 transition-all duration-300 ease-in">
         <div className=" shrink-0 sm:max-w-lg lg:max-w-xl">
           <Image src={privateCourse} alt="Intro Course" priority />
         </div>
@@ -99,7 +98,7 @@ function ContentSection() {
         </div>
         <div className="font-[family-name:var(--font-raleway)]">
           <div className="w-full text-center text-2xl mb-4">
-            Intro kitesurfing course
+            Beginner kitesurfing course
           </div>
           <Accordion
             type="single"
@@ -111,7 +110,7 @@ function ContentSection() {
               <AccordionTrigger className="text-lg mx-4 font-semibold">
                 What is Beginner course?{" "}
               </AccordionTrigger>
-              <AccordionContent>
+              <AccordionContent className="mx-12 mb-2">
                 You will learn basics of the kite and proceed attempt your first
                 water start with your IKO Instructor. You will now put your
                 skills to the test and experience the full potential of the wind
@@ -125,13 +124,13 @@ function ContentSection() {
                 What is duration of the course?{" "}
               </AccordionTrigger>
               <AccordionContent>
-                <div className=" mx-8 mb-2">
+                <div className=" mx-12 mb-2">
                   Private is <strong className="text-xl">6 hours</strong>
                 </div>
-                <div className=" mx-8 mb-2">
+                <div className=" mx-12 mb-2">
                   Group is <strong className="text-xl">8 hours</strong>
                 </div>
-                <div className=" mx-8 mb-2">
+                <div className=" mx-12 mb-2">
                   Course takes 2 to 3 days to be completed depending on weather
                   and student progress.
                 </div>
@@ -139,10 +138,10 @@ function ContentSection() {
             </AccordionItem>
           </Accordion>
           <div className="flex flex-col">
-            <div className="">
+            <div className="mx-12 mb-2">
               Private: <strong className="text-xl">22,000</strong> EGP
             </div>
-            <div className="">
+            <div className="mx-12 mb-2">
               <span>
                 Group: <strong className="text-xl">17,000</strong> EGP per pax
               </span>
