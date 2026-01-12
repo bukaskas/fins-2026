@@ -72,7 +72,7 @@ function Menu() {
         </Link>
         <Sheet>
           <SheetTrigger className="absolute right-4">
-            <EllipsisVertical />
+            <EllipsisVertical size={40} />
           </SheetTrigger>
           <SheetContent className="[&>button:first-of-type]:hidden flex flex-col items-end py-4 px-4 ">
             <SheetTitle className="self-center">Menu</SheetTitle>
