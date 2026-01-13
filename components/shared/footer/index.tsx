@@ -1,17 +1,22 @@
 import {
   EMAIL_ADDRESS,
+  FACEBOOK_URL,
+  INSTAGRAM_URL,
   LOCATION_ADDRESS,
   WHATSAPP_PHONE,
 } from "@/lib/constants";
 import { Mail, Map } from "lucide-react";
 import Link from "next/link";
-import { FaWhatsapp } from "react-icons/fa";
+import { FaInstagram, FaWhatsapp } from "react-icons/fa";
+import Image from "next/image";
+import white_logo from "@/public/images/fins-white-logo.svg";
+import { CiFacebook } from "react-icons/ci";
 function Footer() {
   return (
     <footer className="bg-gray-800 text-white mt-auto bg-gray-800 text-white z-50">
       {/* First row */}
       <div className="grid grid-cols-3 md:mx-28 gap-4 p-4 ">
-        <div>White logo</div>
+        <Image src={white_logo} alt="Fins Logo" width={150} height={150} />
 
         <div className="flex flex-col gap-2">
           <div className="font-semibold">Contact us</div>
@@ -26,15 +31,7 @@ function Footer() {
               {WHATSAPP_PHONE}
             </Link>
           </div>
-          <div className="flex flex-row gap-2 items-center">
-            <Link
-              href={`mailto:${EMAIL_ADDRESS}`}
-              className="hover:underline hover:text-gray-300 flex flex-row gap-2 items-center italic"
-            >
-              <Mail size={22} />
-              {EMAIL_ADDRESS}
-            </Link>
-          </div>
+
           <div>
             <Link
               href={`${LOCATION_ADDRESS}`}
@@ -45,10 +42,35 @@ function Footer() {
               <Map /> Click here
             </Link>
           </div>
+
+          <Link
+            href={`mailto:${EMAIL_ADDRESS}`}
+            className="hover:underline hover:text-gray-300 flex flex-row gap-2 items-center italic"
+          >
+            <Mail size={25} className="shrink-0" />
+            {EMAIL_ADDRESS}
+          </Link>
         </div>
         <div>
-          <div>Instagram</div>
-          <div>Facebook</div>
+          <div className="flex flex-col gap-2">
+            <div className="font-semibold">Socials</div>
+            <Link
+              href={INSTAGRAM_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex gap-2"
+            >
+              <FaInstagram size={25} />
+            </Link>
+            <Link
+              href={FACEBOOK_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex gap-2"
+            >
+              <CiFacebook />
+            </Link>
+          </div>
         </div>
       </div>
       <div className="grid grid-cols-3 md:mx-28 gap-4 p-4 ">
