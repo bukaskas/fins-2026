@@ -10,7 +10,8 @@ import Link from "next/link";
 import { FaInstagram, FaWhatsapp } from "react-icons/fa";
 import Image from "next/image";
 import white_logo from "@/public/images/fins-white-logo.svg";
-import { CiFacebook } from "react-icons/ci";
+
+import { TiSocialFacebookCircular } from "react-icons/ti";
 function Footer() {
   return (
     <footer className="bg-gray-800 text-white mt-auto bg-gray-800 text-white z-50">
@@ -66,9 +67,9 @@ function Footer() {
               href={FACEBOOK_URL}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex gap-2"
+              className="flex gap-2 font-semibold"
             >
-              <CiFacebook />
+              <TiSocialFacebookCircular size={25} />
             </Link>
           </div>
         </div>
