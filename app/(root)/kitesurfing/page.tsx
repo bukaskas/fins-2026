@@ -48,6 +48,19 @@ function ContentSection() {
           <div className="w-full text-center text-2xl mb-4">
             Intro kitesurfing course
           </div>
+          <div className="flex flex-col">
+            <div className="mx-12 text-2xl font-semibold">Price:</div>
+            <div className="mx-12 mb-2">
+              Private: <strong className="text-xl">7,500</strong> EGP
+            </div>
+            <div className="mx-12 mb-2">
+              <span>
+                Group: <strong className="text-xl">5,000</strong> EGP per pax
+              </span>
+              , group is 2 to 4 persons
+            </div>
+          </div>
+          <div className="w-full text-center text-xl ">About the course:</div>
           <Accordion type="single" collapsible defaultValue="item-1">
             <AccordionItem value="item-1">
               <AccordionTrigger className="text-lg mx-4 font-semibold ">
@@ -78,17 +91,6 @@ function ContentSection() {
               </AccordionContent>
             </AccordionItem>
           </Accordion>
-          <div className="flex flex-col">
-            <div className="mx-12 mb-2">
-              Private: <strong className="text-xl">7,500</strong> EGP
-            </div>
-            <div className="mx-12 mb-2">
-              <span>
-                Group: <strong className="text-xl">5,000</strong> EGP per pax
-              </span>
-              , group is 2 to 4 persons
-            </div>
-          </div>
         </div>
       </div>
       {/* Beginner course section */}
@@ -99,6 +101,18 @@ function ContentSection() {
         <div className="font-[family-name:var(--font-raleway)]">
           <div className="w-full text-center text-2xl mb-4">
             Beginner kitesurfing course
+          </div>
+          <div className="flex flex-col">
+            <div className="mx-12 text-2xl font-semibold">Price:</div>
+            <div className="mx-12 mb-2">
+              Private: <strong className="text-xl">22,000</strong> EGP
+            </div>
+            <div className="mx-12 mb-2">
+              <span>
+                Group: <strong className="text-xl">17,000</strong> EGP per pax
+              </span>
+              , group is 2 to 4 persons
+            </div>
           </div>
           <Accordion
             type="single"
@@ -137,17 +151,6 @@ function ContentSection() {
               </AccordionContent>
             </AccordionItem>
           </Accordion>
-          <div className="flex flex-col">
-            <div className="mx-12 mb-2">
-              Private: <strong className="text-xl">22,000</strong> EGP
-            </div>
-            <div className="mx-12 mb-2">
-              <span>
-                Group: <strong className="text-xl">17,000</strong> EGP per pax
-              </span>
-              , group is 2 to 4 persons
-            </div>
-          </div>
         </div>
       </div>
     </section>
