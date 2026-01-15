@@ -23,6 +23,10 @@ const links = [
     title: "Kitesurfing",
     href: "/kitesurfing",
   },
+  {
+    title: "About",
+    href: "/about",
+  },
 ];
 
 function Menu() {
@@ -30,7 +34,7 @@ function Menu() {
     <div className="flex md:justify-center z-10 w-full">
       <nav className="hidden md:flex md:items-center md:justify-center gap-6 font-[family-name:var(--font-raleway)]">
         <Button asChild variant={"ghost"} className="text-lg">
-          <Link href="/day-use">About</Link>
+          <Link href="/about">About</Link>
         </Button>
 
         <Button asChild variant={"ghost"} className="text-lg">
@@ -74,29 +78,61 @@ function Menu() {
           <SheetTrigger className="absolute right-4">
             <EllipsisVertical size={40} />
           </SheetTrigger>
-          <SheetContent className="[&>button:first-of-type]:hidden flex flex-col items-end py-4 px-4 ">
-            <SheetTitle className="self-center">Menu</SheetTitle>
-            <SheetClose asChild>
-              <button className="h-12 w-12 rounded-full flex items-center justify-center hover:bg-muted">
-                <X className="h-6 w-6" />
-              </button>
-            </SheetClose>
-            {links.map((link) => (
-              <Button key={link.href} asChild variant={"ghost"}>
-                <Link href={link.href}>{link.title}</Link>
-              </Button>
-            ))}
-            <Button asChild variant={"ghost"}>
-              <Link href="/cart">
-                <ShoppingCart /> Cart
-              </Link>
-            </Button>
-            <Button asChild variant={"ghost"}>
-              <Link href="/sign-in">
-                <UserIcon /> Sign In
-              </Link>
-            </Button>
-            <SheetDescription></SheetDescription>
+          <SheetContent className="[&>button:first-of-type]:hidden flex flex-col items-stretch py-8 px-6 w-[300px]">
+            {/* Header with close button */}
+            <div className="flex items-center justify-between mb-8">
+              <SheetTitle className="text-2xl font-bold">Menu</SheetTitle>
+              <SheetClose asChild>
+                <button className="h-10 w-10 rounded-full flex items-center justify-center hover:bg-muted transition-colors">
+                  <X className="h-5 w-5" />
+                </button>
+              </SheetClose>
+            </div>
+
+            {/* Main navigation links - larger and full width */}
+            <div className="flex flex-col gap-2 mb-6">
+              {links.map((link) => (
+                <SheetClose asChild key={link.href}>
+                  <Button
+                    asChild
+                    variant={"ghost"}
+                    className="w-full justify-start text-xl h-14 px-4 hover:bg-primary/10 font-[family-name:var(--font-raleway)]"
+                  >
+                    <Link href={link.href}>{link.title}</Link>
+                  </Button>
+                </SheetClose>
+              ))}
+            </div>
+
+            {/* Secondary actions - separator and smaller */}
+            <div className="border-t pt-4 mt-auto flex flex-col gap-2">
+              <SheetClose asChild>
+                <Button
+                  asChild
+                  variant={"ghost"}
+                  className="w-full justify-start text-lg h-12 px-4"
+                >
+                  <Link href="/cart">
+                    <ShoppingCart className="mr-2" /> Cart
+                  </Link>
+                </Button>
+              </SheetClose>
+              <SheetClose asChild>
+                <Button
+                  asChild
+                  variant={"ghost"}
+                  className="w-full justify-start text-lg h-12 px-4"
+                >
+                  <Link href="/sign-in">
+                    <UserIcon className="mr-2" /> Sign In
+                  </Link>
+                </Button>
+              </SheetClose>
+            </div>
+
+            <SheetDescription className="sr-only">
+              Navigation menu
+            </SheetDescription>
           </SheetContent>
         </Sheet>
       </nav>
