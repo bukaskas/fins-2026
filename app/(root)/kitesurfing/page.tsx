@@ -1,19 +1,60 @@
+"use client";
 import Image from "next/image";
 import heroKiteImage from "@/public/images/product-1.webp";
 import { Table, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Hash, Timer, User, UserIcon } from "lucide-react";
+import rentalPhoto from "@/public/images/webphotos_fins/webphoto_22.webp";
 import privateCourse from "@/public/images/product-2.webp";
+import beginnerPhoto from "@/public/images/webphotos_fins/webphoto_29.webp";
 import {
   Accordion,
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
+import { useGSAP } from "@gsap/react";
+import gsap from "gsap";
+
+gsap.registerPlugin(useGSAP);
+gsap.registerPlugin(ScrollTrigger);
+
 function KitesurfingPage() {
+  useGSAP(() => {
+    // TODO: add animation to #courses, #rental, #storage sections using
+    gsap.from("#courses", {
+      scrollTrigger: {
+        trigger: "#courses",
+        toggleActions: "restart none none none",
+        end: "top 75%",
+        scrub: 1,
+      },
+      y: 200,
+      opacity: 0,
+      duration: 2,
+      ease: "power2.out",
+    });
+    gsap.from("#rental", {
+      scrollTrigger: {
+        trigger: "#rental",
+        toggleActions: "restart none none none",
+        end: "top 75%",
+        scrub: 1,
+      },
+
+      opacity: 0,
+      duration: 4,
+      ease: "power2.out",
+    });
+  });
+
   return (
     <>
       <HeroSection />
+      <NavigationMenu />
       <ContentSection />
+      <RentalTable />
+      <StorageTable />
     </>
   );
 }
@@ -36,30 +77,54 @@ function HeroSection() {
   );
 }
 
+function NavigationMenu() {
+  return (
+    <nav className=" bg-white   ">
+      <div className="max-w-6xl mx-auto px-4">
+        <ul className="flex justify-center gap-8 py-4 flex-wrap">
+          <li>
+            <a
+              href="#courses"
+              className="text-sm font-semibold text-gray-700 hover:text-stone-600 transition-colors font-[family-name:var(--font-raleway)]"
+            >
+              Courses
+            </a>
+          </li>
+          <li>
+            <a
+              href="#rental"
+              className="text-sm font-semibold text-gray-700 hover:text-green-600 transition-colors font-[family-name:var(--font-raleway)]"
+            >
+              Equipment Rental
+            </a>
+          </li>
+          <li>
+            <a
+              href="#storage"
+              className="text-sm font-semibold text-gray-700 hover:text-green-600 transition-colors font-[family-name:var(--font-raleway)]"
+            >
+              Equipment Storage
+            </a>
+          </li>
+        </ul>
+      </div>
+    </nav>
+  );
+}
+
 function ContentSection() {
   return (
-    <section className="mt-4 flex flex-wrap w-full">
+    <section id="courses" className="mt-4 flex flex-wrap w-full ">
       {/*Intro course section */}
       <div className="flex flex-col md:flex-row  gap-6 max-w-6xl mb-4 transition-all duration-300 ease-in">
-        <div className=" shrink-0 sm:max-w-lg lg:max-w-xl">
+        <div className=" shrink-0 sm:max-w-lg lg:max-w-xl relative">
           <Image src={privateCourse} alt="Intro Course" priority />
-        </div>
-        <div className="font-[family-name:var(--font-raleway)] transition-all duration-300 ease-in">
-          <div className="w-full text-center text-2xl mb-4">
+          <div className="absolute inset-0 bg-stone-600/40" />
+          <div className="absolute bottom-[10%] w-full text-center text-4xl text-white font-semibold">
             Intro kitesurfing course
           </div>
-          <div className="flex flex-col">
-            <div className="mx-12 text-2xl font-semibold">Price:</div>
-            <div className="mx-12 mb-2">
-              Private: <strong className="text-xl">7,500</strong> EGP
-            </div>
-            <div className="mx-12 mb-2">
-              <span>
-                Group: <strong className="text-xl">5,000</strong> EGP per pax
-              </span>
-              , group is 2 to 4 persons
-            </div>
-          </div>
+        </div>
+        <div className="font-[family-name:var(--font-raleway)] transition-all duration-300 ease-in">
           <div className="w-full text-center text-xl ">About the course:</div>
           <Accordion type="single" collapsible defaultValue="item-1">
             <AccordionItem value="item-1">
@@ -90,30 +155,40 @@ function ContentSection() {
                 </div>
               </AccordionContent>
             </AccordionItem>
+            <AccordionItem value="item-3">
+              <AccordionTrigger className="text-lg mx-4 font-semibold">
+                Price?{" "}
+              </AccordionTrigger>
+
+              <AccordionContent>
+                <div className="flex flex-col">
+                  <div className="mx-12 text-2xl font-semibold">Price:</div>
+                  <div className="mx-12 mb-2">
+                    Private: <strong className="text-xl">7,500</strong> EGP
+                  </div>
+                  <div className="mx-12 mb-2">
+                    <span>
+                      Group: <strong className="text-xl">5,000</strong> EGP per
+                      pax
+                    </span>
+                    , group is 2 to 4 persons
+                  </div>
+                </div>
+              </AccordionContent>
+            </AccordionItem>
           </Accordion>
         </div>
       </div>
       {/* Beginner course section */}
       <div className="flex flex-col md:flex-row gap-6 max-w-6xl">
-        <div className=" shrink-0 sm:max-w-lg lg:max-w-xl">
-          <Image src={privateCourse} alt="Intro Course" priority />
-        </div>
-        <div className="font-[family-name:var(--font-raleway)]">
-          <div className="w-full text-center text-2xl mb-4">
+        <div className=" shrink-0 sm:max-w-lg lg:max-w-xl relative">
+          <Image src={beginnerPhoto} alt="Beginner course" priority />
+          <div className="absolute inset-0 bg-stone-600/40" />
+          <div className="absolute bottom-[10%] w-full text-center text-4xl text-white font-semibold">
             Beginner kitesurfing course
           </div>
-          <div className="flex flex-col">
-            <div className="mx-12 text-2xl font-semibold">Price:</div>
-            <div className="mx-12 mb-2">
-              Private: <strong className="text-xl">22,000</strong> EGP
-            </div>
-            <div className="mx-12 mb-2">
-              <span>
-                Group: <strong className="text-xl">17,000</strong> EGP per pax
-              </span>
-              , group is 2 to 4 persons
-            </div>
-          </div>
+        </div>
+        <div className="font-[family-name:var(--font-raleway)]">
           <Accordion
             type="single"
             collapsible
@@ -150,6 +225,24 @@ function ContentSection() {
                 </div>
               </AccordionContent>
             </AccordionItem>
+            <AccordionItem value="item-3">
+              <AccordionTrigger className="text-lg mx-4 font-semibold">
+                Price?{" "}
+              </AccordionTrigger>
+              <AccordionContent>
+                <div className="mx-12 text-2xl font-semibold">Price:</div>
+                <div className="mx-12 mb-2">
+                  Private: <strong className="text-xl">22,000</strong> EGP
+                </div>
+                <div className="mx-12 mb-2">
+                  <span>
+                    Group: <strong className="text-xl">17,000</strong> EGP per
+                    pax
+                  </span>
+                  , group is 2 to 4 persons
+                </div>
+              </AccordionContent>
+            </AccordionItem>
           </Accordion>
         </div>
       </div>
@@ -157,34 +250,158 @@ function ContentSection() {
   );
 }
 
-function BeginnerCourses() {
+function RentalTable() {
   return (
-    <section id="courses">
-      <div>Beginner courses</div>
-      <p>
-        Beginner courses are designed for those that didn't try kitesurfing
-        before. We will start from the basics and get you on the board. If you
-        like the experience, then check our advance courses
-      </p>
-      <Table>
-        <TableHeader>
-          <TableRow className="sm:text-xl">
-            <TableHead>Course name</TableHead>
-            <TableHead>
-              <span className="flex items-center gap-0">
-                <Timer className="h-4 " /> Time
-              </span>
-            </TableHead>
-            <TableHead>
-              <span className="flex items-center gap ">
-                <Hash className="h-4" />
-                <User className="h-5" />
-              </span>
-            </TableHead>
-            <TableHead>Price</TableHead>
-          </TableRow>
-        </TableHeader>
-      </Table>
+    <section id="rental" className="max-w-4xl mx-auto ">
+      <div className="w-full h-30 overflow-hidden flex items-center justify-center relative">
+        <Image
+          alt="kitesurfing equipment rental"
+          src={rentalPhoto}
+          fill
+          className="object-cover"
+        />
+        <div className="absolute inset-0 bg-stone-600/40" />
+        <h3 className="absolute z-10 text-5xl text-white font-semibold text-center  px-4 font-[family-name:var(--font-raleway)]  ">
+          Equipment Rental
+        </h3>
+      </div>
+
+      <div className="overflow-x-auto mt-4 px-6 ">
+        <table className="w-full border-collapse bg-white shadow-md rounded-lg overflow-hidden mb-4">
+          <thead className="bg-stone-600 text-white">
+            <tr>
+              <th className="px-6 py-3 text-left text-sm font-semibold">
+                Item
+              </th>
+              <th className="px-6 py-3 text-center text-sm font-semibold">
+                Half day
+              </th>
+              <th className="px-6 py-3 text-center text-sm font-semibold">
+                Full day
+              </th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-200">
+            <tr className="hover:bg-gray-50 transition-colors">
+              <td className="px-6 py-4 text-sm">Full equipment rental</td>
+              <td className="px-6 py-4 text-sm text-center font-semibold">
+                3500
+              </td>
+              <td className="px-6 py-4 text-sm text-center font-semibold">
+                5200
+              </td>
+            </tr>
+            <tr className="hover:bg-gray-50 transition-colors">
+              <td className="px-6 py-4 text-sm">2 days Full equipment</td>
+              <td className="px-6 py-4 text-sm text-center font-semibold">
+                6000
+              </td>
+              <td className="px-6 py-4 text-sm text-center font-semibold">
+                9000
+              </td>
+            </tr>
+            <tr className="hover:bg-gray-50 transition-colors">
+              <td className="px-6 py-4 text-sm">Kite and bar</td>
+              <td className="px-6 py-4 text-sm text-center font-semibold">
+                3000
+              </td>
+              <td className="px-6 py-4 text-sm text-center font-semibold">
+                4000
+              </td>
+            </tr>
+            <tr className="hover:bg-gray-50 transition-colors">
+              <td className="px-6 py-4 text-sm">Board only</td>
+              <td className="px-6 py-4 text-sm text-center font-semibold">
+                1000
+              </td>
+              <td className="px-6 py-4 text-sm text-center font-semibold">
+                1700
+              </td>
+            </tr>
+            <tr className="hover:bg-gray-50 transition-colors">
+              <td className="px-6 py-4 text-sm">Bar only</td>
+              <td className="px-6 py-4 text-sm text-center font-semibold">
+                1000
+              </td>
+              <td className="px-6 py-4 text-sm text-center font-semibold">
+                1700
+              </td>
+            </tr>
+            <tr className="hover:bg-gray-50 transition-colors">
+              <td className="px-6 py-4 text-sm">Wetsuit / Harness</td>
+              <td className="px-6 py-4 text-sm text-center font-semibold">
+                500
+              </td>
+              <td className="px-6 py-4 text-sm text-center font-semibold">
+                600
+              </td>
+            </tr>
+            <tr className="hover:bg-gray-50 transition-colors">
+              <td className="px-6 py-4 text-sm">Leash/helmet</td>
+              <td className="px-6 py-4 text-sm text-center font-semibold">
+                250
+              </td>
+              <td className="px-6 py-4 text-sm text-center font-semibold">
+                350
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  );
+}
+
+function StorageTable() {
+  return (
+    <section id="storage" className="max-w-4xl mx-auto ">
+      <div className="w-full h-30 overflow-hidden flex items-center justify-center relative">
+        <Image
+          alt="kitesurfing equipment rental"
+          src={rentalPhoto}
+          fill
+          className="object-cover"
+        />
+        <div className="absolute inset-0 bg-stone-600/40" />
+        <h3 className="absolute z-10 text-5xl text-white font-semibold text-center  px-4 font-[family-name:var(--font-raleway)]  ">
+          Equipment Storage
+        </h3>
+      </div>
+
+      <div className="overflow-x-auto mt-4 px-6 ">
+        <table className="w-full border-collapse bg-white shadow-md rounded-lg overflow-hidden mb-4">
+          <thead className="bg-stone-600 text-white">
+            <tr>
+              <th className="px-6 py-3 text-left text-sm font-semibold">
+                Time
+              </th>
+              <th className="px-6 py-3 text-center text-sm font-semibold">
+                Price
+              </th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-200">
+            <tr className="hover:bg-gray-50 transition-colors">
+              <td className="px-6 py-4 text-sm">One week</td>
+              <td className="px-6 py-4 text-sm text-center font-semibold">
+                500
+              </td>
+            </tr>
+            <tr className="hover:bg-gray-50 transition-colors">
+              <td className="px-6 py-4 text-sm">One month</td>
+              <td className="px-6 py-4 text-sm text-center font-semibold">
+                1200
+              </td>
+            </tr>
+            <tr className="hover:bg-gray-50 transition-colors">
+              <td className="px-6 py-4 text-sm">Three months</td>
+              <td className="px-6 py-4 text-sm text-center font-semibold">
+                3000
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </section>
   );
 }

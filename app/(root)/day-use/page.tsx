@@ -1,5 +1,3 @@
-import React from "react";
-
 function DayUsePage() {
   return (
     <section className="flex flex-col gap-4 m-4 mx-6">

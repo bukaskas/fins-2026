@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import Image, { StaticImageData } from "next/image";
-import restaurantMobile from "@/public/images/hero_images/hero_mobile3.jpg";
+import restaurantMobile from "@/public/images/hero_images/hero_mobile3.webp";
 import restaurantDesktop from "@/public/images/hero_images/restaurant_desktop3.webp";
 
 type RestaurantHeroProps = {

@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import Image, { StaticImageData } from "next/image";
-import dayUseMobile from "@/public/images/hero_images/hero_mobile1.jpg";
+import dayUseMobile from "@/public/images/hero_images/hero_mobile1.webp";
 import dayUseDesktop from "@/public/images/hero_images/hero_desktop1.webp";
 type DayUseHeroProps = {
   mobileSrc?: StaticImageData;

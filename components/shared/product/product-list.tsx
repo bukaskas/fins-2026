@@ -1,14 +1,5 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { PlusIcon } from "lucide-react";
 import Image from "next/image";
 
 import privateCourse from "@/public/images/fins-private-lesson.webp";
@@ -17,18 +8,13 @@ import { useRef, useEffect } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { useGSAP } from "@gsap/react";
-import sampleData from "@/db/sample-data";
+
+import restaurantPhoto from "@/public/images/webphotos_fins/webphoto_17.webp";
 
 gsap.registerPlugin(useGSAP);
 gsap.registerPlugin(ScrollTrigger);
 
 function ProductList({ title }: { title?: string }) {
-  const privateCourseWrapRef = useRef<HTMLDivElement>(null);
-  const privateCourseTextRef = useRef<HTMLDivElement>(null);
-
-  const products = sampleData.products;
-
-  // TODO: slide in photo #private-course from left
   useGSAP(() => {
     gsap.from("#private-course", {
       scrollTrigger: {
@@ -37,9 +23,32 @@ function ProductList({ title }: { title?: string }) {
         // start: "20px 80%",
         end: "top 75%",
         scrub: 1,
-        markers: true,
       },
       x: -200,
+      opacity: 0,
+      duration: 2,
+      ease: "power2.out",
+    });
+    gsap.from("#restaurant-photo", {
+      scrollTrigger: {
+        trigger: "#restaurant-photo",
+        toggleActions: "restart none none none",
+        end: "top 75%",
+        scrub: 1,
+      },
+      x: -200,
+      opacity: 0,
+      duration: 2,
+      ease: "power2.out",
+    });
+    gsap.from("#restaurant-text", {
+      scrollTrigger: {
+        trigger: "#restaurant-text",
+        toggleActions: "restart none none none",
+        end: "top 75%",
+        scrub: 1,
+      },
+      x: 600,
       opacity: 0,
       duration: 2,
       ease: "power2.out",
@@ -48,8 +57,6 @@ function ProductList({ title }: { title?: string }) {
       scrollTrigger: {
         trigger: "#private-course-text",
         toggleActions: "restart none none none",
-        // start: "20px 80%",
-        markers: true,
         end: "top 75%",
         scrub: 1,
       },
@@ -65,7 +72,6 @@ function ProductList({ title }: { title?: string }) {
         // start: "20px 80%",
         end: "top 75%",
         scrub: 1,
-        markers: true,
       },
       x: -200,
       opacity: 0,
@@ -77,7 +83,7 @@ function ProductList({ title }: { title?: string }) {
         trigger: "#dayuse-text",
         toggleActions: "restart none none none",
         // start: "20px 80%",
-        markers: true,
+
         end: "top 75%",
         scrub: 1,
       },
@@ -88,21 +94,11 @@ function ProductList({ title }: { title?: string }) {
     });
   }, []);
 
-  const privateCourses = products
-    .filter((product) => product.name.toLowerCase().includes("private"))
-    .sort((a, b) => a.price - b.price);
-  const groupCourses = products
-    .filter((product) => product.name.toLowerCase().includes("group"))
-    .sort((a, b) => a.price - b.price);
   return (
     <section className=" flex flex-wrap justify-center">
       {/* Kiteusurfing Courses */}
       <div className="flex flex-col md:flex-row overflow-x-clip">
-        <div
-          id="private-course"
-          ref={privateCourseWrapRef}
-          className="md:w-[50vw] shrink-0"
-        >
+        <div id="private-course" className="md:w-[50vw] shrink-0">
           <Image
             src={privateCourse}
             alt="Private Course"
@@ -159,21 +155,17 @@ function ProductList({ title }: { title?: string }) {
       </div>
       {/* Restaurant experience */}
       <div className="flex flex-col md:flex-row overflow-x-clip">
-        <div
-          id="private-course"
-          ref={privateCourseWrapRef}
-          className="md:w-[50vw] shrink-0"
-        >
+        <div id="restaurant-photo" className="md:w-[50vw] shrink-0">
           <Image
-            src={privateCourse}
-            alt="Private Course"
+            src={restaurantPhoto}
+            alt="Burger by the beach in sokhna"
             className="relative z-20 aspect-video w-full object-cover"
             sizes="50vw"
             priority
           />
         </div>
         <div
-          id="private-course-text"
+          id="restaurant-text"
           className="font-[family-name:var(--font-raleway)]"
         >
           <div className="w-full text-center text-2xl pt-8 mb-4">
