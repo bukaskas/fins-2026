@@ -11,9 +11,9 @@ import swimmingPool from "@/public/images/svg/swimming-pool.svg";
 
 function DayUsePage() {
   return (
-    <section className="font-[family-name:var(--font-raleway)] ">
+    <section className=" font-[family-name:var(--font-raleway)] ">
       <HeroSection />
-      <BannerWithIcons />
+
       <div className="flex flex-col md:flex-row">
         <BeachExperienceImage />
         <FoodExperienceImage />
@@ -30,14 +30,16 @@ export default DayUsePage;
 
 function HeroSection() {
   return (
-    <div>
+    <div className="relative h-[90vh] -mt-30 ">
       <Image
         src={heroDayUse}
         alt="Day Use experience at Fins Sokhna"
-        className="absolute inset-0 -z-10 min-h-150 max-h-150 object-cover"
+        className="object-cover"
+        fill
         priority
       />
-      <h4 className="text-center text-stone-800 font-semibold mt-100 text-4xl  ">
+      <div className="absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-black/50 to-transparent" />
+      <h4 className="absolute bottom-[7%] left-1/2 -translate-x-1/2 text-center text-white font-bold text-4xl ">
         Day Use at Fins
       </h4>
     </div>

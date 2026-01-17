@@ -24,6 +24,10 @@ const links = [
     href: "/kitesurfing",
   },
   {
+    title: "Restaurant",
+    href: "/restaurant",
+  },
+  {
     title: "About",
     href: "/about",
   },
@@ -58,7 +62,7 @@ function Menu() {
           <Link href="/day-use">Day Use</Link>
         </Button>
         <Button asChild variant={"ghost"} className="text-lg">
-          <Link href="/day-use">Restaurant</Link>
+          <Link href="/restaurant">Restaurant</Link>
         </Button>
       </nav>
       <nav className="md:hidden flex justify-center w-full p-4 relative">

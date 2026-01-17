@@ -35,7 +35,7 @@ export function DayUseHero({
       <div className="mx-auto max-w-2xl px-10">
         <div className="hidden sm:mb-8 sm:flex sm:justify-center">
           <div className="relative rounded-full px-3 py-1 text-sm/6 text-gray-600 ring-1 ring-gray-900/10 hover:ring-gray-900/20">
-            Spending a beautiful day by the beach.{" "}
+            Day Use experience
             <a href="/day-use" className="font-semibold text-orange-600">
               <span aria-hidden="true" className="absolute inset-0" />
               Read more <span aria-hidden="true">&rarr;</span>
@@ -44,7 +44,7 @@ export function DayUseHero({
         </div>
         <div className="text-center bg-white/30 rounded-2xl p-4">
           <h1 className="text-5xl font-semibold tracking-tight text-balance text-gray-900 sm:text-7xl">
-            Spend a beautiful day by the beach
+            Beach
           </h1>
           <p className="mt-8 text-lg font-medium text-pretty sm:text-xl/8 ">
             Amazing food, soft sand, activities and more. All you need for a

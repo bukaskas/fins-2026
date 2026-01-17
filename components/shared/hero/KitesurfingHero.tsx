@@ -44,13 +44,11 @@ export function KitesurfingHero({
         </div>
         <div className="text-center bg-white/30  rounded-2xl p-4">
           <h1 className="text-5xl font-semibold tracking-tight text-balance text-gray-900 sm:text-7xl">
-            Learn kitesurfing in Fins, Kai Sokhna
+            Kitesurfing lessons
           </h1>
           <p className="mt-8 text-lg font-medium text-pretty sm:text-xl/8 ">
-            Escape the city buzz and discover a new adventure with kitesurfing
-            near Cairo. Our spot offers steady winds and a shallow sandy lagoon,
-            perfect for learning and riding. Relax on a beautiful beach and
-            enjoy the ideal setting for your kitesurfing getaway.
+            Escape the city and discover kitesurfing in our perfect shallow
+            lagoon with steady winds and beautiful beaches near Cairo.
           </p>
           <div className="mt-10 flex items-center justify-center gap-x-6">
             <Button asChild className="rounded-full text-xl">

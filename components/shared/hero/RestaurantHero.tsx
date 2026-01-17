@@ -45,12 +45,11 @@ export function RestaurantHero({
         </div>
         <div className="text-center bg-white/30 rounded-2xl p-4">
           <h1 className="text-5xl font-semibold tracking-tight text-balance text-gray-900 sm:text-7xl">
-            Beachfront Restaurant in Sokhna
+            Restaurant
           </h1>
           <p className="mt-8 text-lg font-medium text-pretty  rounded-full p-4 sm:text-xl/8">
-            Discover the perfect blend of international cuisine and pizza. Enjoy
-            fresh flavors at our restaurant by the beach, where every table
-            comes with a sea breeze and a view.
+            Savor international cuisine and pizza with stunning beach views—book
+            your table today.
           </p>
           <div className="mt-10 flex items-center justify-center gap-x-6">
             <Button asChild className="rounded-full text-xl" size={"lg"}>
