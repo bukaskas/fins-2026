@@ -4,10 +4,16 @@ import beachExperienceImage from "@/public/images/day_use/beach1.webp";
 import foodExperienceImage from "@/public/images/day_use/food.webp";
 import loungeExperienceImage from "@/public/images/day_use/lounge.webp";
 import gamesExperienceImage from "@/public/images/day_use/games.webp";
+import restaurantSvg from "@/public/images/svg/lounge.svg";
+import pingPongSvg from "@/public/images/svg/ping-pong.svg";
+import loungeSvg from "@/public/images/svg/lounge.svg";
+import swimmingPool from "@/public/images/svg/swimming-pool.svg";
+
 function DayUsePage() {
   return (
     <section className="font-[family-name:var(--font-raleway)] ">
       <HeroSection />
+      <BannerWithIcons />
       <div className="flex flex-col md:flex-row">
         <BeachExperienceImage />
         <FoodExperienceImage />
@@ -45,7 +51,7 @@ function BeachExperienceImage() {
         <Image
           src={beachExperienceImage}
           alt="Sandy beach at Fins Sokhna with umbrellas and sun loungers"
-          className="relative z-5  w-full object-cover"
+          className=" z-5  w-full object-cover"
           sizes="50vw"
           priority
         />
@@ -63,13 +69,13 @@ function BeachExperienceImage() {
 function FoodExperienceImage() {
   return (
     <div className="flex flex-col md:flex-row ">
-      <div id="food-photo" className="md:w-[50vw] shrink-0 relative ">
+      <div id="food-photo" className="md:w-[50vw] shrink-0 relative aspect-3/2">
         <Image
           src={foodExperienceImage}
           alt="Delicious food options at Fins Sokhna restaurant including burgers, pizza, and salads"
-          className="relative z-5  w-full h-full object-cover object-[center_75%] aspect-3/2"
+          className=" z-5 object-[center_75%]"
           sizes="50vw"
-          priority
+          fill
         />
         <div className="absolute bottom-[15%] z-10 left-4 text-white font-semibold text-4xl">
           Restaurant
@@ -121,6 +127,36 @@ function GamesExperienceImage() {
         <div className="absolute  bottom-[8%] z-10 left-4 text-white italic">
           Enjoy a variety of fun games to play by the beach.
         </div>
+      </div>
+    </div>
+  );
+}
+
+// A line that would have grey background with logos:
+//  burger, <Hamburger />
+// pizza, <Pizza />
+// swimming pool, <WavesLadder />
+//  games, <Dices />
+// lounge, <Armchair />
+
+function BannerWithIcons() {
+  return (
+    <div className="bg-gray-200 flex justify-around py-4">
+      <div className="flex w-full justify-between px-24">
+        <Image
+          src={restaurantSvg}
+          alt="Restaurant Icon"
+          width={50}
+          height={50}
+        />
+        <Image src={pingPongSvg} alt="Ping Pong Icon" width={50} height={50} />
+        <Image src={loungeSvg} alt="Lounge icon" width={50} height={50} />
+        <Image
+          src={swimmingPool}
+          alt="Swimming Pool Icon"
+          width={50}
+          height={50}
+        />
       </div>
     </div>
   );
