@@ -82,7 +82,7 @@ function FoodExperienceImage() {
           Restaurant
         </div>
         <div className="absolute  bottom-[8%] z-10 left-4 text-white italic">
-          What a day without tasty and high quality food
+          Enjoy our burgers, pizza, and salads.
         </div>
       </div>
     </div>
