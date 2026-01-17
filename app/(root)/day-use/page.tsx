@@ -1,23 +1,13 @@
+import Image from "next/image";
+import heroDayUse from "@/public/images/day_use/beach2.webp";
+import beachExperienceImage from "@/public/images/day_use/beach1.webp";
+import foodExperienceImage from "@/public/images/day_use/food.webp";
 function DayUsePage() {
   return (
-    <section className="flex flex-col gap-4 m-4 mx-6">
-      <div className="text-center text-2xl font-bold">
-        Day Use at Fins at Kai Sokhna
-      </div>
-      <div>
-        <h1 className="text-xl font-semibold pb-4">Beach experience</h1>
-        <div>
-          We are lucky to have a space with one of the longest sandy beaches in
-          the Sokhna area. The soft sand on the beach in the swimming area make
-          it perfect for both kids and adults to enjoy, play, and swim. Let your
-          imagination run free—build sandcastles, relax in the sun, or simply
-          enjoy the refreshing sea breeze.
-        </div>
-      </div>
-      <div>
-        <h1 className="text-xl font-semibold pb-4">Food</h1>
-        <div>What a day without tasty and high quality food</div>
-      </div>
+    <section className="font-[family-name:var(--font-raleway)] ">
+      <HeroSection />
+      <BeachExperienceImage />
+      <FoodExperienceImage />
       <div>
         <h1 className="text-xl font-semibold pb-4">Games</h1>
         <div>
@@ -28,7 +18,7 @@ function DayUsePage() {
         </div>
       </div>
       <div>
-        <h1 className="text-xl font-semibold pb-4">Music</h1>
+        <h1 className="text-xl font-semibold pb-4">Atmosphere</h1>
         <div>
           We always look to set good atmosphere for people to enjoy the day.
         </div>
@@ -38,3 +28,63 @@ function DayUsePage() {
 }
 
 export default DayUsePage;
+
+function HeroSection() {
+  return (
+    <div>
+      <Image
+        src={heroDayUse}
+        alt="Day Use experience at Fins Sokhna"
+        className="absolute inset-0 -z-10 min-h-150 max-h-150 object-cover"
+        priority
+      />
+      <h4 className="text-center text-stone-800 font-semibold mt-100 text-4xl  ">
+        Day Use experience
+      </h4>
+    </div>
+  );
+}
+
+function BeachExperienceImage() {
+  return (
+    <div className="flex flex-col md:flex-row ">
+      <div id="beach-photo" className="md:w-[50vw] shrink-0 relative">
+        <Image
+          src={beachExperienceImage}
+          alt="Sandy beach at Fins Sokhna with umbrellas and sun loungers"
+          className="relative z-5  w-full object-cover"
+          sizes="50vw"
+          priority
+        />
+        <div className="absolute bottom-[15%] z-10 left-4 text-white font-semibold text-4xl">
+          Beach experience
+        </div>
+        <div className="absolute  bottom-[8%] z-10 left-4 text-white italic">
+          Widest sandy beach in Sokhna area
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function FoodExperienceImage() {
+  return (
+    <div className="flex flex-col md:flex-row ">
+      <div id="food-photo" className="md:w-[50vw] shrink-0 relative ">
+        <Image
+          src={foodExperienceImage}
+          alt="Sandy beach at Fins Sokhna with umbrellas and sun loungers"
+          className="relative z-5  w-full h-full object-cover object-[center_75%] aspect-3/2"
+          sizes="50vw"
+          priority
+        />
+        <div className="absolute bottom-[15%] z-10 left-4 text-white font-semibold text-4xl">
+          Food experience
+        </div>
+        <div className="absolute  bottom-[8%] z-10 left-4 text-white italic">
+          What a day without tasty and high quality food
+        </div>
+      </div>
+    </div>
+  );
+}
