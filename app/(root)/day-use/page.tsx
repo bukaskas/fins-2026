@@ -39,7 +39,7 @@ function HeroSection() {
         priority
       />
       <h4 className="text-center text-stone-800 font-semibold mt-100 text-4xl  ">
-        Day Use experience
+        Day Use at Fins
       </h4>
     </div>
   );
@@ -57,7 +57,7 @@ function BeachExperienceImage() {
           priority
         />
         <div className="absolute bottom-[15%] z-10 left-4 text-white font-semibold text-4xl">
-          Beach experience
+          Beach Access
         </div>
         <div className="absolute  bottom-[8%] z-10 left-4 text-white italic">
           Widest sandy beach in Sokhna area
@@ -79,7 +79,7 @@ function FoodExperienceImage() {
           priority
         />
         <div className="absolute bottom-[15%] z-10 left-4 text-white font-semibold text-4xl">
-          Food experience
+          Restaurant
         </div>
         <div className="absolute  bottom-[8%] z-10 left-4 text-white italic">
           What a day without tasty and high quality food
