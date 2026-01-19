@@ -52,7 +52,9 @@ export function DayUseHero({
           </p>
           <div className="mt-10 flex items-center justify-center gap-x-6">
             <Button asChild className="rounded-full text-xl">
-              <Link href="/day-use">Book now</Link>
+              <Link href="https://wa.me/201222144388?text=Hello%2C%0AI%20want%20to%20reserve%20day%20use">
+                Book now
+              </Link>
             </Button>
             <Link
               href="/day-use"

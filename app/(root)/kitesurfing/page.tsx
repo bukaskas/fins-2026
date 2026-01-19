@@ -157,7 +157,7 @@ function IntroCourseSection() {
           <DialogContent>
             <DialogHeader>
               <DialogTitle>
-                Do you want to feel the thrill of kitesurfing?
+                Interested to try kitesurfing for one session?
               </DialogTitle>
               <DialogDescription asChild>
                 <div className="text-left space-y-4">
@@ -186,6 +186,16 @@ function IntroCourseSection() {
                         per pax
                       </span>
                       , group is 2 to 4 persons
+                    </div>
+                    <div className="flex justify-end">
+                      <Button
+                        asChild
+                        className="text-center justify-end rounded-full text-xl"
+                      >
+                        <Link href="https://wa.me/201080500099?text=Hello%2C%0AI%20want%20to%20book%20intro%20course">
+                          Book now
+                        </Link>
+                      </Button>
                     </div>
                   </div>
                 </div>
@@ -265,7 +275,9 @@ function BeginnerCourseSection() {
                       asChild
                       className="text-center justify-end rounded-full text-xl"
                     >
-                      <Link href="/kitesurfing">Book lessons</Link>
+                      <Link href="https://wa.me/201080500099?text=Hello%2C%0AI%20want%20to%20book%20beginner%20course">
+                        Book now
+                      </Link>
                     </Button>
                   </div>
                 </div>

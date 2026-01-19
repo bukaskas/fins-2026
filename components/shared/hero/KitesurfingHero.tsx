@@ -52,7 +52,9 @@ export function KitesurfingHero({
           </p>
           <div className="mt-10 flex items-center justify-center gap-x-6">
             <Button asChild className="rounded-full text-xl">
-              <Link href="/kitesurfing">Book lessons</Link>
+              <Link href="https://wa.me/201080500099?text=Hello%2C%0AI%20want%20to%20book%20beginner%20course">
+                Book now
+              </Link>
             </Button>
             <Link
               href="/kitesurfing"
