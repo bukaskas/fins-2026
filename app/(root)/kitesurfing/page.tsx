@@ -151,7 +151,7 @@ function IntroCourseSection() {
           One session to get a taste of kitesurfing
         </div>
         <Dialog>
-          <DialogTrigger className="absolute italic bottom-8 right-8 border-2 border-white bg-stone-600/60 hover:bg-stone-600 text-white px-4 py-2 rounded-xl z-10 font-semibold">
+          <DialogTrigger className="absolute italic bottom-4 right-4 border-1 border-white bg-stone-600/60 hover:bg-stone-600 text-white px-2 py-1 rounded-full z-10 font-semibold">
             More info
           </DialogTrigger>
           <DialogContent>
@@ -215,7 +215,7 @@ function BeginnerCourseSection() {
           One session to get a taste of kitesurfing
         </div>
         <Dialog>
-          <DialogTrigger className="absolute italic bottom-8 right-8 border-2 border-white bg-stone-600/60 hover:bg-stone-600 text-white px-4 py-2 rounded-xl z-10 font-semibold">
+          <DialogTrigger className="absolute italic bottom-4 right-4 border-1 border-white bg-stone-600/60 hover:bg-stone-600 text-white px-2 py-1 rounded-full z-10 font-semibold">
             More info
           </DialogTrigger>
           <DialogContent>
