@@ -15,6 +15,16 @@ import {
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { useGSAP } from "@gsap/react";
 import gsap from "gsap";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import Link from "next/link";
 
 gsap.registerPlugin(useGSAP);
 gsap.registerPlugin(ScrollTrigger);
@@ -114,139 +124,157 @@ function NavigationMenu() {
 
 function ContentSection() {
   return (
-    <section id="courses" className="mt-4 flex flex-wrap w-full ">
+    <section id="courses" className="mt-4 w-full ">
       {/*Intro course section */}
-      <div className="flex flex-col md:flex-row  gap-6 max-w-6xl mb-4 transition-all duration-300 ease-in">
-        <div className=" shrink-0 sm:max-w-lg lg:max-w-xl relative">
-          <Image src={privateCourse} alt="Intro Course" priority />
-          <div className="absolute inset-0 bg-stone-600/40" />
-          <div className="absolute bottom-[10%] w-full text-center text-4xl text-white font-semibold">
-            Intro kitesurfing course
-          </div>
-        </div>
-        <div className="font-[family-name:var(--font-raleway)] transition-all duration-300 ease-in">
-          <div className="w-full text-center text-xl ">About the course:</div>
-          <Accordion type="single" collapsible defaultValue="item-1">
-            <AccordionItem value="item-1">
-              <AccordionTrigger className="text-lg mx-4 font-semibold ">
-                What is Intro course?{" "}
-              </AccordionTrigger>
-              <AccordionContent className="transition-all duration-300 ease-in">
-                <div className=" mx-12 mb-2">
-                  Intro course is designed for those that plan to try
-                  kitesurfing for one session, to get experience what we need to
-                  learn in order to become a kitesurfer.
-                </div>
-                <div className=" mx-12 mb-2">
-                  We will focus on kite control, safety and basic knowledge that
-                  we need to know before getting on the board. Main focus is
-                  understanding how kite works and safety.
-                </div>
-              </AccordionContent>
-            </AccordionItem>
-            <AccordionItem value="item-2">
-              <AccordionTrigger className="text-lg mx-4 font-semibold">
-                What is duration of the course?{" "}
-              </AccordionTrigger>
-              <AccordionContent>
-                <div className=" mx-12 mb-2">
-                  Duration is <strong className="text-xl">2 hours</strong> done
-                  in one session.
-                </div>
-              </AccordionContent>
-            </AccordionItem>
-            <AccordionItem value="item-3">
-              <AccordionTrigger className="text-lg mx-4 font-semibold">
-                Price?{" "}
-              </AccordionTrigger>
-
-              <AccordionContent>
-                <div className="flex flex-col">
-                  <div className="mx-12 text-2xl font-semibold">Price:</div>
-                  <div className="mx-12 mb-2">
-                    Private: <strong className="text-xl">7,500</strong> EGP
-                  </div>
-                  <div className="mx-12 mb-2">
-                    <span>
-                      Group: <strong className="text-xl">5,000</strong> EGP per
-                      pax
-                    </span>
-                    , group is 2 to 4 persons
-                  </div>
-                </div>
-              </AccordionContent>
-            </AccordionItem>
-          </Accordion>
-        </div>
-      </div>
+      <IntroCourseSection />
       {/* Beginner course section */}
-      <div className="flex flex-col md:flex-row gap-6 max-w-6xl">
-        <div className=" shrink-0 sm:max-w-lg lg:max-w-xl relative">
-          <Image src={beginnerPhoto} alt="Beginner course" priority />
-          <div className="absolute inset-0 bg-stone-600/40" />
-          <div className="absolute bottom-[10%] w-full text-center text-4xl text-white font-semibold">
-            Beginner kitesurfing course
-          </div>
-        </div>
-        <div className="font-[family-name:var(--font-raleway)]">
-          <Accordion
-            type="single"
-            collapsible
-            className="w-full"
-            defaultValue="item-1"
-          >
-            <AccordionItem value="item-1">
-              <AccordionTrigger className="text-lg mx-4 font-semibold">
-                What is Beginner course?{" "}
-              </AccordionTrigger>
-              <AccordionContent className="mx-12 mb-2">
-                You will learn basics of the kite and proceed attempt your first
-                water start with your IKO Instructor. You will now put your
-                skills to the test and experience the full potential of the wind
-                and the kite. You will learn to use the kite power to body drag
-                in all possible directions, water relaunch your kite, recover
-                your board; and attempt your first rides on the board!
-              </AccordionContent>
-            </AccordionItem>
-            <AccordionItem value="item-2">
-              <AccordionTrigger className="text-lg mx-4 font-semibold">
-                What is duration of the course?{" "}
-              </AccordionTrigger>
-              <AccordionContent>
-                <div className=" mx-12 mb-2">
-                  Private is <strong className="text-xl">6 hours</strong>
-                </div>
-                <div className=" mx-12 mb-2">
-                  Group is <strong className="text-xl">8 hours</strong>
-                </div>
-                <div className=" mx-12 mb-2">
-                  Course takes 2 to 3 days to be completed depending on weather
-                  and student progress.
-                </div>
-              </AccordionContent>
-            </AccordionItem>
-            <AccordionItem value="item-3">
-              <AccordionTrigger className="text-lg mx-4 font-semibold">
-                Price?{" "}
-              </AccordionTrigger>
-              <AccordionContent>
-                <div className="mx-12 text-2xl font-semibold">Price:</div>
-                <div className="mx-12 mb-2">
-                  Private: <strong className="text-xl">22,000</strong> EGP
-                </div>
-                <div className="mx-12 mb-2">
-                  <span>
-                    Group: <strong className="text-xl">17,000</strong> EGP per
-                    pax
-                  </span>
-                  , group is 2 to 4 persons
-                </div>
-              </AccordionContent>
-            </AccordionItem>
-          </Accordion>
-        </div>
-      </div>
+      <BeginnerCourseSection />
     </section>
+  );
+}
+
+function IntroCourseSection() {
+  return (
+    <div className="flex flex-col md:flex-row ">
+      <div id="beach-photo" className="w-full md:w-[50vw] shrink-0 relative">
+        <Image
+          src={privateCourse}
+          alt="Introduction to kitesurfing course"
+          className=" z-5  w-full object-cover"
+          sizes="50vw"
+          priority
+        />
+        <div className="absolute bottom-[15%] z-10 left-4 text-white font-semibold text-4xl">
+          Intro course
+        </div>
+        <div className="absolute  bottom-[8%] z-10 left-4 text-white italic">
+          One session to get a taste of kitesurfing
+        </div>
+        <Dialog>
+          <DialogTrigger className="absolute italic bottom-8 right-8 border-2 border-white bg-stone-600/60 hover:bg-stone-600 text-white px-4 py-2 rounded-xl z-10 font-semibold">
+            More info
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>
+                Do you want to feel the thrill of kitesurfing?
+              </DialogTitle>
+              <DialogDescription asChild>
+                <div className="text-left space-y-4">
+                  <p className="text-sm text-muted-foreground">
+                    Intro course is designed for those that plan to try
+                    kitesurfing for one session, to get experience what we need
+                    to learn in order to become a kitesurfer.
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    We will focus on kite control, safety and basic knowledge
+                    that we need to know before getting on the board. Main focus
+                    is understanding how kite works and safety.
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    Duration is <strong className="text-base">2 hours</strong>{" "}
+                    done in one session.
+                  </p>
+                  <div className="space-y-2">
+                    <div className="text-lg font-semibold">Price:</div>
+                    <div className="text-sm">
+                      Private: <strong className="text-base">7,500</strong> EGP
+                    </div>
+                    <div className="text-sm">
+                      <span>
+                        Group: <strong className="text-base">5,000</strong> EGP
+                        per pax
+                      </span>
+                      , group is 2 to 4 persons
+                    </div>
+                  </div>
+                </div>
+              </DialogDescription>
+            </DialogHeader>
+          </DialogContent>
+        </Dialog>
+      </div>
+    </div>
+  );
+}
+function BeginnerCourseSection() {
+  return (
+    <div className="flex flex-col md:flex-row  ">
+      <div id="beach-photo" className="w-full md:w-[50vw] shrink-0 relative">
+        <Image
+          src={beginnerPhoto}
+          alt="Beginner kitesurfing course"
+          className=" z-5  w-full object-cover"
+          sizes="50vw"
+          priority
+        />
+        <div className="absolute bottom-[15%] z-10 left-4 text-white font-semibold text-4xl">
+          Beginner course
+        </div>
+        <div className="absolute  bottom-[8%] z-10 left-4 text-white italic">
+          One session to get a taste of kitesurfing
+        </div>
+        <Dialog>
+          <DialogTrigger className="absolute italic bottom-8 right-8 border-2 border-white bg-stone-600/60 hover:bg-stone-600 text-white px-4 py-2 rounded-xl z-10 font-semibold">
+            More info
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>What is Beginner course? </DialogTitle>
+              <DialogDescription asChild>
+                <div className="text-left space-y-4">
+                  <p className="text-sm text-muted-foreground">
+                    You will learn basics of the kite and proceed attempt your
+                    first water start with your IKO Instructor. You will now put
+                    your skills to the test and experience the full potential of
+                    the wind and the kite.
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    You will learn to use the kite power to body drag in all
+                    possible directions, water relaunch your kite, recover your
+                    board; and attempt your first rides on the board!
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    <div className="text-xl font-semibold">Duration:</div>
+                    <div className="">
+                      Private is <strong className="text-xl">6 hours</strong>
+                    </div>
+                    <div className=" ">
+                      Group is <strong className="text-xl">8 hours</strong>
+                    </div>
+                    <div className="">
+                      Course takes 2 to 3 days to be completed depending on
+                      weather and student progress.
+                    </div>
+                  </p>
+                  <div className="space-y-2">
+                    <div className="text-lg font-semibold">Price:</div>
+                    <div className="text-sm">
+                      Private: <strong className="text-base">22,000</strong> EGP
+                    </div>
+                    <div className="text-sm">
+                      <span>
+                        Group: <strong className="text-base">17,000</strong> EGP
+                        per pax
+                      </span>
+                      , group is 2 to 4 persons
+                    </div>
+                  </div>
+                  <div className="flex justify-end">
+                    <Button
+                      asChild
+                      className="text-center justify-end rounded-full text-xl"
+                    >
+                      <Link href="/kitesurfing">Book lessons</Link>
+                    </Button>
+                  </div>
+                </div>
+              </DialogDescription>
+            </DialogHeader>
+          </DialogContent>
+        </Dialog>
+      </div>
+    </div>
   );
 }
 
@@ -403,5 +431,73 @@ function StorageTable() {
         </table>
       </div>
     </section>
+  );
+}
+
+function OldIntroCourseSection() {
+  return (
+    <div className="flex flex-col md:flex-row  gap-6 max-w-6xl mb-4 transition-all duration-300 ease-in">
+      <div className=" shrink-0 sm:max-w-lg lg:max-w-xl relative">
+        <Image src={privateCourse} alt="Intro Course" priority />
+        <div className="absolute inset-0 bg-stone-600/40" />
+        <div className="absolute bottom-[10%] w-full text-center text-4xl text-white font-semibold">
+          Intro kitesurfing course
+        </div>
+      </div>
+      <div className="font-[family-name:var(--font-raleway)] transition-all duration-300 ease-in">
+        <div className="w-full text-center text-xl ">About the course:</div>
+        <Accordion type="single" collapsible defaultValue="item-1">
+          <AccordionItem value="item-1">
+            <AccordionTrigger className="text-lg mx-4 font-semibold ">
+              What is Intro course?{" "}
+            </AccordionTrigger>
+            <AccordionContent className="transition-all duration-300 ease-in">
+              <div className=" mx-12 mb-2">
+                Intro course is designed for those that plan to try kitesurfing
+                for one session, to get experience what we need to learn in
+                order to become a kitesurfer.
+              </div>
+              <div className=" mx-12 mb-2">
+                We will focus on kite control, safety and basic knowledge that
+                we need to know before getting on the board. Main focus is
+                understanding how kite works and safety.
+              </div>
+            </AccordionContent>
+          </AccordionItem>
+          <AccordionItem value="item-2">
+            <AccordionTrigger className="text-lg mx-4 font-semibold">
+              What is duration of the course?{" "}
+            </AccordionTrigger>
+            <AccordionContent>
+              <div className=" mx-12 mb-2">
+                Duration is <strong className="text-xl">2 hours</strong> done in
+                one session.
+              </div>
+            </AccordionContent>
+          </AccordionItem>
+          <AccordionItem value="item-3">
+            <AccordionTrigger className="text-lg mx-4 font-semibold">
+              Price?{" "}
+            </AccordionTrigger>
+
+            <AccordionContent>
+              <div className="flex flex-col">
+                <div className="mx-12 text-2xl font-semibold">Price:</div>
+                <div className="mx-12 mb-2">
+                  Private: <strong className="text-xl">7,500</strong> EGP
+                </div>
+                <div className="mx-12 mb-2">
+                  <span>
+                    Group: <strong className="text-xl">5,000</strong> EGP per
+                    pax
+                  </span>
+                  , group is 2 to 4 persons
+                </div>
+              </div>
+            </AccordionContent>
+          </AccordionItem>
+        </Accordion>
+      </div>
+    </div>
   );
 }
