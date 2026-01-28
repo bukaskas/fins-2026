@@ -73,7 +73,8 @@ function KitesurfingBookingForm() {
           );
         } else {
           // Failed: show error and re-enable form
-          toast.error(result.message || "Failed to create booking");
+          console.log(result);
+          toast(result.message || "Failed to create booking");
           setIsSubmitting(false);
         }
       } catch (error: any) {
