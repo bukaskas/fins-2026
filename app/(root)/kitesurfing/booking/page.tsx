@@ -66,34 +66,37 @@ function KitesurfingBookingForm() {
       setIsSubmitting(true);
       try {
         const result = await createBooking(value as BookingFormData);
-        if (result.success) {
-          setIsSubmitting(false);
+        if (result.success && result.bookingId && result.date) {
           toast(`${result.message}`);
-          if (result.bookingId && result.date) {
-            router.push(
-              `/kitesurfing/booking/success?bookingId=${result.bookingId}&date=${result.date.toISOString()}`,
-            );
-          }
+          router.push(
+            `/kitesurfing/booking/success?bookingId=${result.bookingId}&date=${result.date.toISOString()}`,
+          );
+        } else {
+          // Failed: show error and re-enable form
+          toast.error(result.message || "Failed to create booking");
+          setIsSubmitting(false);
         }
       } catch (error: any) {
+        // Exception: show error and re-enable form
+        console.error("Booking error:", error);
+        toast.error(error.message || "Something went wrong. Please try again.");
         setIsSubmitting(false);
-        toast(`Error: ${error.message || "Something went wrong"}`);
       }
 
-      toast("You submitted the following values:", {
-        description: (
-          <pre className="bg-code text-code-foreground mt-2 w-[320px] overflow-x-auto rounded-md p-4">
-            <code>{JSON.stringify(value, null, 2)}</code>
-          </pre>
-        ),
-        position: "bottom-right",
-        classNames: {
-          content: "flex flex-col gap-2",
-        },
-        style: {
-          "--border-radius": "calc(var(--radius)  + 4px)",
-        } as React.CSSProperties,
-      });
+      // toast("You submitted the following values:", {
+      //   description: (
+      //     <pre className="bg-code text-code-foreground mt-2 w-[320px] overflow-x-auto rounded-md p-4">
+      //       <code>{JSON.stringify(value, null, 2)}</code>
+      //     </pre>
+      //   ),
+      //   position: "bottom-right",
+      //   classNames: {
+      //     content: "flex flex-col gap-2",
+      //   },
+      //   style: {
+      //     "--border-radius": "calc(var(--radius)  + 4px)",
+      //   } as React.CSSProperties,
+      // });
     },
   });
   return (
