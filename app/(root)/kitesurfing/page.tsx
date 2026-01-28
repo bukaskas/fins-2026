@@ -1,17 +1,19 @@
 "use client";
 import Image from "next/image";
 import heroKiteImage from "@/public/images/product-1.webp";
-import { Table, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Hash, Timer, User, UserIcon } from "lucide-react";
+import {
+  Table,
+  TableBody,
+  TableCaption,
+  TableCell,
+  TableFooter,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import rentalPhoto from "@/public/images/webphotos_fins/webphoto_22.webp";
 import privateCourse from "@/public/images/product-2.webp";
 import beginnerPhoto from "@/public/images/webphotos_fins/webphoto_29.webp";
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { useGSAP } from "@gsap/react";
 import gsap from "gsap";
@@ -31,7 +33,6 @@ gsap.registerPlugin(ScrollTrigger);
 
 function KitesurfingPage() {
   useGSAP(() => {
-    // TODO: add animation to #courses, #rental, #storage sections using
     gsap.from("#courses", {
       scrollTrigger: {
         trigger: "#courses",
@@ -126,9 +127,17 @@ function ContentSection() {
   return (
     <section id="courses" className="mt-4 w-full ">
       {/*Intro course section */}
-      <IntroCourseSection />
-      {/* Beginner course section */}
-      <BeginnerCourseSection />
+      <div className="flex flex-col md:flex-row">
+        <IntroCourseSection />
+        {/* Beginner course section */}
+        <BeginnerCourseSection />
+      </div>
+      <div className="flex flex-col md:flex-row">
+        {/* Advance course section */}
+        <AdvanceCourseSection />
+        {/* Kids course section */}
+        <KidsCourseSection />
+      </div>
     </section>
   );
 }
@@ -192,9 +201,7 @@ function IntroCourseSection() {
                         asChild
                         className="text-center justify-end rounded-full text-xl"
                       >
-                        <Link href="https://wa.me/201080500099?text=Hello%2C%0AI%20want%20to%20book%20intro%20course">
-                          Book now
-                        </Link>
+                        <Link href="/kitesurfing/booking">Book now</Link>
                       </Button>
                     </div>
                   </div>
@@ -275,12 +282,151 @@ function BeginnerCourseSection() {
                       asChild
                       className="text-center justify-end rounded-full text-xl"
                     >
-                      <Link href="https://wa.me/201080500099?text=Hello%2C%0AI%20want%20to%20book%20beginner%20course">
+                      <Link href="/kitesurfing/booking">Book now</Link>
+                    </Button>
+                  </div>
+                </div>
+              </DialogDescription>
+            </DialogHeader>
+          </DialogContent>
+        </Dialog>
+      </div>
+    </div>
+  );
+}
+function AdvanceCourseSection() {
+  return (
+    <div className="flex flex-col md:flex-row  ">
+      <div id="beach-photo" className="w-full md:w-[50vw] shrink-0 relative">
+        <Image
+          src={beginnerPhoto}
+          alt="Beginner kitesurfing course"
+          className=" z-5  w-full object-cover"
+          sizes="50vw"
+          priority
+        />
+        <div className="absolute bottom-[15%] z-10 left-4 text-white font-semibold text-4xl">
+          Refresher course
+        </div>
+        <div className="absolute  bottom-[8%] z-10 left-4 text-white italic">
+          Finished beginner course but need to refresh your skills?
+        </div>
+        <Dialog>
+          <DialogTrigger className="absolute italic bottom-4 right-4 border-1 border-white bg-stone-600/60 hover:bg-stone-600 text-white px-2 py-1 rounded-full z-10 font-semibold">
+            More info
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>What is Refresher course? </DialogTitle>
+              <DialogDescription asChild>
+                <div className="text-left space-y-4">
+                  <p className="text-sm text-muted-foreground">
+                    Refresher course designed for those who did the course
+                    before, but would like to refresh and improve their skills
+                    to reach independent level.
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    We will check your skills and improve them that you can ride
+                    and stay safe on your own
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    <div className="text-xl font-semibold">Duration:</div>
+                    <div className="">
+                      <strong className="text-xl">2 hours session</strong>
+                    </div>
+                  </p>
+                  <div className="space-y-2">
+                    <div className="text-lg font-semibold">Price:</div>
+                    <div className="text-sm">
+                      Private: <strong className="text-base">7,500</strong> EGP
+                    </div>
+                    <div className="text-sm">
+                      <span>
+                        Group: <strong className="text-base">5,000</strong> EGP
+                        per pax
+                      </span>
+                      , group is 2 to 4 persons
+                    </div>
+                  </div>
+                  <div className="flex justify-end">
+                    <Button
+                      asChild
+                      className="text-center justify-end rounded-full text-xl"
+                    >
+                      <Link href="https://wa.me/201080500099?text=Hello%2C%0AI%20want%20to%20book%20refresher%20course">
                         Book now
                       </Link>
                     </Button>
                   </div>
                 </div>
+              </DialogDescription>
+            </DialogHeader>
+          </DialogContent>
+        </Dialog>
+      </div>
+    </div>
+  );
+}
+function KidsCourseSection() {
+  return (
+    <div className="flex flex-col md:flex-row  ">
+      <div id="beach-photo" className="w-full md:w-[50vw] shrink-0 relative">
+        <Image
+          src={beginnerPhoto}
+          alt="Beginner kitesurfing course"
+          className="z-5  w-full object-cover"
+          sizes="50vw"
+          priority
+        />
+        <div className="absolute bottom-[15%] z-10 left-4 text-white font-semibold text-4xl">
+          Kids courses
+        </div>
+        <div className="absolute  bottom-[8%] z-10 left-4 text-white italic">
+          Special course for kids, ages 6 to 18
+        </div>
+        <Dialog>
+          <DialogTrigger className="absolute italic bottom-4 right-4 border-1 border-white bg-stone-600/60 hover:bg-stone-600 text-white px-2 py-1 rounded-full z-10 font-semibold">
+            More info
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Kids courses </DialogTitle>
+              <DialogDescription asChild>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="">Course</TableHead>
+                      <TableHead className="">Time</TableHead>
+                      <TableHead className="">Price</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    <TableRow>
+                      <TableCell className="font-medium">Intro</TableCell>
+                      <TableCell>2 hours</TableCell>
+                      <TableCell>5,000 EGP</TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell className="font-medium">
+                        Private Beginner
+                      </TableCell>
+                      <TableCell>6 hours</TableCell>
+                      <TableCell>15,000 EGP</TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell className="font-medium">
+                        Group Beginner
+                      </TableCell>
+                      <TableCell>8 hours</TableCell>
+                      <TableCell>11,250 EGP</TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell className="font-medium">Refresher</TableCell>
+                      <TableCell>2 hours</TableCell>
+                      <TableCell>5,000 EGP</TableCell>
+                    </TableRow>
+                  </TableBody>
+                </Table>
               </DialogDescription>
             </DialogHeader>
           </DialogContent>
@@ -443,73 +589,5 @@ function StorageTable() {
         </table>
       </div>
     </section>
-  );
-}
-
-function OldIntroCourseSection() {
-  return (
-    <div className="flex flex-col md:flex-row  gap-6 max-w-6xl mb-4 transition-all duration-300 ease-in">
-      <div className=" shrink-0 sm:max-w-lg lg:max-w-xl relative">
-        <Image src={privateCourse} alt="Intro Course" priority />
-        <div className="absolute inset-0 bg-stone-600/40" />
-        <div className="absolute bottom-[10%] w-full text-center text-4xl text-white font-semibold">
-          Intro kitesurfing course
-        </div>
-      </div>
-      <div className="font-[family-name:var(--font-raleway)] transition-all duration-300 ease-in">
-        <div className="w-full text-center text-xl ">About the course:</div>
-        <Accordion type="single" collapsible defaultValue="item-1">
-          <AccordionItem value="item-1">
-            <AccordionTrigger className="text-lg mx-4 font-semibold ">
-              What is Intro course?{" "}
-            </AccordionTrigger>
-            <AccordionContent className="transition-all duration-300 ease-in">
-              <div className=" mx-12 mb-2">
-                Intro course is designed for those that plan to try kitesurfing
-                for one session, to get experience what we need to learn in
-                order to become a kitesurfer.
-              </div>
-              <div className=" mx-12 mb-2">
-                We will focus on kite control, safety and basic knowledge that
-                we need to know before getting on the board. Main focus is
-                understanding how kite works and safety.
-              </div>
-            </AccordionContent>
-          </AccordionItem>
-          <AccordionItem value="item-2">
-            <AccordionTrigger className="text-lg mx-4 font-semibold">
-              What is duration of the course?{" "}
-            </AccordionTrigger>
-            <AccordionContent>
-              <div className=" mx-12 mb-2">
-                Duration is <strong className="text-xl">2 hours</strong> done in
-                one session.
-              </div>
-            </AccordionContent>
-          </AccordionItem>
-          <AccordionItem value="item-3">
-            <AccordionTrigger className="text-lg mx-4 font-semibold">
-              Price?{" "}
-            </AccordionTrigger>
-
-            <AccordionContent>
-              <div className="flex flex-col">
-                <div className="mx-12 text-2xl font-semibold">Price:</div>
-                <div className="mx-12 mb-2">
-                  Private: <strong className="text-xl">7,500</strong> EGP
-                </div>
-                <div className="mx-12 mb-2">
-                  <span>
-                    Group: <strong className="text-xl">5,000</strong> EGP per
-                    pax
-                  </span>
-                  , group is 2 to 4 persons
-                </div>
-              </div>
-            </AccordionContent>
-          </AccordionItem>
-        </Accordion>
-      </div>
-    </div>
   );
 }

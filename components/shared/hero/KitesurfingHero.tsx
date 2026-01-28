@@ -52,12 +52,10 @@ export function KitesurfingHero({
           </p>
           <div className="mt-10 flex items-center justify-center gap-x-6">
             <Button asChild className="rounded-full text-xl">
-              <Link href="https://wa.me/201080500099?text=Hello%2C%0AI%20want%20to%20book%20beginner%20course">
-                Book now
-              </Link>
+              <Link href="/kitesurfing/booking">Book now</Link>
             </Button>
             <Link
-              href="/kitesurfing"
+              href="https://wa.me/201080500099?text=Hello%2C%0AI%20want%20to%20book%20beginner%20course"
               className="text-sm/6 font-semibold text-gray-900"
             >
               Learn more <span aria-hidden="true">→</span>
