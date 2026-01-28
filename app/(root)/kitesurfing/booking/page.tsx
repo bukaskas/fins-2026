@@ -79,7 +79,7 @@ function KitesurfingBookingForm() {
       } catch (error: any) {
         // Exception: show error and re-enable form
         console.error("Booking error:", error);
-        toast.error(error.message || "Something went wrong. Please try again.");
+        toast(error.message || "Something went wrong. Please try again.");
         setIsSubmitting(false);
       }
 
