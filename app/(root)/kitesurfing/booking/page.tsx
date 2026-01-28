@@ -65,6 +65,7 @@ function KitesurfingBookingForm() {
       }
       setIsSubmitting(true);
       try {
+        console.log("Creating booking with data:", value);
         const result = await createBooking(value as BookingFormData);
         if (result.success && result.bookingId && result.date) {
           toast(`${result.message}`);

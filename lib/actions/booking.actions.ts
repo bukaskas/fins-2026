@@ -14,7 +14,7 @@ export async function createBooking(data: BookingFormData) {
 
     console.log("Creating booking with data:", data);
     const validatedData = bookingFormSchema.parse(data);
-
+    console.log("DATABASE_URL exists:", !!process.env.DATABASE_URL);
     console.log(validatedData)
     const booking = await prisma.booking.create({
       data: {
@@ -26,11 +26,25 @@ export async function createBooking(data: BookingFormData) {
       },
     });
 
-    return ({ success: true, message: `Booking created at ${validatedData.date.toISOString()}`, bookingId: booking.id, date: booking.date });
+    return ({
+      success: true,
+      message: `Booking created at ${validatedData.date.toISOString()}`,
+      bookingId: booking.id,
+      date: booking.date
+    });
   }
   catch (error) {
+
+
     if (isRedirectError(error)) {
       throw error;
+    }
+    console.error("Booking creation error:", error);
+    if (error instanceof Error) {
+      return {
+        success: false,
+        message: `Failed to create booking: ${error.message}`
+      };
     }
     return { success: false, message: "Failed to create booking." };
   }
