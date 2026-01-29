@@ -31,15 +31,6 @@ const BookingEmail = ({ username, date }: BookingEmailProps) => {
       <Tailwind>
         <Body className=" m-auto font-sans">
           <Container className="mb-10 mx-auto p-5 max-w-[465px]">
-            <Section className="mt-10">
-              <Img
-                src="https://fins-2026.vercel.app/_next/static/media/logo.33edeaa2.svg"
-                width="60"
-                height="60"
-                alt="Fins Logo"
-                className="my-0 mx-auto"
-              />
-            </Section>
             <Heading className="text-2xl  font-normal text-center p-0 my-8 mx-0">
               Welcome and thank you for your booking {username}!
             </Heading>
