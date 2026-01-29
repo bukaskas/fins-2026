@@ -3,6 +3,8 @@
 import { prisma } from "@/db/prisma";
 import { isRedirectError } from "next/dist/client/components/redirect-error";
 import { BookingFormData, bookingFormSchema } from "../validators";
+import { sendBookingEmail } from "@/emails/index";
+
 
 
 
@@ -26,6 +28,8 @@ export async function createBooking(data: BookingFormData) {
       },
     });
 
+    await sendBookingEmail(validatedData.email, validatedData.name, validatedData.date);
+
     return ({
       success: true,
       message: `Booking created at ${validatedData.date.toISOString()}`,
@@ -34,12 +38,10 @@ export async function createBooking(data: BookingFormData) {
     });
   }
   catch (error) {
-
-
+    console.error('Booking creation error:', error);
     if (isRedirectError(error)) {
       throw error;
     }
-
-    return { success: false, message: "Failed to create booking." };
+    return { success: false, message: `Failed to create booking. Error: ${error instanceof Error ? error.message : String(error)}` };
   }
 }
