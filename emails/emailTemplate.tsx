@@ -11,7 +11,7 @@ import {
   Tailwind,
   Text,
 } from "@react-email/components";
-import logoPhoto from "./static/images/fins logo.png";
+
 const baseURL =
   process.env.NODE_ENV === "production"
     ? "https://fins-2026.vercel.app/"
