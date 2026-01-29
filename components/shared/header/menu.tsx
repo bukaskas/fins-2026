@@ -54,7 +54,7 @@ function Menu() {
             height={84}
             alt={`${APP_NAME}`}
           />
-          <span className="hidden lg:block text-2xl whitespace-nowrap font-[family-name:var(--font-raleway)]">
+          <span className="hidden lg:block -mt-2 whitespace-nowrap font-[family-name:var(--font-raleway)]">
             kite surfing center
           </span>
         </Link>
