@@ -49,11 +49,11 @@ function KitesurfingBookingForm() {
 
   const form = useForm({
     defaultValues: {
-      name: "John Doe",
+      name: "",
       date: new Date(Date.now() + 86400000), // Tomorrow
-      email: "john.doe@example.com",
-      phone: "+201121105926",
-      service: "private-course",
+      email: "",
+      phone: "",
+      service: "",
     },
     validators: {
       onSubmit: bookingFormSchema,
@@ -123,7 +123,7 @@ function KitesurfingBookingForm() {
                         onBlur={field.handleBlur}
                         onChange={(e) => field.handleChange(e.target.value)}
                         aria-invalid={isInvalid}
-                        placeholder="Max Leiter"
+                        placeholder="First and Family name"
                         autoComplete="off"
                         disabled={isSubmitting}
                         className="rounded-full"
@@ -150,8 +150,7 @@ function KitesurfingBookingForm() {
                         onBlur={field.handleBlur}
                         onChange={(e) => field.handleChange(e.target.value)}
                         aria-invalid={isInvalid}
-                        placeholder="max.leiter@example.com"
-                        autoComplete="off"
+                        placeholder="Email address"
                         disabled={isSubmitting}
                         className="rounded-full"
                       />
@@ -179,7 +178,6 @@ function KitesurfingBookingForm() {
                         aria-invalid={isInvalid}
                         international
                         defaultCountry="EG"
-                        autoComplete="off"
                         disabled={isSubmitting}
                       />
                       {isInvalid && (
