@@ -53,10 +53,12 @@ export function RestaurantHero({
           </p>
           <div className="mt-10 flex items-center justify-center gap-x-6">
             <Button asChild className="rounded-full text-xl" size={"lg"}>
-              <Link href="/restaurant">Reserve a table</Link>
+              <Link href="https://wa.me/201222144388?text=Hello%2C%0AI%20would%20like%20to%20reserve%20a%20table">
+                Reserve a table
+              </Link>
             </Button>
             <Link
-              href="/restaurant"
+              href="https://drive.google.com/file/d/1ucvNArsKuwd_Em9CXWguJKIIshlh-dG0/view?usp=sharing"
               className="text-sm/6 font-semibold text-gray-900"
             >
               View menu <span aria-hidden="true">→</span>
