@@ -1,7 +1,7 @@
 import HeroSection from "@/components/shared/hero";
 import ProductList from "@/components/shared/product/product-list";
 export const metadata = {
-  title: "Home",
+  title: "Home-Fins kitesurfing school",
 };
 
 const HomePage = () => {
