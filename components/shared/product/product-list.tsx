@@ -10,6 +10,8 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { useGSAP } from "@gsap/react";
 
 import restaurantPhoto from "@/public/images/webphotos_fins/webphoto_17.webp";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
 
 gsap.registerPlugin(useGSAP);
 gsap.registerPlugin(ScrollTrigger);
@@ -112,15 +114,19 @@ function ProductList({ title }: { title?: string }) {
           className="font-[family-name:var(--font-raleway)]"
         >
           <div className="w-full text-center text-2xl pt-8 mb-4">
-            Kitesurfing courses
+            Kitesurfing courses near Cairo
           </div>
-          <div className="max-w-fit mx-8 text center text-xl mb-4">
-            Learn kitesurfing at Fins kitesurfing school near Cairo. The
-            shallow, waist-deep lagoon provides a safe environment for
-            beginners, while consistent winds create ideal conditions.
-            Experienced IKO instructors guide you through every step. Between
-            sessions, unwind in luxury seating and enjoy delicious food—making
-            your kitesurfing experience both exciting and memorable.
+          <div className="max-w-fit mx-8 text center text-xl mb-4 flex flex-col gap-2">
+            <div>
+              Learn kitesurfing at Fins Kitesurfing School, just a short drive
+              from Cairo. The shallow, waist‑deep lagoon is safe for beginners
+              and fun for all levels. You will find:
+            </div>
+            <ul className="gap-2">
+              <li>Sandy lagoon, with waist deep water</li>
+              <li>IKO‑certified instructors to guide you</li>
+              <li>Relaxing seating and good food between lessons</li>
+            </ul>
           </div>
         </div>
       </div>
@@ -134,14 +140,25 @@ function ProductList({ title }: { title?: string }) {
             Day use at Fins beach club
           </div>
           <div className="max-w-fit mx-8 text center text-xl mb-4 ">
-            Fins Beach Club sits on a protected lagoon where the water stays
-            shallow and calm—perfect perfect to go relax in the sea or just want
-            the kids to splash around safely. After you're done, grab a lounger
-            by the pool with your drink and watch the kites and friends enjoying
-            their time on the beach.
+            <div>
+              Enjoy a calm, protected lagoon where the water stays shallow and
+              smooth. It is perfect for a quiet swim or safe playtime for kids.
+            </div>
+            <div>
+              After your swim, stretch out on a poolside lounger with a drink in
+              hand. Watch the kites in the sky and friends having fun on the
+              beach.
+            </div>
           </div>
-          <div className="max-w-fit mx-8 text center text-xl mb-4">
+          <div className="max-w-fit mx-8  text-xl mb-4 flex gap-4 items-center ">
             Find our location here:
+            <span>
+              <Button variant="secondary" className="rounded-full ">
+                <Link href="https://maps.app.goo.gl/jwJTUPVJjCc62Vh36">
+                  Google Maps
+                </Link>
+              </Button>
+            </span>
           </div>
         </div>
         <div id="dayuse-photo" className="shrink-0 md:w-[50vw]">
@@ -169,17 +186,23 @@ function ProductList({ title }: { title?: string }) {
           className="font-[family-name:var(--font-raleway)]"
         >
           <div className="w-full text-center text-2xl pt-8 mb-4">
-            Restaurant by the beach experience
+            Beach restaurant near Sokhna
           </div>
-          <div className="max-w-fit mx-8 text center text-xl mb-4">
-            Enjoy delicious food with the Red Sea right in front of you. Our
-            beach restaurant is the perfect spot to relax and eat well. We serve
-            amazing Italian pizza made fresh in our stone oven, pasta that
-            tastes just like it should, and juicy burgers that hit the spot
-            every time. Everything is made with quality ingredients and plenty
-            of flavor. Whether you're hungry after a swim or looking for a
-            casual dinner with a view, come try our food. Great meals taste even
-            better by the beach.
+          <div className="max-w-fit mx-8 text center text-xl mb-4 flex flex-col gap-2">
+            <div>
+              Sit by the sea and enjoy fresh, tasty food with a clear Red Sea
+              view. Our menu features:
+            </div>
+            <ul>
+              <li>Oven baked Italian Pizza</li>
+              <li>Classic pasta dishes</li>
+              <li>Juicy burgers</li>
+            </ul>
+            <div>
+              Whether you come after a session in the water or for a relaxed
+              meal, Fins Beach Club makes it easy to enjoy your time by the
+              beach.
+            </div>
           </div>
         </div>
       </div>
