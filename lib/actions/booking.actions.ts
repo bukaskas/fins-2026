@@ -8,9 +8,7 @@ import { sendBookingEmail } from "@/emails/index";
 
 
 
-// Complete the createBooking server action in db/actions.ts to validate 
-// formData with Zod, save the booking to PostgreSQL via Prisma Client, 
-// and return success/error states.
+
 export async function createBooking(data: BookingFormData) {
   try {
 
@@ -46,7 +44,7 @@ export async function createBooking(data: BookingFormData) {
   }
 }
 
-// Fetch all the bookings
+
 export async function getAllBookings() {
   try {
     const bookings = await prisma.booking.findMany({})
