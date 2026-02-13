@@ -1,15 +1,37 @@
 "use client";
-import * as React from "react";
+
+import React from "react";
 import { useRouter } from "next/navigation";
+import type { Booking } from "@prisma/client";
+import { useForm } from "@tanstack/react-form";
+import { toast } from "sonner";
+import Image from "next/image";
+
+import { BookingFormData, bookingFormSchema } from "@/lib/validators";
+import { updateBooking } from "@/lib/actions/booking.actions";
+
+import kitePhoto from "@/public/images/kitesurfing/kite_booking_form_descktop.webp";
 import {
-  Field,
-  FieldError,
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
   FieldGroup,
   FieldLabel,
+  Field,
+  FieldError,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { PhoneInput } from "@/app/(root)/kitesurfing/booking/phoneInput";
+import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverTrigger } from "@radix-ui/react-popover";
+import { PopoverContent } from "@/components/ui/popover";
 import { format } from "date-fns";
-import { Calendar as CalendarIcon, Phone } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -18,56 +40,31 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useForm } from "@tanstack/react-form";
-import { Button } from "@/components/ui/button";
-import { Calendar } from "@/components/ui/calendar";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import kitePhoto from "@/public/images/kitesurfing/kite_booking_form_descktop.webp";
-import {
-  Card,
-  CardAction,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { toast } from "sonner";
-import { createBooking } from "@/lib/actions/booking.actions";
-import Image from "next/image";
-import { BookingFormData, bookingFormSchema } from "@/lib/validators";
-import { PhoneInput } from "./phoneInput";
 
-const instructors = ["Mohie", "Tarek", "Ahmed", "Unassigned"];
+type Props = {
+  booking: Booking;
+};
 
-function KitesurfingBookingForm() {
+function BookingEditForm({ booking }: Props) {
   const [isSubmitting, setIsSubmitting] = React.useState(false);
-
   const [open, setOpen] = React.useState(false);
   const router = useRouter();
 
   const form = useForm({
     defaultValues: {
-      name: "",
-      date: new Date(Date.now() + 86400000), // Tomorrow
-      email: "",
-      phone: "",
-      service: "",
-      instructor: null,
-      time: null,
+      name: booking.name,
+      date: new Date(booking.date),
+      email: booking.email,
+      phone: booking.phone,
+      service: booking.service,
+      instructor: booking.instructor,
+      time: booking.time,
     } as BookingFormData,
     validators: {
       onSubmit: ({ value }) => {
         const result = bookingFormSchema.safeParse(value);
         if (result.success) return;
-
-        const fieldErrors = result.error.flatten().fieldErrors;
-        // TanStack expects a map of field -> string | string[]
-        return fieldErrors as any;
+        return result.error.flatten().fieldErrors as any;
       },
     },
     onSubmit: async ({ value }) => {
@@ -82,16 +79,16 @@ function KitesurfingBookingForm() {
           instructor: value.instructor ?? null,
           time: value.time ?? null,
         };
-        const result = await createBooking(normalizedValue as BookingFormData);
-        if (result.success && result.bookingId && result.date) {
-          toast(`${result.message}`);
-          router.push(
-            `/kitesurfing/booking/success?bookingId=${result.bookingId}&date=${result.date.toISOString()}`,
-          );
+        console.log("Submitting form with values:", normalizedValue);
+        const result = await updateBooking(
+          booking.id,
+          normalizedValue as BookingFormData,
+        );
+        if (result?.success && result.bookingId && result.date) {
+          toast(result.message);
+          router.push(`/bookings`);
         } else {
-          // Failed: show error and re-enable form
-
-          toast(result.message || "Failed to create booking");
+          toast(result?.message || "Failed to update booking");
           setIsSubmitting(false);
         }
       } catch (error: any) {
@@ -100,7 +97,6 @@ function KitesurfingBookingForm() {
       }
     },
   });
-  // add photo to medium size screens
 
   return (
     <div className="md:flex md:m-2">
@@ -118,9 +114,10 @@ function KitesurfingBookingForm() {
         </CardHeader>
         <CardContent>
           <form
-            id="booking-form"
+            id="update-booking-form"
             onSubmit={(e) => {
               e.preventDefault();
+
               form.handleSubmit();
             }}
           >
@@ -383,7 +380,7 @@ function KitesurfingBookingForm() {
             <Button
               className="rounded-full"
               type="submit"
-              form="booking-form"
+              form="update-booking-form"
               disabled={isSubmitting}
             >
               Submit
@@ -395,4 +392,4 @@ function KitesurfingBookingForm() {
   );
 }
 
-export default KitesurfingBookingForm;
+export default BookingEditForm;

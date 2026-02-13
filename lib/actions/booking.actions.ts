@@ -45,3 +45,53 @@ export async function createBooking(data: BookingFormData) {
     return { success: false, message: `Failed to create booking. Error: ${error instanceof Error ? error.message : String(error)}` };
   }
 }
+
+// Fetch all the bookings
+export async function getAllBookings() {
+  try {
+    const bookings = await prisma.booking.findMany({})
+    return { success: true, data: bookings };
+  } catch (error) {
+    console.error('Error fetching bookings:', error);
+    return { success: false, message: `Failed to fetch bookings. Error: ${error instanceof Error ? error.message : String(error)}` };
+  }
+}
+
+export async function updateBooking(id: string, data: BookingFormData) {
+  try {
+    const validatedData = bookingFormSchema.parse(data);
+    console.log("Validated data for update:", validatedData);
+    const updatedBooking = await prisma.booking.update({
+      where: { id },
+      data: {
+        name: validatedData.name,
+        date: validatedData.date,
+        email: validatedData.email,
+        phone: validatedData.phone,
+        service: validatedData.service,
+        instructor: validatedData.instructor ?? null,
+        time: validatedData.time ?? null,
+      },
+    });
+
+    return ({
+      success: true,
+      message: `Booking updated at ${validatedData.date.toISOString()}`,
+      bookingId: updatedBooking.id,
+      date: updatedBooking.date
+    });
+  } catch (error) {
+    console.error('Booking update error:', error);
+  }
+}
+
+export async function getBookingById(id: string) {
+  try {
+    const booking = await prisma.booking.findUnique({ where: { id } });
+    return booking;
+  } catch (e) {
+    console.error("Error fetching booking by id", e);
+    return null;
+  }
+}
+

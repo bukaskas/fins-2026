@@ -6,5 +6,7 @@ export const bookingFormSchema = z.object({
   phone: z.string().min(7, "Phone number must be at least 7 digits long"),
   email: z.string().email("Invalid email address"),
   service: z.string().min(1, "Service is required"),
+  time: z.string().nullable().default(null),
+  instructor: z.string().nullable().default(null),
 });
 export type BookingFormData = z.infer<typeof bookingFormSchema>;
