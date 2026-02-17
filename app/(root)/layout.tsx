@@ -1,6 +1,8 @@
 import Footer from "@/components/shared/footer";
 import Header from "@/components/shared/header";
 import { Toaster } from "@/components/ui/sonner";
+export const dynamic = "force-dynamic";
+
 export default function RootLayout({
   children,
 }: Readonly<{
