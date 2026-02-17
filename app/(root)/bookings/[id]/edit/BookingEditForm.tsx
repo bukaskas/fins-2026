@@ -6,10 +6,8 @@ import type { Booking } from "@prisma/client";
 import { useForm } from "@tanstack/react-form";
 import { toast } from "sonner";
 import Image from "next/image";
-
 import { BookingFormData, bookingFormSchema } from "@/lib/validators";
 import { updateBooking } from "@/lib/actions/booking.actions";
-
 import kitePhoto from "@/public/images/kitesurfing/kite_booking_form_descktop.webp";
 import {
   Card,
@@ -300,7 +298,7 @@ function BookingEditForm({ booking }: Props) {
                           className="w-full rounded-full"
                           disabled={isSubmitting}
                         >
-                          <SelectValue placeholder="Select a service" />
+                          <SelectValue placeholder="Select time of the session" />
                         </SelectTrigger>
                         <SelectContent>
                           <SelectGroup>

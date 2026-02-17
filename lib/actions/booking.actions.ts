@@ -11,11 +11,7 @@ import { sendBookingEmail } from "@/emails/index";
 
 export async function createBooking(data: BookingFormData) {
   try {
-
-
     const validatedData = bookingFormSchema.parse(data);
-
-
     const booking = await prisma.booking.create({
       data: {
         name: validatedData.name,
@@ -58,7 +54,6 @@ export async function getAllBookings() {
 export async function updateBooking(id: string, data: BookingFormData) {
   try {
     const validatedData = bookingFormSchema.parse(data);
-    console.log("Validated data for update:", validatedData);
     const updatedBooking = await prisma.booking.update({
       where: { id },
       data: {
@@ -80,6 +75,7 @@ export async function updateBooking(id: string, data: BookingFormData) {
     });
   } catch (error) {
     console.error('Booking update error:', error);
+    return { success: false, message: `Failed to update booking. Error: ${error instanceof Error ? error.message : String(error)}` };
   }
 }
 

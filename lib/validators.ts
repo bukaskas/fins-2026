@@ -1,5 +1,5 @@
-import { z } from "zod";
-
+import { email, z } from "zod";
+import { User } from "@prisma/client";
 export const bookingFormSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters long"),
   date: z.date().min(new Date(), "Date must be in the future"),
@@ -10,3 +10,11 @@ export const bookingFormSchema = z.object({
   instructor: z.string().nullable().default(null),
 });
 export type BookingFormData = z.infer<typeof bookingFormSchema>;
+
+export const signUpFormSchema = z.object({
+  name: z.string().nullable(),
+  phone: z.string().nullable(),
+  email: z.string().email("Invalid email address"),
+  password: z.string(),
+});
+export type SignUpFormData = z.infer<typeof signUpFormSchema>;

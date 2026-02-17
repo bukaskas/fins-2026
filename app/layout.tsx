@@ -3,6 +3,7 @@ import { Geist, Geist_Mono, Raleway, Roboto_Mono } from "next/font/google";
 import "./globals.css";
 import { APP_DESCRIPTION, APP_NAME, SERVER_URL } from "@/lib/constants";
 import WhatsAppButton from "@/components/shared/WhatsAppButton";
+import { AuthProvider } from "@/components/shared/SessionProvider";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -48,8 +49,10 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} ${raleway.variable} ${robotoMono.variable}`}
       >
-        {children}
-        <WhatsAppButton />
+        <AuthProvider>
+          {children}
+          <WhatsAppButton />
+        </AuthProvider>
       </body>
     </html>
   );

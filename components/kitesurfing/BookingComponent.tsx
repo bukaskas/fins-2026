@@ -25,22 +25,9 @@ function BookingComponent({ booking }: { booking: Booking }) {
           <Calendar1 />
           {day}-{month}
         </div>
-        <div className="flex gap-2">
-          <User />
-          {booking.name}
-        </div>
-        <div className="flex gap-2">
-          <School />
-          {booking.instructor}
-        </div>
-        <div className="flex gap-2">
-          <Clock10 />
-          {booking.time}
-        </div>
-        <div className="flex gap-2">
-          <Phone />
-          {booking.phone}
-        </div>
+        <div className="flex gap-2">{booking.time}</div>
+        <div className="flex gap-2">{booking.name}</div>
+        <div className="flex gap-2">{booking.phone}</div>
         <div className="flex gap-2">{booking.service}</div>
         <Button variant="outline" size="sm">
           <Link href={`/bookings/${booking.id}/edit`}> Edit</Link>

@@ -13,6 +13,10 @@ import { APP_NAME } from "@/lib/constants";
 import Image from "next/image";
 import logo from "../../../public/images/logo.svg";
 import { X } from "lucide-react";
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "@/lib/auth";
+import { UserAuthButton } from "./UserAuthButton";
+// import { UserAuthButton } from "./UserAuthButton";
 
 const links = [
   {
@@ -33,9 +37,19 @@ const links = [
   },
 ];
 
-function Menu() {
+async function Menu() {
+  const session = await getServerSession(authOptions);
+  console.log("Menu session:", JSON.stringify(session, null, 2));
+  const role = (session?.user as any)?.role;
+  const isAdmin = role === "ADMIN";
   return (
     <div className="flex md:justify-center z-10 w-full">
+      <div className="fixed bottom-2 left-2 z-50 text-xs bg-black/70 text-white px-2 py-1 rounded">
+        {session
+          ? `Logged in as ${session.user?.email} (${role ?? "no role"})`
+          : "No session"}
+      </div>
+
       <nav className="hidden md:flex md:items-center md:justify-center gap-6 font-[family-name:var(--font-raleway)]">
         <Button asChild variant={"ghost"} className="text-lg">
           <Link href="/about">About</Link>
@@ -64,6 +78,14 @@ function Menu() {
         <Button asChild variant={"ghost"} className="text-lg">
           <Link href="/restaurant">Restaurant</Link>
         </Button>
+
+        {/* desktop auth button */}
+        <UserAuthButton session={session} className="text-lg" />
+        {isAdmin && (
+          <Button asChild variant={"ghost"} className="text-lg">
+            <Link href="/bookings">Bookings</Link>
+          </Button>
+        )}
       </nav>
       <nav className="md:hidden flex justify-center w-full p-4 relative">
         <Link className="flex flex-col items-center" href="/">
@@ -106,9 +128,19 @@ function Menu() {
                   </Button>
                 </SheetClose>
               ))}
+              {isAdmin && (
+                <SheetClose asChild>
+                  <Button
+                    asChild
+                    variant={"ghost"}
+                    className="w-full justify-start text-xl h-14 px-4 hover:bg-primary/10 font-[family-name:var(--font-raleway)]"
+                  >
+                    <Link href="/bookings">Bookings</Link>
+                  </Button>
+                </SheetClose>
+              )}
             </div>
 
-            {/* Secondary actions - separator and smaller */}
             <div className="border-t pt-4 mt-auto flex flex-col gap-2">
               <SheetClose asChild>
                 <Button
@@ -121,17 +153,13 @@ function Menu() {
                   </Link>
                 </Button>
               </SheetClose>
-              <SheetClose asChild>
-                <Button
-                  asChild
-                  variant={"ghost"}
-                  className="w-full justify-start text-lg h-12 px-4"
-                >
-                  <Link href="/sign-in">
-                    <UserIcon className="mr-2" /> Sign In
-                  </Link>
-                </Button>
-              </SheetClose>
+
+              {/* mobile auth button (sign in / logout) */}
+
+              <UserAuthButton
+                session={session}
+                className="w-full justify-start text-lg h-12 px-4"
+              />
             </div>
 
             <SheetDescription className="sr-only">
