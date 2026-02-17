@@ -21,10 +21,10 @@ import { createUser } from "@/lib/actions/user.actions";
 import { signIn } from "next-auth/react";
 
 const defaultUserValues = {
-  name: "Audrius Bukauskas",
-  phone: "+201123456789",
-  email: "audriusb88@gmail.com",
-  password: "12345678",
+  name: "",
+  phone: "",
+  email: "",
+  password: "",
 };
 
 function SignUpForm() {
