@@ -8,6 +8,67 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum LessonType {
+  PRIVATE
+  SEMI_PRIVATE
+  GROUP
+  FOIL
+  KIDS
+}
+
+enum LessonBookingStatus {
+  RESERVED
+  CONFIRMED
+  COMPLETED
+  NO_SHOW
+  CANCELED
+}
+
+enum BeachUseType {
+  REGULAR
+  LOCAL
+  MEMBER_FREE
+}
+
+enum BeachVisitStatus {
+  OPEN
+  COMPLETED
+  CANCELED
+}
+
+enum InventoryCategory {
+  KITE
+  BOARD
+  HARNESS
+  BAR
+  WETSUIT
+  ACCESSORY
+  OTHER
+}
+
+enum ItemCondition {
+  NEW
+  GOOD
+  FAIR
+  DAMAGED
+  RETIRED
+}
+
+enum RentalStatus {
+  OPEN
+  RETURNED
+  LATE
+  CANCELED
+}
+
+enum InventoryMovementType {
+  IN
+  OUT
+  ADJUSTMENT
+  MAINTENANCE
+  LOST
+}
+
 model Booking {
   id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   name       String
@@ -39,9 +100,22 @@ model User {
   image         String?
   emailVerified DateTime?
   createdAt     DateTime  @default(now()) @db.Timestamp(6)
-  role          Role      @default(KITER)
-  accounts      Account[]
-  sessions      Session[]
+  updatedAt     DateTime  @default(now()) @updatedAt
+
+  role             Role              @default(KITER)
+  accounts         Account[]
+  sessions         Session[]
+  members          Member[]
+  orders           Order[]
+  payments         Payment[]
+  userCreditGrants UserCreditGrant[]
+  userCreditUsages UserCreditUsage[]
+
+  lessonSessionsAsInstructor LessonSession[]     @relation("LessonInstructor")
+  lessonBookings             LessonBooking[]
+  beachVisits                BeachVisit[]
+  rentals                    Rental[]
+  inventoryMovements         InventoryMovement[]
 }
 
 model Account {
@@ -77,4 +151,249 @@ model VerificationToken {
   expires    DateTime
 
   @@id([identifier, token])
+}
+
+model Member {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId         String   @db.Uuid
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  validUntil     DateTime @db.Timestamp(6)
+  membershipType String
+  createdAt      DateTime @default(now()) @db.Timestamp(6)
+}
+
+enum ProductType {
+  SERVICE
+  BUNDLE_CREDIT
+}
+
+model Product {
+  id              String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name            String
+  sku             String      @unique
+  type            ProductType
+  priceCents      Int // always store money in cents
+  currency        String      @default("EGP")
+  creditUnits     Int? // e.g. 10 or 20 for bundle products
+  creditValidDays Int? // optional expiry window
+  isActive        Boolean     @default(true)
+  createdAt       DateTime    @default(now()) @db.Timestamp(6)
+
+  orderLines       OrderLine[]
+  userCreditGrants UserCreditGrant[]
+}
+
+model Order {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId     String   @db.Uuid
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  status     String   @default("OPEN") // OPEN, PAID, PARTIAL, CANCELED
+  totalCents Int
+  createdAt  DateTime @default(now()) @db.Timestamp(6)
+
+  lines       OrderLine[]
+  allocations PaymentAllocation[]
+}
+
+model OrderLine {
+  id             String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  orderId        String  @db.Uuid
+  order          Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId      String  @db.Uuid
+  product        Product @relation(fields: [productId], references: [id])
+  qty            Int     @default(1)
+  unitPriceCents Int
+  lineTotalCents Int
+
+  // snapshot for bundles at time of sale
+  creditUnitsEach Int?
+}
+
+model Payment {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId      String   @db.Uuid
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  amountCents Int
+  method      String // CASH, CARD, TRANSFER...
+  reference   String?
+  receivedAt  DateTime @default(now()) @db.Timestamp(6)
+
+  allocations PaymentAllocation[]
+}
+
+model PaymentAllocation {
+  id          String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  paymentId   String  @db.Uuid
+  payment     Payment @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+  orderId     String  @db.Uuid
+  order       Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  amountCents Int
+
+  @@unique([paymentId, orderId])
+}
+
+model UserCreditGrant {
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId         String    @db.Uuid
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  productId      String    @db.Uuid
+  product        Product   @relation(fields: [productId], references: [id])
+  orderLineId    String?   @db.Uuid
+  totalUnits     Int
+  remainingUnits Int
+  expiresAt      DateTime?
+  createdAt      DateTime  @default(now()) @db.Timestamp(6)
+
+  usages UserCreditUsage[]
+}
+
+model UserCreditUsage {
+  id        String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  grantId   String          @db.Uuid
+  grant     UserCreditGrant @relation(fields: [grantId], references: [id], onDelete: Cascade)
+  userId    String          @db.Uuid
+  user      User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  unitsUsed Int             @default(1)
+  usedAt    DateTime        @default(now()) @db.Timestamp(6)
+  bookingId String?         @db.Uuid
+
+  lessonBookingId String? @db.Uuid
+  beachVisitId    String? @db.Uuid
+  rentalId        String? @db.Uuid
+
+  lessonBooking LessonBooking? @relation(fields: [lessonBookingId], references: [id], onDelete: SetNull)
+  beachVisit    BeachVisit?    @relation(fields: [beachVisitId], references: [id], onDelete: SetNull)
+  rental        Rental?        @relation(fields: [rentalId], references: [id], onDelete: SetNull)
+
+  @@index([userId, usedAt])
+  @@index([lessonBookingId])
+  @@index([beachVisitId])
+  @@index([rentalId])
+}
+
+model LessonSession {
+  id           String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  startsAt     DateTime   @db.Timestamp(6)
+  endsAt       DateTime   @db.Timestamp(6)
+  lessonType   LessonType
+  capacity     Int        @default(1)
+  instructorId String?    @db.Uuid
+  notes        String?
+  createdAt    DateTime   @default(now()) @db.Timestamp(6)
+  updatedAt    DateTime   @default(now()) @updatedAt
+
+  instructor User?           @relation("LessonInstructor", fields: [instructorId], references: [id], onDelete: SetNull)
+  bookings   LessonBooking[]
+
+  @@index([startsAt])
+  @@index([instructorId, startsAt])
+}
+
+model LessonBooking {
+  id          String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  sessionId   String              @db.Uuid
+  guestId     String              @db.Uuid
+  status      LessonBookingStatus @default(RESERVED)
+  attended    Boolean             @default(false)
+  checkedInAt DateTime?           @db.Timestamp(6)
+  notes       String?
+  createdAt   DateTime            @default(now()) @db.Timestamp(6)
+
+  session LessonSession     @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  guest   User              @relation(fields: [guestId], references: [id], onDelete: Cascade)
+  usages  UserCreditUsage[]
+
+  @@unique([sessionId, guestId])
+  @@index([guestId, createdAt])
+}
+
+model BeachVisit {
+  id           String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  guestId      String           @db.Uuid
+  visitDate    DateTime         @db.Date
+  type         BeachUseType
+  status       BeachVisitStatus @default(OPEN)
+  checkedInAt  DateTime?        @db.Timestamp(6)
+  checkedOutAt DateTime?        @db.Timestamp(6)
+  notes        String?
+  createdAt    DateTime         @default(now()) @db.Timestamp(6)
+
+  guest  User              @relation(fields: [guestId], references: [id], onDelete: Cascade)
+  usages UserCreditUsage[]
+
+  @@index([guestId, visitDate])
+}
+
+model Rental {
+  id         String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  guestId    String       @db.Uuid
+  startsAt   DateTime     @db.Timestamp(6)
+  dueAt      DateTime     @db.Timestamp(6)
+  returnedAt DateTime?    @db.Timestamp(6)
+  status     RentalStatus @default(OPEN)
+  totalCents Int          @default(0)
+  notes      String?
+  createdAt  DateTime     @default(now()) @db.Timestamp(6)
+  updatedAt  DateTime     @default(now()) @updatedAt
+
+  guest  User              @relation(fields: [guestId], references: [id], onDelete: Cascade)
+  lines  RentalLine[]
+  usages UserCreditUsage[]
+
+  @@index([guestId, startsAt])
+  @@index([status, dueAt])
+}
+
+model RentalLine {
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  rentalId        String   @db.Uuid
+  inventoryItemId String   @db.Uuid
+  qty             Int      @default(1)
+  unitPriceCents  Int
+  lineTotalCents  Int
+  createdAt       DateTime @default(now()) @db.Timestamp(6)
+
+  rental        Rental              @relation(fields: [rentalId], references: [id], onDelete: Cascade)
+  inventoryItem InventoryItem       @relation(fields: [inventoryItemId], references: [id], onDelete: Restrict)
+  movements     InventoryMovement[]
+
+  @@index([rentalId])
+  @@index([inventoryItemId])
+}
+
+model InventoryItem {
+  id           String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  sku          String            @unique
+  name         String
+  category     InventoryCategory
+  size         String?
+  totalQty     Int               @default(0)
+  availableQty Int               @default(0)
+  condition    ItemCondition     @default(GOOD)
+  isActive     Boolean           @default(true)
+  createdAt    DateTime          @default(now()) @db.Timestamp(6)
+  updatedAt    DateTime          @default(now()) @updatedAt
+
+  rentalLines RentalLine[]
+  movements   InventoryMovement[]
+
+  @@index([category, isActive])
+}
+
+model InventoryMovement {
+  id              String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  inventoryItemId String                @db.Uuid
+  rentalLineId    String?               @db.Uuid
+  actorId         String?               @db.Uuid
+  type            InventoryMovementType
+  qty             Int
+  reason          String?
+  createdAt       DateTime              @default(now()) @db.Timestamp(6)
+
+  inventoryItem InventoryItem @relation(fields: [inventoryItemId], references: [id], onDelete: Cascade)
+  rentalLine    RentalLine?   @relation(fields: [rentalLineId], references: [id], onDelete: SetNull)
+  actor         User?         @relation(fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([inventoryItemId, createdAt])
+  @@index([type, createdAt])
 }

@@ -9,7 +9,7 @@ import {
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { format } from "date-fns";
-import { Calendar as CalendarIcon, Phone } from "lucide-react";
+
 import {
   Select,
   SelectContent,
@@ -42,10 +42,13 @@ import Image from "next/image";
 import { BookingFormData, bookingFormSchema } from "@/lib/validators";
 import { PhoneInput } from "./phoneInput";
 
-const instructors = ["Mohie", "Tarek", "Ahmed", "Unassigned"];
-
 function KitesurfingBookingForm() {
   const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const [date, setDate] = React.useState<Date | null>(null);
+
+  React.useEffect(() => {
+    setDate(new Date(Date.now() + 86400000));
+  }, []);
 
   const [open, setOpen] = React.useState(false);
   const router = useRouter();
@@ -53,7 +56,7 @@ function KitesurfingBookingForm() {
   const form = useForm({
     defaultValues: {
       name: "",
-      date: new Date(Date.now() + 86400000), // Tomorrow
+      date: date, // Tomorrow
       email: "",
       phone: "",
       service: "",

@@ -1,6 +1,6 @@
 'use server'
 import { prisma } from "@/db/prisma";
-import { signUpFormSchema, SignUpFormData } from "../validators";
+import { SignUpFormData } from "../validators";
 import bcryptjs from "bcryptjs";
 
 
@@ -54,4 +54,28 @@ export async function createUser(data: SignUpFormData) {
 
 export async function verifyPassword(plainPassword: string, hashedPassword: string) {
   return await bcryptjs.compare(plainPassword, hashedPassword);
+}
+
+export async function searchUser(query: string) {
+  const q = query.trim();
+  if (!q) return [];
+
+  return prisma.user.findMany({
+    where: {
+      OR: [
+        { name: { contains: q, mode: "insensitive" } },
+        { email: { contains: q, mode: "insensitive" } },
+        { phone: { contains: q, mode: "insensitive" } },
+      ],
+    },
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      phone: true,
+      role: true,
+    },
+    orderBy: [{ name: "asc" }],
+    take: 25,
+  });
 }

@@ -16,6 +16,7 @@ import { X } from "lucide-react";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { UserAuthButton } from "./UserAuthButton";
+import { AdminLinks } from "./adminLinks";
 // import { UserAuthButton } from "./UserAuthButton";
 
 const links = [
@@ -78,14 +79,10 @@ async function Menu() {
         <Button asChild variant={"ghost"} className="text-lg">
           <Link href="/restaurant">Restaurant</Link>
         </Button>
+        {isAdmin && <AdminLinks />}
 
         {/* desktop auth button */}
         <UserAuthButton session={session} className="text-lg" />
-        {isAdmin && (
-          <Button asChild variant={"ghost"} className="text-lg">
-            <Link href="/bookings">Bookings</Link>
-          </Button>
-        )}
       </nav>
       <nav className="md:hidden flex justify-center w-full p-4 relative">
         <Link className="flex flex-col items-center" href="/">
@@ -130,13 +127,7 @@ async function Menu() {
               ))}
               {isAdmin && (
                 <SheetClose asChild>
-                  <Button
-                    asChild
-                    variant={"ghost"}
-                    className="w-full justify-start text-xl h-14 px-4 hover:bg-primary/10 font-[family-name:var(--font-raleway)]"
-                  >
-                    <Link href="/bookings">Bookings</Link>
-                  </Button>
+                  <AdminLinks />
                 </SheetClose>
               )}
             </div>

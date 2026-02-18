@@ -1,5 +1,5 @@
 import { email, z } from "zod";
-import { User } from "@prisma/client";
+
 export const bookingFormSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters long"),
   date: z.date().min(new Date(), "Date must be in the future"),

@@ -1,15 +1,7 @@
-import {
-  Card,
-  CardAction,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import Link from "next/link";
 import type { Booking } from "@prisma/client";
-import { Calendar1, Clock10, Phone, School, User } from "lucide-react";
+import { Calendar1 } from "lucide-react";
 import { Button } from "../ui/button";
 function BookingComponent({ booking }: { booking: Booking }) {
   const dateObj = new Date(booking.date);

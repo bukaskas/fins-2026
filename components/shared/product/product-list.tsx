@@ -4,7 +4,7 @@ import Image from "next/image";
 
 import privateCourse from "@/public/images/fins-private-lesson.webp";
 import dayuseintro from "@/public/images/hero_images/dayuse_intro.webp";
-import { useRef, useEffect } from "react";
+
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { useGSAP } from "@gsap/react";
