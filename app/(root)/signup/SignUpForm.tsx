@@ -24,7 +24,7 @@ const defaultUserValues = {
   name: "",
   phone: "",
   email: "",
-  password: "",
+  password: "12345678",
 };
 
 function SignUpForm() {
@@ -59,12 +59,12 @@ function SignUpForm() {
           return;
         }
 
-        const signInResult = await signIn("credentials", {
-          redirect: true,
-          callbackUrl: "/", // change to "/dashboard" or similar if you want
-          email: value.email,
-          password: value.password,
-        });
+        // await signIn("credentials", {
+        //   redirect: true,
+        //   callbackUrl: "/", // change to "/dashboard" or similar if you want
+        //   email: value.email,
+        //   password: value.password,
+        // });
         // If redirect: true, NextAuth will handle navigation.
         // If you later set redirect: false, you can check:
         // if (signInResult?.error) toast.error("Invalid credentials");
@@ -160,9 +160,10 @@ function SignUpForm() {
                   field.state.meta.isTouched && !field.state.meta.isValid;
 
                 return (
-                  <Field data-invalid={isInvalid}>
-                    <FieldLabel htmlFor={field.name}>Email</FieldLabel>
+                  <Field data-invalid={isInvalid} hidden>
+                    <FieldLabel htmlFor={field.name}>Password</FieldLabel>
                     <Input
+                      hidden
                       id={field.name}
                       name={field.name}
                       value={field.state.value}

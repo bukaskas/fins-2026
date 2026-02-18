@@ -36,7 +36,7 @@ const BookingEmail = ({ username, date }: BookingEmailProps) => {
             </Heading>
             <Text className="text-start text-sm ">Hello {username},</Text>
             <Text className="text-start text-sm  leading-relaxed">
-              We're excited to start the course on {date}. We will follow the
+              We are excited to start the course on {date}. We will follow the
               forecast and update you with exact time a day before, because the
               weather can be difficult to predict. Please let us know if you
               have preferred time.

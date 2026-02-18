@@ -140,26 +140,3 @@ function GamesExperienceImage() {
 // swimming pool, <WavesLadder />
 //  games, <Dices />
 // lounge, <Armchair />
-
-function BannerWithIcons() {
-  return (
-    <div className="bg-gray-200 flex justify-around py-4">
-      <div className="flex w-full justify-between px-24">
-        <Image
-          src={restaurantSvg}
-          alt="Restaurant Icon"
-          width={50}
-          height={50}
-        />
-        <Image src={pingPongSvg} alt="Ping Pong Icon" width={50} height={50} />
-        <Image src={loungeSvg} alt="Lounge icon" width={50} height={50} />
-        <Image
-          src={swimmingPool}
-          alt="Swimming Pool Icon"
-          width={50}
-          height={50}
-        />
-      </div>
-    </div>
-  );
-}

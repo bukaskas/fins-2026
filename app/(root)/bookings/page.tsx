@@ -24,7 +24,7 @@ async function BookingsPage() {
     },
     {} as Record<string, Booking[]>,
   );
-  console;
+
   return (
     <div>
       <div>Bookings page</div>

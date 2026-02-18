@@ -36,14 +36,14 @@ function RestaurantPage() {
           <p className="mb-4">
             Our restaurant offers a unique dining experience right by the beach,
             where you can enjoy delicious meals while taking in the stunning sea
-            views. Whether you're looking for a romantic dinner, a family
+            views. Whether you are looking for a romantic dinner, a family
             outing, or a casual meal with friends, our menu has something for
             everyone.
           </p>
           <p className="mb-4">
             From fresh seafood to gourmet dishes, our chefs use the finest
             ingredients to create mouth-watering meals that will satisfy your
-            taste buds. Don't forget to check out our selection of fine wines
+            taste buds. Do not forget to check out our selection of fine wines
             and refreshing cocktails to complement your dining experience.
           </p>
           <Button className="rounded-full" variant="outline">

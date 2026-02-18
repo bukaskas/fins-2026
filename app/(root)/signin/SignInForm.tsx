@@ -40,6 +40,7 @@ export function SignInForm() {
 
       toast.success("Signed in successfully!");
       router.push(result.url || callbackUrl);
+      router.refresh();
     } catch (err: any) {
       toast.error(err?.message || "Something went wrong. Please try again.");
     } finally {
