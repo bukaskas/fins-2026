@@ -3,6 +3,11 @@ import { prisma } from "@/db/prisma";
 import { SignUpFormData } from "../validators";
 import bcryptjs from "bcryptjs";
 
+import { Prisma, Role } from "@prisma/client";
+import { sendRegistrationEmail } from "@/emails";
+
+// ...existing code...
+
 
 export async function createUser(data: SignUpFormData) {
   try {
@@ -30,6 +35,15 @@ export async function createUser(data: SignUpFormData) {
 
       return user;
     });
+    let emailSent = false;
+    try {
+      console.log("[createUser] sending registration email to:", result.email);
+      await sendRegistrationEmail(result.email, result.name || "");
+      emailSent = true;
+      console.log("[createUser] registration email sent");
+    } catch (emailError) {
+      console.error("[createUser] registration email failed:", emailError);
+    }
 
     return {
       success: true,
@@ -79,3 +93,36 @@ export async function searchUser(query: string) {
     take: 25,
   });
 }
+
+
+export async function listUsers(query?: string) {
+  const q = (query ?? "").trim();
+  const qUpper = q.toUpperCase();
+
+  const orFilters: Prisma.UserWhereInput[] = q
+    ? [
+      { name: { contains: q, mode: "insensitive" } },
+      { email: { contains: q, mode: "insensitive" } },
+      { phone: { contains: q, mode: "insensitive" } },
+    ]
+    : [];
+
+  if (q && Object.values(Role).includes(qUpper as Role)) {
+    orFilters.push({ role: { equals: qUpper as Role } });
+  }
+
+  return prisma.user.findMany({
+    where: orFilters.length ? { OR: orFilters } : undefined,
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      phone: true,
+      role: true,
+      createdAt: true,
+    },
+    orderBy: [{ createdAt: "desc" }],
+    take: 100,
+  });
+}
+

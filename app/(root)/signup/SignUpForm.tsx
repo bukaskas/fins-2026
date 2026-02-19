@@ -18,7 +18,8 @@ import { toast } from "sonner";
 import Image from "next/image";
 import kitePhoto from "@/public/images/kitesurfing/kite_booking_form_descktop.webp";
 import { createUser } from "@/lib/actions/user.actions";
-import { signIn } from "next-auth/react";
+
+import { useRouter } from "next/navigation";
 
 const defaultUserValues = {
   name: "",
@@ -29,12 +30,13 @@ const defaultUserValues = {
 
 function SignUpForm() {
   const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const callbackUrl = "/";
+  const router = useRouter();
 
   const form = useForm({
     defaultValues: defaultUserValues as SignUpFormData,
     validators: {
       onSubmit: ({ value }) => {
-        console.log("Validating form with values:", value);
         const result = signUpFormSchema.safeParse(value);
         if (!result.success) {
           console.log("Validation errors:", result.error.flatten());
@@ -52,19 +54,12 @@ function SignUpForm() {
         };
 
         const result = await createUser(normalizedValue);
-        // 2. Automatically sign in with credentials provider
 
         if (!result.success) {
           toast.error(result.message);
           return;
         }
 
-        // await signIn("credentials", {
-        //   redirect: true,
-        //   callbackUrl: "/", // change to "/dashboard" or similar if you want
-        //   email: value.email,
-        //   password: value.password,
-        // });
         // If redirect: true, NextAuth will handle navigation.
         // If you later set redirect: false, you can check:
         // if (signInResult?.error) toast.error("Invalid credentials");
@@ -73,6 +68,7 @@ function SignUpForm() {
         setIsSubmitting(false);
       } finally {
         setIsSubmitting(false);
+        router.push(callbackUrl);
       }
     },
   });

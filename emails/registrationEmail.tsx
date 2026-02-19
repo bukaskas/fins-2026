@@ -11,16 +11,12 @@ import {
   Text,
 } from "@react-email/components";
 
-const baseURL =
-  process.env.NODE_ENV === "production"
-    ? "https://fins-2026.vercel.app/"
-    : "./static";
-interface BookingEmailProps {
+interface RegistrationEmailProps {
   username?: string;
   date?: string;
 }
 
-const BookingEmail = ({ username, date }: BookingEmailProps) => {
+function RegistrationEmail({ username, date }: RegistrationEmailProps) {
   const previewText = `Welcome and thank you ${username}!`;
 
   return (
@@ -31,19 +27,20 @@ const BookingEmail = ({ username, date }: BookingEmailProps) => {
         <Body className=" m-auto font-sans">
           <Container className="mb-10 mx-auto p-5 max-w-[465px]">
             <Heading className="text-2xl  font-normal text-center p-0 my-8 mx-0">
-              Welcome and thank you for your booking {username}!
+              Thank you for signing up, {username}!
             </Heading>
-            <Text className="text-start text-sm ">Hello {username},</Text>
+
             <Text className="text-start text-sm  leading-relaxed">
-              We are excited to start the course on {date}. We will follow the
-              forecast and update you with exact time a day before, because the
-              weather can be difficult to predict. Please let us know if you
-              have preferred time.
+              We are creating a database of and will want to improve our
+              services based on the feedback. In future you will manage to book
+              any services through our website, as well we will seek to help
+              inform of any offers and events if you wish to join. For any
+              questions feel free to contact us via whatsapp.
             </Text>
             <Section className="text-center mt-[32px] mb-[32px]">
               <Button
                 className="py-2.5 px-5 bg-green-500 rounded-md text-black text-sm font-semibold no-underline text-center"
-                href={`https://wa.me/201080500099?text=Hello%2C%0AI%20did%20reserve%20a%20spot.%20I%20have%20few%20questions`}
+                href={`https://wa.me/201121105926?text=Hello%2C%20I%20have%20register%20on%20the%20website.%20Let%20me%20know%20more%20info%20about%20it`}
               >
                 Contact us on Whatsapp
               </Button>
@@ -58,6 +55,6 @@ const BookingEmail = ({ username, date }: BookingEmailProps) => {
       </Tailwind>
     </Html>
   );
-};
+}
 
-export default BookingEmail;
+export default RegistrationEmail;
