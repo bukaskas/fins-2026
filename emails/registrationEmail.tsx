@@ -31,11 +31,9 @@ function RegistrationEmail({ username, date }: RegistrationEmailProps) {
             </Heading>
 
             <Text className="text-start text-sm  leading-relaxed">
-              We are creating a database of and will want to improve our
-              services based on the feedback. In future you will manage to book
-              any services through our website, as well we will seek to help
-              inform of any offers and events if you wish to join. For any
-              questions feel free to contact us via whatsapp.
+              Thank you for signing up. Now you will be the first to know about
+              our offers, manage your bookings and services through our website.
+              We are happy to answer any inquiries via WhatsApp.
             </Text>
             <Section className="text-center mt-[32px] mb-[32px]">
               <Button
