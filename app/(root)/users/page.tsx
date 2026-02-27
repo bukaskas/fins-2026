@@ -1,4 +1,6 @@
+import { Button } from "@/components/ui/button";
 import { listUsers } from "@/lib/actions/user.actions";
+import Link from "next/link";
 
 type Props = {
   searchParams: Promise<{ q?: string }>;
@@ -55,6 +57,16 @@ export default async function UsersPage({ searchParams }: Props) {
                   <td className="px-3 py-2 font-medium">{u.role}</td>
                   <td className="px-3 py-2">
                     {new Date(u.createdAt).toLocaleDateString()}
+                  </td>
+                  <td>
+                    <Button asChild variant={"link"}>
+                      <Link
+                        href={`/users/edit/${u.id}`}
+                        className="text-blue-500 hover:underline"
+                      >
+                        Edit
+                      </Link>
+                    </Button>
                   </td>
                 </tr>
               ))

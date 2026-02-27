@@ -10,8 +10,9 @@ datasource db {
 
 enum LessonType {
   PRIVATE
-  SEMI_PRIVATE
   GROUP
+  EXTRA_PRIVATE
+  EXTRA_GROUP
   FOIL
   KIDS
 }
@@ -102,20 +103,21 @@ model User {
   createdAt     DateTime  @default(now()) @db.Timestamp(6)
   updatedAt     DateTime  @default(now()) @updatedAt
 
-  role             Role              @default(KITER)
-  accounts         Account[]
-  sessions         Session[]
-  members          Member[]
-  orders           Order[]
-  payments         Payment[]
-  userCreditGrants UserCreditGrant[]
-  userCreditUsages UserCreditUsage[]
+  role     Role      @default(KITER)
+  accounts Account[]
+  sessions Session[]
+  members  Member[]
+  orders   Order[]
+  payments Payment[]
 
   lessonSessionsAsInstructor LessonSession[]     @relation("LessonInstructor")
   lessonBookings             LessonBooking[]
   beachVisits                BeachVisit[]
   rentals                    Rental[]
   inventoryMovements         InventoryMovement[]
+  wallets                    UserWallet[]
+  walletLedgerOwned          WalletLedger[]      @relation("WalletOwner")
+  walletLedgerActor          WalletLedger[]      @relation("WalletActor")
 }
 
 model Account {
@@ -167,6 +169,25 @@ enum ProductType {
   BUNDLE_CREDIT
 }
 
+enum WalletType {
+  BEACH_USE
+  LESSON_HOURS
+}
+
+enum WalletUnit {
+  ENTRY
+  HOUR
+}
+
+enum WalletLedgerReason {
+  PURCHASE
+  CONSUMPTION
+  ADJUSTMENT
+  REFUND
+  EXPIRY
+  MIGRATION
+}
+
 model Product {
   id              String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   name            String
@@ -179,10 +200,18 @@ model Product {
   isActive        Boolean     @default(true)
   createdAt       DateTime    @default(now()) @db.Timestamp(6)
 
-  orderLines       OrderLine[]
-  userCreditGrants UserCreditGrant[]
+  orderLines OrderLine[]
 }
 
+// When selling prepaid credits (bundle/hours):
+
+// Create Order + OrderLine
+// Post a WalletLedger entry with:
+// positive delta (credit)
+// reason = PURCHASE
+// orderId and orderLineId filled
+// So: OrderLine tells you what was sold, 
+// WalletLedger tells you how balance changed over time.
 model Order {
   id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   userId     String   @db.Uuid
@@ -191,8 +220,9 @@ model Order {
   totalCents Int
   createdAt  DateTime @default(now()) @db.Timestamp(6)
 
-  lines       OrderLine[]
-  allocations PaymentAllocation[]
+  lines         OrderLine[]
+  allocations   PaymentAllocation[]
+  walletEntries WalletLedger[]
 }
 
 model OrderLine {
@@ -207,6 +237,7 @@ model OrderLine {
 
   // snapshot for bundles at time of sale
   creditUnitsEach Int?
+  walletEntries   WalletLedger[]
 }
 
 model Payment {
@@ -218,7 +249,8 @@ model Payment {
   reference   String?
   receivedAt  DateTime @default(now()) @db.Timestamp(6)
 
-  allocations PaymentAllocation[]
+  allocations   PaymentAllocation[]
+  walletEntries WalletLedger[]
 }
 
 model PaymentAllocation {
@@ -232,43 +264,55 @@ model PaymentAllocation {
   @@unique([paymentId, orderId])
 }
 
-model UserCreditGrant {
-  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  userId         String    @db.Uuid
-  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  productId      String    @db.Uuid
-  product        Product   @relation(fields: [productId], references: [id])
-  orderLineId    String?   @db.Uuid
-  totalUnits     Int
-  remainingUnits Int
-  expiresAt      DateTime?
-  createdAt      DateTime  @default(now()) @db.Timestamp(6)
+model UserWallet {
+  id        String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId    String     @db.Uuid
+  type      WalletType
+  unit      WalletUnit
+  balance   Decimal    @default(0) @db.Decimal(12, 2)
+  createdAt DateTime   @default(now()) @db.Timestamp(6)
+  updatedAt DateTime   @default(now()) @updatedAt
 
-  usages UserCreditUsage[]
+  user    User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  entries WalletLedger[]
+
+  @@unique([userId, type])
+  @@index([type])
 }
 
-model UserCreditUsage {
-  id        String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  grantId   String          @db.Uuid
-  grant     UserCreditGrant @relation(fields: [grantId], references: [id], onDelete: Cascade)
-  userId    String          @db.Uuid
-  user      User            @relation(fields: [userId], references: [id], onDelete: Cascade)
-  unitsUsed Int             @default(1)
-  usedAt    DateTime        @default(now()) @db.Timestamp(6)
-  bookingId String?         @db.Uuid
+model WalletLedger {
+  id             String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  walletId       String             @db.Uuid
+  userId         String             @db.Uuid
+  actorId        String?            @db.Uuid
+  delta          Decimal            @db.Decimal(12, 2)
+  balanceAfter   Decimal            @db.Decimal(12, 2)
+  reason         WalletLedgerReason
+  note           String?
+  idempotencyKey String?
+  occurredAt     DateTime           @default(now()) @db.Timestamp(6)
 
+  orderId         String? @db.Uuid
+  orderLineId     String? @db.Uuid
+  paymentId       String? @db.Uuid
   lessonBookingId String? @db.Uuid
   beachVisitId    String? @db.Uuid
   rentalId        String? @db.Uuid
 
+  wallet        UserWallet     @relation(fields: [walletId], references: [id], onDelete: Cascade)
+  owner         User           @relation("WalletOwner", fields: [userId], references: [id], onDelete: Cascade)
+  actor         User?          @relation("WalletActor", fields: [actorId], references: [id], onDelete: SetNull)
+  order         Order?         @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  orderLine     OrderLine?     @relation(fields: [orderLineId], references: [id], onDelete: SetNull)
+  payment       Payment?       @relation(fields: [paymentId], references: [id], onDelete: SetNull)
   lessonBooking LessonBooking? @relation(fields: [lessonBookingId], references: [id], onDelete: SetNull)
   beachVisit    BeachVisit?    @relation(fields: [beachVisitId], references: [id], onDelete: SetNull)
   rental        Rental?        @relation(fields: [rentalId], references: [id], onDelete: SetNull)
 
-  @@index([userId, usedAt])
-  @@index([lessonBookingId])
-  @@index([beachVisitId])
-  @@index([rentalId])
+  @@unique([walletId, idempotencyKey])
+  @@index([walletId, occurredAt])
+  @@index([userId, occurredAt])
+  @@index([reason, occurredAt])
 }
 
 model LessonSession {
@@ -299,9 +343,9 @@ model LessonBooking {
   notes       String?
   createdAt   DateTime            @default(now()) @db.Timestamp(6)
 
-  session LessonSession     @relation(fields: [sessionId], references: [id], onDelete: Cascade)
-  guest   User              @relation(fields: [guestId], references: [id], onDelete: Cascade)
-  usages  UserCreditUsage[]
+  session       LessonSession  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  guest         User           @relation(fields: [guestId], references: [id], onDelete: Cascade)
+  walletEntries WalletLedger[]
 
   @@unique([sessionId, guestId])
   @@index([guestId, createdAt])
@@ -318,8 +362,8 @@ model BeachVisit {
   notes        String?
   createdAt    DateTime         @default(now()) @db.Timestamp(6)
 
-  guest  User              @relation(fields: [guestId], references: [id], onDelete: Cascade)
-  usages UserCreditUsage[]
+  guest         User           @relation(fields: [guestId], references: [id], onDelete: Cascade)
+  walletEntries WalletLedger[]
 
   @@index([guestId, visitDate])
 }
@@ -336,9 +380,9 @@ model Rental {
   createdAt  DateTime     @default(now()) @db.Timestamp(6)
   updatedAt  DateTime     @default(now()) @updatedAt
 
-  guest  User              @relation(fields: [guestId], references: [id], onDelete: Cascade)
-  lines  RentalLine[]
-  usages UserCreditUsage[]
+  guest         User           @relation(fields: [guestId], references: [id], onDelete: Cascade)
+  lines         RentalLine[]
+  walletEntries WalletLedger[]
 
   @@index([guestId, startsAt])
   @@index([status, dueAt])

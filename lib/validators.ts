@@ -18,3 +18,23 @@ export const signUpFormSchema = z.object({
   password: z.string(),
 });
 export type SignUpFormData = z.infer<typeof signUpFormSchema>;
+
+import { Role } from "@prisma/client";
+
+export const userEditFormSchema = z.object({
+  name: z.string().trim().nullable(),
+  phone: z.string().trim().nullable(),
+  email: z.string().email("Invalid email address"),
+  role: z.nativeEnum(Role),
+  // optional on edit; only validate if provided
+  password: z
+    .string()
+    .trim()
+    .optional()
+    .transform((v) => (v && v.length > 0 ? v : undefined))
+    .refine((v) => !v || v.length >= 8, {
+      message: "Password must be at least 8 characters long",
+    }),
+});
+
+export type UserEditFormData = z.infer<typeof userEditFormSchema>;

@@ -1,6 +1,6 @@
 'use server'
 import { prisma } from "@/db/prisma";
-import { SignUpFormData } from "../validators";
+import { SignUpFormData, UserEditFormData } from "../validators";
 import bcryptjs from "bcryptjs";
 
 import { Prisma, Role } from "@prisma/client";
@@ -63,6 +63,55 @@ export async function createUser(data: SignUpFormData) {
       success: false,
       message: "Failed to create account. Please try again.",
     };
+  }
+}
+
+export async function getUserById(id: string) {
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        phone: true,
+        role: true,
+      },
+    });
+    return user;
+  } catch (error) {
+    console.error("Error fetching user by ID:", error);
+    throw new Error("Failed to fetch user");
+  }
+}
+
+export async function updateUser(id: string, data: UserEditFormData) {
+  try {
+    const passwordData =
+      data.password && data.password.length > 0
+        ? { password: await bcryptjs.hash(data.password, 10) }
+        : {};
+
+    const updated = await prisma.user.update({
+      where: { id },
+      data: {
+        name: data.name || null,
+        phone: data.phone || null,
+        email: data.email,
+        role: data.role,
+        ...passwordData,
+      },
+      select: { id: true },
+    });
+
+    return { success: true, message: "User updated successfully.", userId: updated.id };
+  } catch (error: any) {
+    if (error.code === "P2002" && error.meta?.target?.includes("email")) {
+      return { success: false, message: "Email is already used by another account." };
+    }
+
+    console.error("Error updating user:", error);
+    return { success: false, message: "Failed to update user." };
   }
 }
 

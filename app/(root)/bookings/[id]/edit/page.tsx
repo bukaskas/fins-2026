@@ -1,5 +1,3 @@
-import React from "react";
-
 import BookingEditForm from "./BookingEditForm";
 import { getBookingById } from "@/lib/actions/booking.actions";
 import { Booking } from "@prisma/client";

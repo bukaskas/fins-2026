@@ -40,7 +40,6 @@ const links = [
 
 async function Menu() {
   const session = await getServerSession(authOptions);
-  console.log("Menu session:", JSON.stringify(session, null, 2));
   const role = (session?.user as any)?.role;
   const isAdmin = role === "ADMIN";
   return (

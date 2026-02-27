@@ -24,6 +24,10 @@ const adminLinks = [
     title: "Payments",
     href: "/accounting/payments",
   },
+  {
+    title: "Users",
+    href: "/users",
+  },
 ];
 
 export function AdminLinks() {
