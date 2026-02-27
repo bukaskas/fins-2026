@@ -2,6 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/db/prisma";
+import { Prisma, WalletLedgerReason, WalletType, WalletUnit } from "@prisma/client";
+
 
 const BEACH_USE_SKU = "BEACH_USE_DAY";
 const BEACH_USE_BASE_PRICE_CENTS = 50000; // 500 EGP
@@ -12,6 +14,9 @@ export async function quickAddBeachUse(formData: FormData) {
   if (!guestId) throw new Error("guestId is required.");
 
   const now = new Date();
+  const visitDate = now; // added
+  const notes = String(formData.get("notes") ?? "").trim() || null; // added
+  const actorId = String(formData.get("actorId") ?? "").trim() || null; // added
 
   await prisma.$transaction(async (tx) => {
     const user = await tx.user.findUnique({
@@ -41,44 +46,45 @@ export async function quickAddBeachUse(formData: FormData) {
     }
 
     // 2) No membership => try consume 1 available credit
-    const grant = await tx.userCreditGrant.findFirst({
-      where: {
-        userId: guestId,
-        remainingUnits: { gte: 1 },
-        OR: [{ expiresAt: null }, { expiresAt: { gt: now } }],
-      },
-      orderBy: [{ expiresAt: "asc" }, { createdAt: "asc" }],
-      select: { id: true },
+    const wallet = await tx.userWallet.findUnique({
+      where: { userId_type: { userId: guestId, type: WalletType.BEACH_USE } },
+      select: { id: true, userId: true, balance: true, unit: true },
     });
 
-    if (grant) {
+    if (wallet && wallet.unit === WalletUnit.ENTRY && wallet.balance.gte(1)) {
       const visit = await tx.beachVisit.create({
         data: {
           guestId,
-          visitDate: now,
+          visitDate,
           type: "REGULAR",
           status: "OPEN",
+          notes,
           checkedInAt: now,
-          notes: "Desk quick add: paid with credit",
         },
       });
 
-      const updated = await tx.userCreditGrant.updateMany({
-        where: { id: grant.id, remainingUnits: { gte: 1 } },
-        data: { remainingUnits: { decrement: 1 } },
-      });
-      if (updated.count === 0) throw new Error("Credit was consumed by another request.");
+      const newBalance = wallet.balance.sub(new Prisma.Decimal(1));
 
-      await tx.userCreditUsage.create({
+      await tx.userWallet.update({
+        where: { id: wallet.id },
+        data: { balance: { decrement: 1 } },
+      });
+
+      await tx.walletLedger.create({
         data: {
-          grantId: grant.id,
+          walletId: wallet.id,
           userId: guestId,
-          unitsUsed: 1,
+          actorId: actorId ?? null,
+          delta: new Prisma.Decimal(-1),
+          balanceAfter: newBalance,
+          reason: WalletLedgerReason.CONSUMPTION,
           beachVisitId: visit.id,
+          note: "Beach entry consumed",
+          idempotencyKey: `beach:${visit.id}:consume:1`,
         },
       });
 
-      return;
+      return { ok: true, visitId: visit.id, charged: false };
     }
 
     // 3) No membership + no credit => charge outstanding
