@@ -70,6 +70,12 @@ function MembershipSections() {
             </tr>
           </tbody>
         </table>
+        <p className="text-sm text-gray-600 mb-4">
+          * Family membership includes 2 adults and up to 2 children under 18.
+          Private membership includes 1 adult. Both memberships include beach
+          access, discounts on rentals and storage, and priority booking for
+          lessons and events.
+        </p>
       </div>
     </section>
   );
