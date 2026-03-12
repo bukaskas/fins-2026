@@ -5,6 +5,7 @@ import heroKiteImage from "@/public/images/product-1.webp";
 import rentalPhoto from "@/public/images/webphotos_fins/webphoto_22.webp";
 import ContentSection from "@/components/kitesurfing/CoursesSection";
 import KitesurfingRentalSection from "@/components/kitesurfing/KitesurfingRentalSection";
+import MembershipSections from "@/components/kitesurfing/MembershipSections";
 
 function KitesurfingPage() {
   return (
@@ -14,6 +15,7 @@ function KitesurfingPage() {
       <ContentSection />
       <KitesurfingRentalSection />
       <StorageTable />
+      <MembershipSections />
     </>
   );
 }
