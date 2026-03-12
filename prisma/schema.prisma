@@ -197,6 +197,8 @@ model Product {
   currency        String      @default("EGP")
   creditUnits     Int? // e.g. 10 or 20 for bundle products
   creditValidDays Int? // optional expiry window
+  walletType      WalletType? // which wallet to credit (required for BUNDLE_CREDIT)
+  walletUnit      WalletUnit? // unit for ledger delta (required for BUNDLE_CREDIT)
   isActive        Boolean     @default(true)
   createdAt       DateTime    @default(now()) @db.Timestamp(6)
 

@@ -17,7 +17,7 @@ const adminLinks = [
     href: "/accounting/open-orders",
   },
   {
-    title: "Register",
+    title: "Add Services",
     href: "/register",
   },
   {

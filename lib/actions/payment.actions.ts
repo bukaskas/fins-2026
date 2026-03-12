@@ -1,5 +1,6 @@
 "use server";
 import { prisma } from "@/db/prisma";
+import { Prisma, WalletLedgerReason, WalletType } from "@prisma/client";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 
@@ -22,9 +23,12 @@ type SettleUserBalanceInput = {
 
 type ConsumeBundleUnitInput = {
   userId: string;
-  productId?: string; // optional: consume from specific bundle product
+  walletType: WalletType; // which wallet to debit
   units?: number; // default 1
-  bookingId?: string;
+  actorId?: string;
+  beachVisitId?: string;
+  lessonBookingId?: string;
+  note?: string;
 };
 
 function toInt(n: number) {
@@ -86,27 +90,56 @@ export async function createOrderForUser(input: CreateOrderForUserInput) {
       include: { lines: true },
     });
 
-    // Create credit grants for bundle lines
+    // Create wallet ledger entries for bundle lines
     for (const line of order.lines) {
       const product = productMap.get(line.productId)!;
       if (product.type !== "BUNDLE_CREDIT") continue;
 
+      if (!product.walletType || !product.walletUnit) {
+        throw new Error(
+          `Product ${product.sku} is BUNDLE_CREDIT but missing walletType/walletUnit.`
+        );
+      }
+
       const totalUnits = (line.creditUnitsEach ?? 0) * line.qty;
       if (totalUnits <= 0) continue;
 
-      const expiresAt =
-        product.creditValidDays && product.creditValidDays > 0
-          ? new Date(Date.now() + product.creditValidDays * 24 * 60 * 60 * 1000)
-          : null;
-
-      await tx.userCreditGrant.create({
-        data: {
+      // Find or create wallet
+      const wallet = await tx.userWallet.upsert({
+        where: { userId_type: { userId, type: product.walletType } },
+        update: {},
+        create: {
           userId,
-          productId: product.id,
+          type: product.walletType,
+          unit: product.walletUnit,
+          balance: new Prisma.Decimal(0),
+        },
+      });
+
+      if (wallet.unit !== product.walletUnit) {
+        throw new Error(
+          `Wallet unit mismatch for ${product.walletType}: expected ${product.walletUnit}, found ${wallet.unit}.`
+        );
+      }
+
+      // Increment balance and record ledger entry
+      const updatedWallet = await tx.userWallet.update({
+        where: { id: wallet.id },
+        data: { balance: { increment: totalUnits } },
+        select: { id: true, balance: true },
+      });
+
+      await tx.walletLedger.create({
+        data: {
+          walletId: wallet.id,
+          userId,
+          delta: new Prisma.Decimal(totalUnits),
+          balanceAfter: updatedWallet.balance,
+          reason: WalletLedgerReason.PURCHASE,
+          orderId: order.id,
           orderLineId: line.id,
-          totalUnits,
-          remainingUnits: totalUnits,
-          expiresAt,
+          note: `Purchased ${totalUnits} ${product.walletUnit}(s) — order ${order.id}`,
+          idempotencyKey: `purchase:${line.id}`,
         },
       });
     }
@@ -117,67 +150,60 @@ export async function createOrderForUser(input: CreateOrderForUserInput) {
 
 
 export async function consumeBundleUnit(input: ConsumeBundleUnitInput) {
-  const { userId, productId, bookingId } = input;
+  const {
+    userId,
+    walletType,
+    actorId,
+    beachVisitId,
+    lessonBookingId,
+    note,
+  } = input;
   const units = toInt(input.units ?? 1);
   if (units <= 0) throw new Error("Units must be > 0.");
 
-  const now = new Date();
-
   return prisma.$transaction(async (tx) => {
-    // find an eligible grant (soonest expiry first)
-    const grant = await tx.userCreditGrant.findFirst({
-      where: {
-        userId,
-        ...(productId ? { productId } : {}),
-        remainingUnits: { gte: units },
-        OR: [{ expiresAt: null }, { expiresAt: { gt: now } }],
-      },
-      orderBy: [{ expiresAt: "asc" }, { createdAt: "asc" }],
+    const wallet = await tx.userWallet.findUnique({
+      where: { userId_type: { userId, type: walletType } },
+      select: { id: true, balance: true, unit: true },
     });
 
-    if (!grant) {
-      throw new Error("No available bundle credits.");
+    if (!wallet || wallet.balance.lt(units)) {
+      throw new Error("Insufficient wallet balance.");
     }
 
-    // race-safe decrement
-    const updated = await tx.userCreditGrant.updateMany({
-      where: {
-        id: grant.id,
-        remainingUnits: { gte: units },
-      },
-      data: {
-        remainingUnits: { decrement: units },
-      },
+    // Atomic decrement — will throw if balance drops below 0 due to a race
+    const updatedWallet = await tx.userWallet.update({
+      where: { id: wallet.id, balance: { gte: units } },
+      data: { balance: { decrement: units } },
+      select: { id: true, balance: true },
     });
 
-    if (updated.count === 0) {
-      throw new Error("Credit was consumed by another request. Please retry.");
-    }
+    const idempotencyKey = beachVisitId
+      ? `consume:${walletType}:beach:${beachVisitId}`
+      : lessonBookingId
+        ? `consume:${walletType}:lesson:${lessonBookingId}`
+        : null;
 
-    const usage = await tx.userCreditUsage.create({
+    const entry = await tx.walletLedger.create({
       data: {
-        grantId: grant.id,
+        walletId: wallet.id,
         userId,
-        unitsUsed: units,
-        bookingId: bookingId ?? null,
+        actorId: actorId ?? null,
+        delta: new Prisma.Decimal(-units),
+        balanceAfter: updatedWallet.balance,
+        reason: WalletLedgerReason.CONSUMPTION,
+        beachVisitId: beachVisitId ?? null,
+        lessonBookingId: lessonBookingId ?? null,
+        note: note ?? `Consumed ${units} ${wallet.unit}(s) from ${walletType}`,
+        idempotencyKey,
       },
-    });
-
-    const refreshed = await tx.userCreditGrant.findUnique({
-      where: { id: grant.id },
-      select: { remainingUnits: true, totalUnits: true, productId: true, expiresAt: true },
     });
 
     return {
-      usageId: usage.id,
-      grantId: grant.id,
-      remainingUnits: refreshed?.remainingUnits ?? 0,
-      totalUnits: refreshed?.totalUnits ?? 0,
-      productId: refreshed?.productId,
-      expiresAt: refreshed?.expiresAt ?? null,
+      ledgerEntryId: entry.id,
+      balanceAfter: updatedWallet.balance,
     };
   });
-
 }
 // Payment settlement logic
 // Compare both functions: settleUserBalance and submitPaymentFromForm. The former is the core logic that applies a payment to a user's outstanding orders, while the latter is a helper that extracts form data and calls the settlement function.
