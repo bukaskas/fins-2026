@@ -70,6 +70,26 @@ enum InventoryMovementType {
   LOST
 }
 
+enum OrderStatus {
+  OPEN
+  PAID
+  PARTIAL
+  CANCELED
+}
+
+enum MembershipType {
+  ANNUAL
+  MONTHLY
+  SEASONAL
+}
+
+enum PaymentMethod {
+  CASH
+  CARD
+  TRANSFER
+  DISCOUNT
+}
+
 model Booking {
   id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   name       String
@@ -160,8 +180,10 @@ model Member {
   userId         String   @db.Uuid
   user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   validUntil     DateTime @db.Timestamp(6)
-  membershipType String
-  createdAt      DateTime @default(now()) @db.Timestamp(6)
+  membershipType MembershipType
+  createdAt      DateTime       @default(now()) @db.Timestamp(6)
+
+  @@index([userId])
 }
 
 enum ProductType {
@@ -218,7 +240,7 @@ model Order {
   id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   userId     String   @db.Uuid
   user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  status     String   @default("OPEN") // OPEN, PAID, PARTIAL, CANCELED
+  status     OrderStatus @default(OPEN)
   totalCents Int
   createdAt  DateTime @default(now()) @db.Timestamp(6)
 
@@ -247,7 +269,7 @@ model Payment {
   userId      String   @db.Uuid
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   amountCents Int
-  method      String // CASH, CARD, TRANSFER...
+  method      PaymentMethod
   reference   String?
   receivedAt  DateTime @default(now()) @db.Timestamp(6)
 

@@ -1,11 +1,12 @@
 "use server";
 
+import { OrderStatus } from "@prisma/client";
 import { prisma } from "@/db/prisma";
 
 export async function listUnsettledOrders() {
   const orders = await prisma.order.findMany({
     where: {
-      status: { in: ["OPEN", "PARTIAL"] },
+      status: { in: [OrderStatus.OPEN, OrderStatus.PARTIAL] },
     },
     include: {
       user: {

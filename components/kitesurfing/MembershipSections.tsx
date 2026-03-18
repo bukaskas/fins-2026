@@ -9,9 +9,9 @@ gsap.registerPlugin(ScrollTrigger);
 
 function MembershipSections() {
   useGSAP(() => {
-    gsap.from("#rental", {
+    gsap.from("#member", {
       scrollTrigger: {
-        trigger: "#rental",
+        trigger: "#member",
         toggleActions: "restart none none none",
         end: "top 75%",
         scrub: 1,
@@ -23,10 +23,10 @@ function MembershipSections() {
   });
 
   return (
-    <section id="rental" className="max-w-4xl mx-auto ">
+    <section id="member" className="max-w-4xl mx-auto ">
       <div className="w-full h-30 overflow-hidden flex items-center justify-center relative">
         <Image
-          alt="kitesurfing equipment rental"
+          alt="membership plans"
           src={rentalPhoto}
           fill
           className="object-cover"

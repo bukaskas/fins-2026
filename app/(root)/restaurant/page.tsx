@@ -1,4 +1,3 @@
-import React from "react";
 import Image from "next/image";
 import restaurantPhoto from "@/public/images/restaurant/restaurant.webp";
 import Link from "next/link";

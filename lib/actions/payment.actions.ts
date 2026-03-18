@@ -1,6 +1,6 @@
 "use server";
 import { prisma } from "@/db/prisma";
-import { Prisma, WalletLedgerReason, WalletType } from "@prisma/client";
+import { OrderStatus, PaymentMethod, Prisma, WalletLedgerReason, WalletType } from "@prisma/client";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 
@@ -17,7 +17,7 @@ type CreateOrderForUserInput = {
 type SettleUserBalanceInput = {
   userId: string;
   amountCents: number;
-  method: string; // "CASH" | "CARD" | "TRANSFER" ...
+  method: PaymentMethod;
   reference?: string;
 };
 
@@ -84,7 +84,7 @@ export async function createOrderForUser(input: CreateOrderForUserInput) {
       data: {
         userId,
         totalCents,
-        status: "OPEN",
+        status: OrderStatus.OPEN,
         lines: { create: lines },
       },
       include: { lines: true },
@@ -232,7 +232,7 @@ export async function settleUserBalance(input: SettleUserBalanceInput) {
 
     // Find unpaid/partially paid orders oldest first
     const orders = await tx.order.findMany({
-      where: { userId, status: { in: ["OPEN", "PARTIAL"] } },
+      where: { userId, status: { in: [OrderStatus.OPEN, OrderStatus.PARTIAL] } },
       orderBy: { createdAt: "asc" },
       include: { allocations: true },
     });
@@ -272,7 +272,7 @@ export async function settleUserBalance(input: SettleUserBalanceInput) {
       if (!order) continue;
 
       const paid = order.allocations.reduce((s, x) => s + x.amountCents, 0);
-      const status = paid >= order.totalCents ? "PAID" : paid > 0 ? "PARTIAL" : "OPEN";
+      const status = paid >= order.totalCents ? OrderStatus.PAID : paid > 0 ? OrderStatus.PARTIAL : OrderStatus.OPEN;
 
       await tx.order.update({
         where: { id: order.id },
@@ -282,7 +282,7 @@ export async function settleUserBalance(input: SettleUserBalanceInput) {
 
     // Optional: calculate user outstanding after payment
     const allOrders = await tx.order.findMany({
-      where: { userId, status: { not: "CANCELED" } },
+      where: { userId, status: { not: OrderStatus.CANCELED } },
       include: { allocations: true },
     });
 
@@ -303,7 +303,7 @@ export async function settleUserBalance(input: SettleUserBalanceInput) {
 
 export async function submitPaymentFromForm(formData: FormData) {
   const userId = String(formData.get("userId") ?? "").trim();
-  const method = String(formData.get("method") ?? "CASH").trim().toUpperCase();
+  const method = String(formData.get("method") ?? "CASH").trim().toUpperCase() as PaymentMethod;
   const reference = String(formData.get("reference") ?? "").trim() || undefined;
 
   const amountCents = parseMoneyToCents(formData.get("amount"));
@@ -329,7 +329,7 @@ export async function submitPaymentFromForm(formData: FormData) {
     await settleUserBalance({
       userId,
       amountCents: discountCents,
-      method: "DISCOUNT",
+      method: PaymentMethod.DISCOUNT,
       reference: reference ? `Discount | ${reference}` : "Discount",
     });
   }
