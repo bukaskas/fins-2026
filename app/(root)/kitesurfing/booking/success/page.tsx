@@ -47,9 +47,9 @@ async function SuccessBookingPage({
           <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-green-100">
             <CheckCircle2 className="h-6 w-6 text-green-600" />
           </div>
-          <CardTitle className="text-2xl">Booking Confirmed!</CardTitle>
+          <CardTitle className="text-2xl">Booking received</CardTitle>
           <CardDescription>
-            Your {bookingType} experience has been successfully booked.
+            Thank you for booking your {bookingType} experience.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -70,12 +70,13 @@ async function SuccessBookingPage({
             </div>
           </div>
           <p className="text-sm text-center text-muted-foreground">
-            We will send you a confirmation email with further details shortly.
+            You should receive an email with info regarding your booking
+            shortly. If you have any questions, feel free to contact us.
           </p>
         </CardContent>
         <CardFooter className="flex flex-col gap-2">
           <Button asChild className="w-full">
-            <Link href="/kitesurfing/booking">Book Another Experience</Link>
+            <Link href="https://wa.me/201080500099">Contact Us</Link>
           </Button>
           <Button asChild variant="outline" className="w-full">
             <Link href="/">Return to Home</Link>

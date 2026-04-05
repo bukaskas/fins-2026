@@ -6,6 +6,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import Link from "next/link";
 
 const adminLinks = [
   {
@@ -43,8 +44,8 @@ export function AdminLinks() {
       <DropdownMenuContent>
         <DropdownMenuGroup>
           {adminLinks.map((link) => (
-            <DropdownMenuItem key={link.href}>
-              <a href={link.href}>{link.title}</a>
+            <DropdownMenuItem key={link.href} asChild>
+              <Link href={link.href}>{link.title}</Link>
             </DropdownMenuItem>
           ))}
         </DropdownMenuGroup>
