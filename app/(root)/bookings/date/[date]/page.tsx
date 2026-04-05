@@ -49,7 +49,8 @@ async function BookingsByDatePage({
             <h1 className="text-3xl font-bold">{formattedDate}</h1>
             {bookings.length > 0 && (
               <p className="text-muted-foreground text-sm mt-1">
-                {bookings.length} booking{bookings.length !== 1 ? "s" : ""} &middot; {totalPeople} people
+                {bookings.length} booking{bookings.length !== 1 ? "s" : ""}{" "}
+                &middot; {totalPeople} people
               </p>
             )}
           </div>
