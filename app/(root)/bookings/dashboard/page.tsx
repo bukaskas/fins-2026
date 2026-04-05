@@ -12,26 +12,39 @@ async function BookingsDashboardPage() {
   const result = await getBookingCountsByDate();
 
   const counts = result.success
-    ? (result.data as { date: string; totalPeople: number; bookingCount: number }[])
+    ? (result.data as {
+        date: string;
+        totalPeople: number;
+        bookingCount: number;
+      }[])
     : [];
 
   const now = new Date();
   const thisMonth = format(now, "yyyy-MM");
 
   const thisMonthCounts = counts.filter((c) => c.date.startsWith(thisMonth));
-  const totalBookingsThisMonth = thisMonthCounts.reduce((s, c) => s + c.bookingCount, 0);
-  const totalPeopleThisMonth = thisMonthCounts.reduce((s, c) => s + c.totalPeople, 0);
+  const totalBookingsThisMonth = thisMonthCounts.reduce(
+    (s, c) => s + c.bookingCount,
+    0,
+  );
+  const totalPeopleThisMonth = thisMonthCounts.reduce(
+    (s, c) => s + c.totalPeople,
+    0,
+  );
 
   const today = format(now, "yyyy-MM-dd");
   const futureCounts = counts.filter((c) => c.date >= today);
-  const busiestDay = futureCounts.reduce<{ date: string; totalPeople: number } | null>(
+  const busiestDay = futureCounts.reduce<{
+    date: string;
+    totalPeople: number;
+  } | null>(
     (best, c) => (!best || c.totalPeople > best.totalPeople ? c : best),
     null,
   );
 
   return (
     <div className="p-6">
-      <div className="mb-8 flex items-center justify-between gap-4">
+      <div className="mb-8 flex-col md:flex items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <Button asChild variant="ghost" size="sm">
             <Link href="/bookings">← Bookings</Link>
