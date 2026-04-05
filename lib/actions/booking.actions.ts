@@ -97,6 +97,16 @@ export async function getBookingCountsByDate() {
   }
 }
 
+export async function deleteBooking(id: string) {
+  try {
+    await prisma.booking.delete({ where: { id } });
+    return { success: true };
+  } catch (error) {
+    console.error('Error deleting booking:', error);
+    return { success: false, message: `Failed to delete booking. Error: ${error instanceof Error ? error.message : String(error)}` };
+  }
+}
+
 export async function getBookingsByDate(date: string) {
   try {
     const start = new Date(`${date}T00:00:00.000Z`);

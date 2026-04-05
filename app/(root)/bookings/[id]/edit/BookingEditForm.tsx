@@ -7,7 +7,7 @@ import { useForm } from "@tanstack/react-form";
 import { toast } from "sonner";
 import Image from "next/image";
 import { BookingFormData, bookingFormSchema } from "@/lib/validators";
-import { updateBooking } from "@/lib/actions/booking.actions";
+import { updateBooking, deleteBooking } from "@/lib/actions/booking.actions";
 import kitePhoto from "@/public/images/kitesurfing/kite_booking_form_descktop.webp";
 import {
   Card,
@@ -39,11 +39,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-const KITESURFING_SERVICES = ["private-course", "coaching"];
-
 function isKitesurfingService(service: string | null | undefined) {
-  if (!service) return false;
-  return KITESURFING_SERVICES.includes(service);
+  return service === "kitesurfing-course";
 }
 
 type Props = {
@@ -302,15 +299,12 @@ function BookingEditForm({ booking }: Props) {
                         </SelectTrigger>
                         <SelectContent>
                           <SelectGroup>
-                            <SelectItem value="private-course">
-                              Private Course
+                            <SelectItem value="kitesurfing-course">
+                              Kitesurfing course
                             </SelectItem>
-                            <SelectItem value="group-course">
-                              Group Course
-                            </SelectItem>
-
-                            <SelectItem value="equipment-rental">
-                              Equipment Rental
+                            <SelectItem value="day-use">Day use</SelectItem>
+                            <SelectItem value="restaurant">
+                              Restaurant
                             </SelectItem>
                           </SelectGroup>
                         </SelectContent>
@@ -407,7 +401,27 @@ function BookingEditForm({ booking }: Props) {
             </FieldGroup>
           </form>
         </CardContent>
-        <CardFooter className="flex justify-end">
+        <CardFooter className="flex justify-between">
+          <Button
+            type="button"
+            variant="destructive"
+            className="rounded-full"
+            disabled={isSubmitting}
+            onClick={async () => {
+              if (!confirm(`Delete booking for ${booking.name}? This cannot be undone.`)) return;
+              setIsSubmitting(true);
+              const result = await deleteBooking(booking.id);
+              if (result.success) {
+                toast.success("Booking deleted");
+                router.push("/bookings");
+              } else {
+                toast.error(result.message ?? "Failed to delete booking");
+                setIsSubmitting(false);
+              }
+            }}
+          >
+            Delete
+          </Button>
           <Field orientation="horizontal" className="flex justify-end">
             <Button
               type="button"

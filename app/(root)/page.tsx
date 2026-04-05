@@ -1,5 +1,7 @@
 import HeroSection from "@/components/shared/hero";
 import ProductList from "@/components/shared/product/product-list";
+import { TideWidget } from "@/components/shared/TideWidget";
+
 export const metadata = {
   title: "Home-Fins kitesurfing school",
 };
@@ -9,6 +11,7 @@ const HomePage = () => {
     <>
       <HeroSection />
       <ProductList title={"Kitesurfing lessons"} />
+      <TideWidget />
     </>
   );
 };
