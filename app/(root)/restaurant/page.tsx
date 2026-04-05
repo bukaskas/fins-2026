@@ -27,6 +27,12 @@ function RestaurantPage() {
               View Our Menu
             </Link>
           </Button>
+          <Button
+            className="rounded-full absolute bottom-5 left-1/2 transform -translate-x-1/2 bg-white/50 md:hidden"
+            variant="outline"
+          >
+            <Link href="/kitesurfing/booking">Make a Reservation</Link>
+          </Button>
           <div className="absolute text-white italic bottom-13 left-1/2 transform -translate-x-1/2  md:hidden">
             “Food tastes better by the beach.”
           </div>
@@ -49,6 +55,9 @@ function RestaurantPage() {
             <Link href="https://drive.google.com/file/d/1ucvNArsKuwd_Em9CXWguJKIIshlh-dG0/view?usp=sharing">
               View Our Menu
             </Link>
+          </Button>
+          <Button className="rounded-full" variant="outline">
+            <Link href="/kitesurfing/booking">Make a Reservation</Link>
           </Button>
         </div>
       </div>

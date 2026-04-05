@@ -42,6 +42,13 @@ import Image from "next/image";
 import { BookingFormData, bookingFormSchema } from "@/lib/validators";
 import { PhoneInput } from "./phoneInput";
 
+const KITESURFING_SERVICES = ["kitesurfing-course"];
+
+function isKitesurfingService(service: string | null | undefined) {
+  if (!service) return false;
+  return KITESURFING_SERVICES.includes(service);
+}
+
 function KitesurfingBookingForm() {
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [date, setDate] = React.useState<Date | null>(null);
@@ -60,6 +67,7 @@ function KitesurfingBookingForm() {
       email: "",
       phone: "",
       service: "",
+      numberOfPeople: 1,
       instructor: null,
       time: null,
     } as BookingFormData,
@@ -80,16 +88,17 @@ function KitesurfingBookingForm() {
       }
       setIsSubmitting(true);
       try {
+        const showInstructor = isKitesurfingService(value.service);
         const normalizedValue = {
           ...value,
-          instructor: value.instructor ?? null,
+          instructor: showInstructor ? (value.instructor ?? null) : null,
           time: value.time ?? null,
         };
         const result = await createBooking(normalizedValue as BookingFormData);
         if (result.success && result.bookingId && result.date) {
           toast(`${result.message}`);
           router.push(
-            `/kitesurfing/booking/success?bookingId=${result.bookingId}&date=${result.date.toISOString()}`,
+            `/kitesurfing/booking/success?bookingId=${result.bookingId}&date=${result.date.toISOString()}&type=${result.bookingType}`,
           );
         } else {
           // Failed: show error and re-enable form
@@ -156,6 +165,44 @@ function KitesurfingBookingForm() {
                 }}
               />
               <form.Field
+                name="service"
+                children={(field) => {
+                  const isInvalid =
+                    field.state.meta.isTouched && !field.state.meta.isValid;
+                  return (
+                    <Field data-invalid={isInvalid}>
+                      <FieldLabel htmlFor={field.name}>Service</FieldLabel>
+                      <Select
+                        onValueChange={field.handleChange}
+                        value={field.state.value}
+                      >
+                        <SelectTrigger
+                          id={field.name}
+                          className="w-full rounded-full"
+                          disabled={isSubmitting}
+                        >
+                          <SelectValue placeholder="Select a service" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectGroup>
+                            <SelectItem value="kitesurfing-course">
+                              Kitesurfing course
+                            </SelectItem>
+                            <SelectItem value="day-use">Day use </SelectItem>
+                            <SelectItem value="restaurant">
+                              Restaurant
+                            </SelectItem>
+                          </SelectGroup>
+                        </SelectContent>
+                      </Select>
+                      {isInvalid && (
+                        <FieldError errors={field.state.meta.errors} />
+                      )}
+                    </Field>
+                  );
+                }}
+              />
+              <form.Field
                 name="email"
                 children={(field) => {
                   const isInvalid =
@@ -208,6 +255,38 @@ function KitesurfingBookingForm() {
                 }}
               />
               <form.Field
+                name="numberOfPeople"
+                children={(field) => {
+                  const isInvalid =
+                    field.state.meta.isTouched && !field.state.meta.isValid;
+                  return (
+                    <Field data-invalid={isInvalid}>
+                      <FieldLabel htmlFor={field.name}>
+                        Number of People
+                      </FieldLabel>
+                      <Input
+                        id={field.name}
+                        type="number"
+                        inputMode="numeric"
+                        value={field.state.value || ""}
+                        onBlur={field.handleBlur}
+                        onChange={(e) =>
+                          field.handleChange(parseInt(e.target.value, 10))
+                        }
+                        aria-invalid={isInvalid}
+                        placeholder="1"
+                        min="1"
+                        disabled={isSubmitting}
+                        className="rounded-full"
+                      />
+                      {isInvalid && (
+                        <FieldError errors={field.state.meta.errors} />
+                      )}
+                    </Field>
+                  );
+                }}
+              />
+              <form.Field
                 name="date"
                 children={(field) => {
                   const isInvalid =
@@ -248,47 +327,7 @@ function KitesurfingBookingForm() {
                   );
                 }}
               />
-              <form.Field
-                name="service"
-                children={(field) => {
-                  const isInvalid =
-                    field.state.meta.isTouched && !field.state.meta.isValid;
-                  return (
-                    <Field data-invalid={isInvalid}>
-                      <FieldLabel htmlFor={field.name}>Service</FieldLabel>
-                      <Select
-                        onValueChange={field.handleChange}
-                        value={field.state.value}
-                      >
-                        <SelectTrigger
-                          id={field.name}
-                          className="w-full rounded-full"
-                          disabled={isSubmitting}
-                        >
-                          <SelectValue placeholder="Select a service" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectGroup>
-                            <SelectItem value="private-course">
-                              Private Course
-                            </SelectItem>
-                            <SelectItem value="group-course">
-                              Group Course
-                            </SelectItem>
-                            <SelectItem value="coaching">Coaching</SelectItem>
-                            <SelectItem value="equipment-rental">
-                              Equipment Rental
-                            </SelectItem>
-                          </SelectGroup>
-                        </SelectContent>
-                      </Select>
-                      {isInvalid && (
-                        <FieldError errors={field.state.meta.errors} />
-                      )}
-                    </Field>
-                  );
-                }}
-              />
+
               <form.Field
                 name="time"
                 children={(field) => {
@@ -296,7 +335,7 @@ function KitesurfingBookingForm() {
                     field.state.meta.isTouched && !field.state.meta.isValid;
                   return (
                     <Field data-invalid={isInvalid}>
-                      <FieldLabel htmlFor={field.name}>Service</FieldLabel>
+                      <FieldLabel htmlFor={field.name}>Arrival Time</FieldLabel>
                       <Select
                         onValueChange={field.handleChange}
                         value={field.state.value ?? undefined}
@@ -306,7 +345,7 @@ function KitesurfingBookingForm() {
                           className="w-full rounded-full"
                           disabled={isSubmitting}
                         >
-                          <SelectValue placeholder="Select a service" />
+                          <SelectValue placeholder="Select a time" />
                         </SelectTrigger>
                         <SelectContent>
                           <SelectGroup>
@@ -333,42 +372,44 @@ function KitesurfingBookingForm() {
                   );
                 }}
               />
-              <form.Field
-                name="instructor"
-                children={(field) => {
-                  const isInvalid =
-                    field.state.meta.isTouched && !field.state.meta.isValid;
-                  return (
-                    <Field data-invalid={isInvalid}>
-                      <FieldLabel htmlFor={field.name}>Service</FieldLabel>
-                      <Select
-                        onValueChange={field.handleChange}
-                        value={field.state.value ?? undefined}
-                      >
-                        <SelectTrigger
-                          id={field.name}
-                          className="w-full rounded-full"
-                          disabled={isSubmitting}
+              {isKitesurfingService(form.getFieldValue("service")) && (
+                <form.Field
+                  name="instructor"
+                  children={(field) => {
+                    const isInvalid =
+                      field.state.meta.isTouched && !field.state.meta.isValid;
+                    return (
+                      <Field data-invalid={isInvalid}>
+                        <FieldLabel htmlFor={field.name}>Instructor</FieldLabel>
+                        <Select
+                          onValueChange={field.handleChange}
+                          value={field.state.value ?? undefined}
                         >
-                          <SelectValue placeholder="Select an instructor" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectGroup>
-                            <SelectItem value="Mohie">Mohie</SelectItem>
-                            <SelectItem value="Tarek">Tarek</SelectItem>
-                            <SelectItem value="Ahmed Sawa7ly">
-                              Ahmed Sawa7ly
-                            </SelectItem>
-                          </SelectGroup>
-                        </SelectContent>
-                      </Select>
-                      {isInvalid && (
-                        <FieldError errors={field.state.meta.errors} />
-                      )}
-                    </Field>
-                  );
-                }}
-              />
+                          <SelectTrigger
+                            id={field.name}
+                            className="w-full rounded-full"
+                            disabled={isSubmitting}
+                          >
+                            <SelectValue placeholder="Select an instructor" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectGroup>
+                              <SelectItem value="Mohie">Mohie</SelectItem>
+                              <SelectItem value="Tarek">Tarek</SelectItem>
+                              <SelectItem value="Ahmed Sawa7ly">
+                                Ahmed Sawa7ly
+                              </SelectItem>
+                            </SelectGroup>
+                          </SelectContent>
+                        </Select>
+                        {isInvalid && (
+                          <FieldError errors={field.state.meta.errors} />
+                        )}
+                      </Field>
+                    );
+                  }}
+                />
+              )}
             </FieldGroup>
           </form>
         </CardContent>

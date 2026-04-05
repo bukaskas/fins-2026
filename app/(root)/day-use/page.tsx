@@ -8,6 +8,8 @@ import restaurantSvg from "@/public/images/svg/lounge.svg";
 import pingPongSvg from "@/public/images/svg/ping-pong.svg";
 import loungeSvg from "@/public/images/svg/lounge.svg";
 import swimmingPool from "@/public/images/svg/swimming-pool.svg";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
 
 function DayUsePage() {
   return (
@@ -42,6 +44,12 @@ function HeroSection() {
       <h4 className="absolute bottom-[7%] left-1/2 -translate-x-1/2 text-center text-white font-bold text-4xl ">
         Day Use at Fins
       </h4>
+      <Button
+        className="absolute bottom-[12%] left-1/2 -translate-x-1/2 rounded-full"
+        variant="outline"
+      >
+        <Link href="/kitesurfing/booking">Make a Reservation</Link>
+      </Button>
     </div>
   );
 }

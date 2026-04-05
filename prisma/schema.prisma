@@ -91,15 +91,16 @@ enum PaymentMethod {
 }
 
 model Booking {
-  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  name       String
-  date       DateTime
-  email      String
-  phone      String
-  service    String
-  createdAt  DateTime @default(now()) @db.Timestamp(6)
-  instructor String?
-  time       String?
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name           String
+  date           DateTime
+  email          String
+  phone          String
+  service        String
+  numberOfPeople Int      @default(1)
+  createdAt      DateTime @default(now()) @db.Timestamp(6)
+  instructor     String?
+  time           String?
 }
 
 enum Role {
@@ -176,10 +177,10 @@ model VerificationToken {
 }
 
 model Member {
-  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  userId         String   @db.Uuid
-  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  validUntil     DateTime @db.Timestamp(6)
+  id             String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId         String         @db.Uuid
+  user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  validUntil     DateTime       @db.Timestamp(6)
   membershipType MembershipType
   createdAt      DateTime       @default(now()) @db.Timestamp(6)
 
@@ -237,12 +238,12 @@ model Product {
 // So: OrderLine tells you what was sold, 
 // WalletLedger tells you how balance changed over time.
 model Order {
-  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  userId     String   @db.Uuid
-  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id         String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId     String      @db.Uuid
+  user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
   status     OrderStatus @default(OPEN)
   totalCents Int
-  createdAt  DateTime @default(now()) @db.Timestamp(6)
+  createdAt  DateTime    @default(now()) @db.Timestamp(6)
 
   lines         OrderLine[]
   allocations   PaymentAllocation[]
@@ -265,13 +266,13 @@ model OrderLine {
 }
 
 model Payment {
-  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  userId      String   @db.Uuid
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id          String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId      String        @db.Uuid
+  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   amountCents Int
   method      PaymentMethod
   reference   String?
-  receivedAt  DateTime @default(now()) @db.Timestamp(6)
+  receivedAt  DateTime      @default(now()) @db.Timestamp(6)
 
   allocations   PaymentAllocation[]
   walletEntries WalletLedger[]

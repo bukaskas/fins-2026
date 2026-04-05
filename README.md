@@ -245,3 +245,10 @@ Stock movement audit (`IN`, `OUT`, `ADJUSTMENT`, etc.), optional actor.
 - Keep old credit tables only during migration/cutover.
 - After full cutover, use wallet/ledger as single source of truth for credit balances.
 - Add DB constraints/indexes for fast lookups on `userId`, `walletId`, `occurredAt`.
+
+## Booking procedure
+
+- table: Booking date, Name, Phone number, Number of people
+- booking form
+- create a table for bookings
+- create a table to show total nr of booking on date ( filter the date that would only show future dates)

@@ -10,15 +10,15 @@ import {
 import { CheckCircle2 } from "lucide-react";
 import Link from "next/link";
 
-// http://localhost:3000/kitesurfing/booking/success?bookingId=d4b8218c-a1c4-46ab-ab9e-6b2d2e53151c&date=2026-01-29T15:58:12.494Z
 async function SuccessBookingPage({
   searchParams,
 }: {
-  searchParams: Promise<{ bookingId?: string; date?: string }>;
+  searchParams: Promise<{ bookingId?: string; date?: string; type?: string }>;
 }) {
   const params = await searchParams;
   const bookingId = params.bookingId;
   const date = params.date ? new Date(params.date) : null;
+  const bookingType = params.type ? params.type : "Fins";
 
   if (!bookingId || !date) {
     return (
@@ -49,7 +49,7 @@ async function SuccessBookingPage({
           </div>
           <CardTitle className="text-2xl">Booking Confirmed!</CardTitle>
           <CardDescription>
-            Your kitesurfing experience has been successfully booked.
+            Your {bookingType} experience has been successfully booked.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
