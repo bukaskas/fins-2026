@@ -5,8 +5,14 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { KitesurfingHero } from "./KitesurfingHero";
 import { DayUseHero } from "./DayUseHero";
 import { RestaurantHero } from "./RestaurantHero";
+import { PharaohHero } from "./PharaohHero";
 
-const heroComponents = [KitesurfingHero, DayUseHero, RestaurantHero];
+const heroComponents = [
+  KitesurfingHero,
+  DayUseHero,
+  RestaurantHero,
+  PharaohHero,
+];
 
 function HeroSection() {
   const [currentSlide, setCurrentSlide] = useState(0);
@@ -37,7 +43,7 @@ function HeroSection() {
     setIsTransitioning(true);
     setTimeout(() => {
       setCurrentSlide(
-        (prev) => (prev - 1 + heroComponents.length) % heroComponents.length
+        (prev) => (prev - 1 + heroComponents.length) % heroComponents.length,
       );
       setIsTransitioning(false);
     }, 300);
