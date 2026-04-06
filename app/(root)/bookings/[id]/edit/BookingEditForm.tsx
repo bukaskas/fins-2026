@@ -3,6 +3,7 @@
 import React from "react";
 import { useRouter } from "next/navigation";
 import type { Booking } from "@prisma/client";
+import { BookingStatus, PaymentStatus } from "@prisma/client";
 import { useForm } from "@tanstack/react-form";
 import { toast } from "sonner";
 import Image from "next/image";
@@ -45,9 +46,10 @@ function isKitesurfingService(service: string | null | undefined) {
 
 type Props = {
   booking: Booking;
+  instructors: { id: string; name: string | null }[];
 };
 
-function BookingEditForm({ booking }: Props) {
+function BookingEditForm({ booking, instructors }: Props) {
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [open, setOpen] = React.useState(false);
   const router = useRouter();
@@ -62,6 +64,8 @@ function BookingEditForm({ booking }: Props) {
       numberOfPeople: booking.numberOfPeople ?? 1,
       instructor: booking.instructor,
       time: booking.time,
+      bookingStatus: booking.bookingStatus,
+      paymentStatus: booking.paymentStatus,
     } as BookingFormData,
     validators: {
       onSubmit: ({ value }) => {
@@ -361,6 +365,58 @@ function BookingEditForm({ booking }: Props) {
                 }}
               />
               <form.Field
+                name="bookingStatus"
+                children={(field) => {
+                  return (
+                    <Field>
+                      <FieldLabel htmlFor={field.name}>Booking Status</FieldLabel>
+                      <Select
+                        onValueChange={(v) => field.handleChange(v as BookingStatus)}
+                        value={field.state.value}
+                      >
+                        <SelectTrigger id={field.name} className="w-full rounded-full" disabled={isSubmitting}>
+                          <SelectValue placeholder="Select booking status" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectGroup>
+                            <SelectItem value={BookingStatus.PENDING}>Pending</SelectItem>
+                            <SelectItem value={BookingStatus.CONFIRMED}>Confirmed</SelectItem>
+                            <SelectItem value={BookingStatus.DECLINED}>Declined</SelectItem>
+                            <SelectItem value={BookingStatus.CANCELED}>Canceled</SelectItem>
+                          </SelectGroup>
+                        </SelectContent>
+                      </Select>
+                    </Field>
+                  );
+                }}
+              />
+              <form.Field
+                name="paymentStatus"
+                children={(field) => {
+                  return (
+                    <Field>
+                      <FieldLabel htmlFor={field.name}>Payment Status</FieldLabel>
+                      <Select
+                        onValueChange={(v) => field.handleChange(v as PaymentStatus)}
+                        value={field.state.value}
+                      >
+                        <SelectTrigger id={field.name} className="w-full rounded-full" disabled={isSubmitting}>
+                          <SelectValue placeholder="Select payment status" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectGroup>
+                            <SelectItem value={PaymentStatus.UNPAID}>Unpaid</SelectItem>
+                            <SelectItem value={PaymentStatus.DEPOSIT_PAID}>Deposit Paid</SelectItem>
+                            <SelectItem value={PaymentStatus.PAID}>Paid</SelectItem>
+                            <SelectItem value={PaymentStatus.REFUNDED}>Refunded</SelectItem>
+                          </SelectGroup>
+                        </SelectContent>
+                      </Select>
+                    </Field>
+                  );
+                }}
+              />
+              <form.Field
                 name="instructor"
                 children={(field) => {
                   const isInvalid =
@@ -382,11 +438,11 @@ function BookingEditForm({ booking }: Props) {
                           </SelectTrigger>
                           <SelectContent>
                             <SelectGroup>
-                              <SelectItem value="Mohie">Mohie</SelectItem>
-                              <SelectItem value="Tarek">Tarek</SelectItem>
-                              <SelectItem value="Ahmed Sawa7ly">
-                                Ahmed Sawa7ly
-                              </SelectItem>
+                              {instructors.map((instructor) => (
+                                <SelectItem key={instructor.id} value={instructor.name ?? instructor.id}>
+                                  {instructor.name ?? "Unnamed"}
+                                </SelectItem>
+                              ))}
                             </SelectGroup>
                           </SelectContent>
                         </Select>

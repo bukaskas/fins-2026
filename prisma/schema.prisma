@@ -90,17 +90,33 @@ enum PaymentMethod {
   DISCOUNT
 }
 
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  DECLINED
+  CANCELED
+}
+
+enum PaymentStatus {
+  UNPAID
+  DEPOSIT_PAID
+  PAID
+  REFUNDED
+}
+
 model Booking {
-  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  id             String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   name           String
   date           DateTime
   email          String
   phone          String
   service        String
-  numberOfPeople Int      @default(1)
-  createdAt      DateTime @default(now()) @db.Timestamp(6)
+  numberOfPeople Int           @default(1)
+  createdAt      DateTime      @default(now()) @db.Timestamp(6)
   instructor     String?
   time           String?
+  bookingStatus  BookingStatus @default(PENDING)
+  paymentStatus  PaymentStatus @default(UNPAID)
 }
 
 enum Role {

@@ -3,6 +3,7 @@ import Link from "next/link";
 import type { Booking } from "@prisma/client";
 import { Users, Pencil } from "lucide-react";
 import { Button } from "../ui/button";
+import { BookingStatusBadge, PaymentStatusBadge } from "@/components/bookings/StatusBadge";
 
 function WhatsAppIcon({ className }: { className?: string }) {
   return (
@@ -62,6 +63,10 @@ function BookingComponent({ booking }: { booking: Booking }) {
           <WhatsAppIcon className="h-4 w-4" />
           <span className="hidden sm:inline">{booking.phone}</span>
         </Link>
+
+        {/* Status badges */}
+        <BookingStatusBadge status={booking.bookingStatus} />
+        <PaymentStatusBadge status={booking.paymentStatus} />
 
         {/* Edit */}
         <Button variant="outline" size="sm" asChild className="shrink-0 h-7 px-2">

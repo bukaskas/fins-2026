@@ -144,6 +144,14 @@ export async function searchUser(query: string) {
 }
 
 
+export async function listInstructors() {
+  return prisma.user.findMany({
+    where: { role: Role.INSTRUCTOR },
+    select: { id: true, name: true },
+    orderBy: { name: "asc" },
+  });
+}
+
 export async function listUsers(query?: string) {
   const q = (query ?? "").trim();
   const qUpper = q.toUpperCase();

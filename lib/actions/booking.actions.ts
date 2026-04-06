@@ -138,6 +138,8 @@ export async function updateBooking(id: string, data: BookingFormData) {
         numberOfPeople: validatedData.numberOfPeople,
         instructor: validatedData.instructor ?? null,
         time: validatedData.time ?? null,
+        bookingStatus: validatedData.bookingStatus,
+        paymentStatus: validatedData.paymentStatus,
       },
     });
 

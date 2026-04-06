@@ -42,13 +42,6 @@ import Image from "next/image";
 import { BookingFormData, bookingFormSchema } from "@/lib/validators";
 import { PhoneInput } from "./phoneInput";
 
-const KITESURFING_SERVICES = ["kitesurfing-course"];
-
-function isKitesurfingService(service: string | null | undefined) {
-  if (!service) return false;
-  return KITESURFING_SERVICES.includes(service);
-}
-
 function KitesurfingBookingForm() {
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [date, setDate] = React.useState<Date | null>(null);
@@ -68,7 +61,6 @@ function KitesurfingBookingForm() {
       phone: "",
       service: "",
       numberOfPeople: 1,
-      instructor: null,
       time: null,
     } as BookingFormData,
     validators: {
@@ -88,10 +80,9 @@ function KitesurfingBookingForm() {
       }
       setIsSubmitting(true);
       try {
-        const showInstructor = isKitesurfingService(value.service);
         const normalizedValue = {
           ...value,
-          instructor: showInstructor ? (value.instructor ?? null) : null,
+          instructor: null,
           time: value.time ?? null,
         };
         const result = await createBooking(normalizedValue as BookingFormData);
@@ -372,44 +363,6 @@ function KitesurfingBookingForm() {
                   );
                 }}
               />
-              {isKitesurfingService(form.getFieldValue("service")) && (
-                <form.Field
-                  name="instructor"
-                  children={(field) => {
-                    const isInvalid =
-                      field.state.meta.isTouched && !field.state.meta.isValid;
-                    return (
-                      <Field data-invalid={isInvalid}>
-                        <FieldLabel htmlFor={field.name}>Instructor</FieldLabel>
-                        <Select
-                          onValueChange={field.handleChange}
-                          value={field.state.value ?? undefined}
-                        >
-                          <SelectTrigger
-                            id={field.name}
-                            className="w-full rounded-full"
-                            disabled={isSubmitting}
-                          >
-                            <SelectValue placeholder="Select an instructor" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectGroup>
-                              <SelectItem value="Mohie">Mohie</SelectItem>
-                              <SelectItem value="Tarek">Tarek</SelectItem>
-                              <SelectItem value="Ahmed Sawa7ly">
-                                Ahmed Sawa7ly
-                              </SelectItem>
-                            </SelectGroup>
-                          </SelectContent>
-                        </Select>
-                        {isInvalid && (
-                          <FieldError errors={field.state.meta.errors} />
-                        )}
-                      </Field>
-                    );
-                  }}
-                />
-              )}
             </FieldGroup>
           </form>
         </CardContent>
