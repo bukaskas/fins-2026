@@ -36,12 +36,18 @@ const serviceContent: Record<
     body: "We look forward to welcoming you on {date}. Our team will make sure you have a wonderful dining experience. Please don't hesitate to contact us if you have any dietary requirements or special requests.",
     cta: "Contact us on WhatsApp",
   },
+  "pharaoh-airstyle": {
+    heading: "Your Pharaoh Airstyle booking is confirmed!",
+    body: "We are excited to welcome you on {date}. Get ready for an amazing experience at the Pharaoh Airstyle event. You will find activities and entertainment throughout the day. Sukun will offer yoga and wellness sessions. Il Campo will join us to offer beach activities for youngsters and adults and of course music to fill your soul and dance all day long. If you have any questions or special requests, feel free to reach out.",
+    cta: "Contact us on WhatsApp",
+  },
 };
 
 const defaultContent = serviceContent["kitesurfing-course"];
 
 const BookingEmail = ({ username, date, bookingType }: BookingEmailProps) => {
-  const content = (bookingType ? serviceContent[bookingType] : null) ?? defaultContent;
+  const content =
+    (bookingType ? serviceContent[bookingType] : null) ?? defaultContent;
   const body = content.body.replace("{date}", date ?? "your scheduled date");
   const previewText = `${content.heading} — ${username}`;
 
