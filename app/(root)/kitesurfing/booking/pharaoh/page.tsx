@@ -34,7 +34,7 @@ import Image from "next/image";
 import { BookingFormData, bookingFormSchema } from "@/lib/validators";
 import { PhoneInput } from "../phoneInput";
 
-const PHARAOH_DATE = new Date(2026, 5, 1); // May 1st, 2026
+const PHARAOH_DATE = new Date("2026-05-01"); // May 1st, 2026 (UTC)
 
 function PharaohAirstyleBookingForm() {
   const [isSubmitting, setIsSubmitting] = React.useState(false);
