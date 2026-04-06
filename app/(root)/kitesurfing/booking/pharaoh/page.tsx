@@ -19,7 +19,7 @@ import {
 } from "@/components/ui/select";
 import { useForm } from "@tanstack/react-form";
 import { Button } from "@/components/ui/button";
-import kitePhoto from "@/public/images/kitesurfing/kite_booking_form_descktop.webp";
+import airstylePhoto from "@/public/images/kitesurfing/airstyle-form.webp";
 import {
   Card,
   CardContent,
@@ -85,13 +85,11 @@ function PharaohAirstyleBookingForm() {
   });
 
   return (
-    <div className="md:flex md:m-2">
-      <Image
-        src={kitePhoto}
-        alt="Kite surfer making a jump"
-        className="hidden md:block md:w-1/2 lg:w-2/3 rounded-l-4xl object-cover"
-      />
-      <Card className="m-2 md:m-0 md:w-1/2 lg:w-1/3 md:rounded-s-none rounded-4xl">
+    <div className="flex justify-center m-2">
+      <Card className="w-full max-w-lg rounded-4xl overflow-hidden pt-0">
+        <div className="relative w-full h-150">
+          <Image src={airstylePhoto} alt="Pharaoh Airstyle Competition" fill />
+        </div>
         <CardHeader>
           <CardTitle>Pharaoh Airstyle — 1st of May</CardTitle>
           <CardDescription>
