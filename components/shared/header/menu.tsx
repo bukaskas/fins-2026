@@ -44,13 +44,7 @@ async function Menu() {
   const isAdmin = role === "ADMIN";
   return (
     <div className="flex md:justify-center z-10 w-full">
-      <div className="fixed bottom-2 left-2 z-50 text-xs bg-black/70 text-white px-2 py-1 rounded">
-        {session
-          ? `Logged in as ${session.user?.email} (${role ?? "no role"})`
-          : "No session"}
-      </div>
-
-      <nav className="hidden md:flex md:items-center md:justify-center gap-6 font-[family-name:var(--font-raleway)]">
+<nav className="hidden md:flex md:items-center md:justify-center gap-2 lg:gap-6 font-[family-name:var(--font-raleway)]">
         <Button asChild variant={"ghost"} className="text-lg">
           <Link href="/about">About</Link>
         </Button>
