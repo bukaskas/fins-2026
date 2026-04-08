@@ -48,7 +48,7 @@ function HeroSection() {
         className="absolute bottom-[12%] left-1/2 -translate-x-1/2 rounded-full"
         variant="outline"
       >
-        <Link href="/kitesurfing/booking">Make a Reservation</Link>
+        <Link href="/day-use/booking">Make a Reservation</Link>
       </Button>
     </div>
   );

@@ -3,7 +3,7 @@
 import { prisma } from "@/db/prisma";
 import { isRedirectError } from "next/dist/client/components/redirect-error";
 import { BookingFormData, bookingFormSchema } from "../validators";
-import { sendBookingEmail } from "@/emails/index";
+import { sendBookingEmail, sendStaffNotificationEmail } from "@/emails/index";
 
 
 
@@ -24,6 +24,14 @@ export async function createBooking(data: BookingFormData) {
     });
 
     await sendBookingEmail(validatedData.email, validatedData.name, validatedData.date, validatedData.service);
+    await sendStaffNotificationEmail(
+      validatedData.name,
+      validatedData.email,
+      validatedData.phone,
+      validatedData.date,
+      validatedData.service,
+      validatedData.numberOfPeople,
+    );
 
     return ({
       success: true,
@@ -162,6 +170,62 @@ export async function getBookingById(id: string) {
   } catch (e) {
     console.error("Error fetching booking by id", e);
     return null;
+  }
+}
+
+export async function getFutureKitesurfingBookings() {
+  try {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const bookings = await prisma.booking.findMany({
+      where: {
+        service: 'kitesurfing-course',
+        date: { gte: today },
+      },
+      orderBy: [{ date: 'asc' }, { time: 'asc' }],
+    });
+
+    return { success: true, data: bookings };
+  } catch (error) {
+    console.error('Error fetching future kitesurfing bookings:', error);
+    return { success: false, message: `Failed to fetch bookings. Error: ${error instanceof Error ? error.message : String(error)}` };
+  }
+}
+
+export async function getBookingsByDateRange(from: string, to: string) {
+  try {
+    const start = new Date(`${from}T00:00:00.000Z`);
+    const end = new Date(`${to}T23:59:59.999Z`);
+
+    const bookings = await prisma.booking.findMany({
+      where: { date: { gte: start, lte: end } },
+      orderBy: [{ date: 'asc' }, { time: 'asc' }],
+    });
+
+    return { success: true, data: bookings };
+  } catch (error) {
+    console.error('Error fetching bookings by date range:', error);
+    return { success: false, message: `Failed to fetch bookings. Error: ${error instanceof Error ? error.message : String(error)}` };
+  }
+}
+
+export async function batchUpdateBookingSchedule(
+  updates: { id: string; time: string | null; instructor: string | null }[]
+) {
+  try {
+    await prisma.$transaction(
+      updates.map((u) =>
+        prisma.booking.update({
+          where: { id: u.id },
+          data: { time: u.time, instructor: u.instructor },
+        })
+      )
+    );
+    return { success: true, message: 'Schedule updated successfully.' };
+  } catch (error) {
+    console.error('Batch update error:', error);
+    return { success: false, message: `Failed to update schedule. Error: ${error instanceof Error ? error.message : String(error)}` };
   }
 }
 

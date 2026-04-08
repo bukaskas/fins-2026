@@ -9,7 +9,6 @@ import {
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { format } from "date-fns";
-
 import {
   Select,
   SelectContent,
@@ -26,10 +25,9 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import kitePhoto from "@/public/images/kitesurfing/kite_booking_form_descktop.webp";
+import dayUsePhoto from "@/public/images/day_use/beach2.webp";
 import {
   Card,
-  CardAction,
   CardContent,
   CardDescription,
   CardFooter,
@@ -37,16 +35,12 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { toast } from "sonner";
-import { createKitesurfingBookingFromPublic } from "@/lib/actions/lessons.actions";
+import { createBooking } from "@/lib/actions/booking.actions";
 import Image from "next/image";
-import {
-  KitesurfingBookingFormData,
-  kitesurfingBookingFormSchema,
-} from "@/lib/validators";
-import { PhoneInput } from "./phoneInput";
-import { LessonType } from "@prisma/client";
+import { BookingFormData, bookingFormSchema } from "@/lib/validators";
+import { PhoneInput } from "@/app/(root)/kitesurfing/booking/phoneInput";
 
-function KitesurfingBookingForm() {
+function DayUseBookingForm() {
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [date, setDate] = React.useState<Date | null>(null);
 
@@ -63,39 +57,38 @@ function KitesurfingBookingForm() {
       date: date,
       email: "",
       phone: "",
-      lessonType: LessonType.PRIVATE,
+      service: "day-use",
       numberOfPeople: 1,
-      time: "",
-      notes: null,
-    } as KitesurfingBookingFormData,
+      time: null,
+    } as BookingFormData,
     validators: {
       onSubmit: ({ value }) => {
-        const result = kitesurfingBookingFormSchema.safeParse(value);
+        const result = bookingFormSchema.safeParse(value);
         if (result.success) return;
-
         const fieldErrors = result.error.flatten().fieldErrors;
-        // TanStack expects a map of field -> string | string[]
         return fieldErrors as any;
       },
     },
     onSubmit: async ({ value }) => {
-      if (!value.date || !value.time) {
-        toast.error("Please fill in all required fields");
+      if (!value.date) {
+        toast.error("Please select a date");
         return;
       }
       setIsSubmitting(true);
       try {
-        const result = await createKitesurfingBookingFromPublic(
-          value as KitesurfingBookingFormData,
-        );
+        const normalizedValue = {
+          ...value,
+          service: "day-use",
+          instructor: null,
+          time: value.time ?? null,
+        };
+        const result = await createBooking(normalizedValue as BookingFormData);
         if (result.success && result.bookingId && result.date) {
-          toast(`${result.message}`);
+          toast(result.message);
           router.push(
-            `/kitesurfing/booking/success?bookingId=${result.bookingId}&date=${result.date.toISOString()}&type=${result.bookingType}`,
+            `/day-use/booking/success?bookingId=${result.bookingId}&date=${result.date.toISOString()}&type=${result.bookingType}`,
           );
         } else {
-          // Failed: show error and re-enable form
-
           toast(result.message || "Failed to create booking");
           setIsSubmitting(false);
         }
@@ -105,25 +98,24 @@ function KitesurfingBookingForm() {
       }
     },
   });
-  // add photo to medium size screens
 
   return (
     <div className="md:flex md:m-2">
       <Image
-        src={kitePhoto}
-        alt="Kite surfer making a jump"
+        src={dayUsePhoto}
+        alt="Day use at Fins Sokhna beach"
         className="hidden md:block md:w-1/2 lg:w-2/3 rounded-l-4xl object-cover"
       />
       <Card className="m-2 md:m-0 md:w-1/2 lg:w-1/3 md:rounded-s-none rounded-4xl">
         <CardHeader>
-          <CardTitle>Kite surfing experience booking</CardTitle>
+          <CardTitle>Day Use booking</CardTitle>
           <CardDescription>
             Fill in the info to reserve your spot!
           </CardDescription>
         </CardHeader>
         <CardContent>
           <form
-            id="booking-form"
+            id="day-use-booking-form"
             onSubmit={(e) => {
               e.preventDefault();
               form.handleSubmit();
@@ -150,57 +142,6 @@ function KitesurfingBookingForm() {
                         disabled={isSubmitting}
                         className="rounded-full"
                       />
-                      {isInvalid && (
-                        <FieldError errors={field.state.meta.errors} />
-                      )}
-                    </Field>
-                  );
-                }}
-              />
-              <form.Field
-                name="lessonType"
-                children={(field) => {
-                  const isInvalid =
-                    field.state.meta.isTouched && !field.state.meta.isValid;
-                  return (
-                    <Field data-invalid={isInvalid}>
-                      <FieldLabel htmlFor={field.name}>Course Type</FieldLabel>
-                      <Select
-                        onValueChange={(v) =>
-                          field.handleChange(v as LessonType)
-                        }
-                        value={field.state.value}
-                      >
-                        <SelectTrigger
-                          id={field.name}
-                          className="w-full rounded-full"
-                          disabled={isSubmitting}
-                        >
-                          <SelectValue placeholder="Select a course" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectGroup>
-                            <SelectItem value={LessonType.PRIVATE}>
-                              Private
-                            </SelectItem>
-                            <SelectItem value={LessonType.GROUP}>
-                              Group
-                            </SelectItem>
-                            <SelectItem value={LessonType.EXTRA_PRIVATE}>
-                              Extra Private
-                            </SelectItem>
-                            <SelectItem value={LessonType.EXTRA_GROUP}>
-                              Extra Group
-                            </SelectItem>
-                            <SelectItem value={LessonType.FOIL}>
-                              Foil
-                            </SelectItem>
-                            <SelectItem value={LessonType.KIDS}>
-                              Kids
-                            </SelectItem>
-                          </SelectGroup>
-                        </SelectContent>
-                      </Select>
                       {isInvalid && (
                         <FieldError errors={field.state.meta.errors} />
                       )}
@@ -329,11 +270,13 @@ function KitesurfingBookingForm() {
                           />
                         </PopoverContent>
                       </Popover>
+                      {isInvalid && (
+                        <FieldError errors={field.state.meta.errors} />
+                      )}
                     </Field>
                   );
                 }}
               />
-
               <form.Field
                 name="time"
                 children={(field) => {
@@ -395,7 +338,7 @@ function KitesurfingBookingForm() {
             <Button
               className="rounded-full"
               type="submit"
-              form="booking-form"
+              form="day-use-booking-form"
               disabled={isSubmitting}
             >
               Submit
@@ -407,4 +350,4 @@ function KitesurfingBookingForm() {
   );
 }
 
-export default KitesurfingBookingForm;
+export default DayUseBookingForm;

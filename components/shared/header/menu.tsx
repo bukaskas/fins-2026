@@ -44,7 +44,7 @@ async function Menu() {
   const isAdmin = role === "ADMIN";
   return (
     <div className="flex md:justify-center z-10 w-full">
-<nav className="hidden md:flex md:items-center md:justify-center gap-2 lg:gap-6 font-[family-name:var(--font-raleway)]">
+      <nav className="hidden md:flex md:items-center md:justify-center gap-2 lg:gap-6 font-[family-name:var(--font-raleway)]">
         <Button asChild variant={"ghost"} className="text-lg">
           <Link href="/about">About</Link>
         </Button>

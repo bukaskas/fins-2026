@@ -18,6 +18,10 @@ const adminLinks = [
     href: "/bookings/dashboard",
   },
   {
+    title: "Schedule",
+    href: "/bookings/schedule",
+  },
+  {
     title: "Open orders",
     href: "/accounting/open-orders",
   },

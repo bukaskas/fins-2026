@@ -42,3 +42,18 @@ export const userEditFormSchema = z.object({
 });
 
 export type UserEditFormData = z.infer<typeof userEditFormSchema>;
+
+import { LessonType } from "@prisma/client";
+
+export const kitesurfingBookingFormSchema = z.object({
+  name: z.string().min(2, "Name must be at least 2 characters long"),
+  email: z.string().email("Invalid email address"),
+  phone: z.string().min(7, "Phone number must be at least 7 digits long"),
+  date: z.date({ required_error: "Date is required" }),
+  time: z.string().min(1, "Please select a time"),
+  lessonType: z.nativeEnum(LessonType),
+  numberOfPeople: z.number().int().min(1).max(4).default(1),
+  notes: z.string().nullable().default(null),
+});
+
+export type KitesurfingBookingFormData = z.infer<typeof kitesurfingBookingFormSchema>;

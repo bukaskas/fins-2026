@@ -38,7 +38,7 @@ const serviceContent: Record<
   },
   "pharaoh-airstyle": {
     heading: "Your Pharaoh Airstyle booking is confirmed!",
-    body: "We are excited to welcome you on {date}. Get ready for an amazing experience at the Pharaoh Airstyle event. You will find activities and entertainment throughout the day. Sukun will offer yoga and wellness sessions. Il Campo will join us to offer beach activities for youngsters and adults and of course music to fill your soul and dance all day long. If you have any questions or special requests, feel free to reach out.",
+    body: "We are excited to welcome you on {date}. Get ready for an unforgettable experience at the Pharaoh Airstyle event and celebration of 4 years of Fins. A full day of activities and entertainment awaits you. Sukun will offer yoga and wellness sessions, while Il Campo will host beach activities for both children and adults. There will also be music throughout the day to keep the energy high. If you have any questions or special requests, feel free to reach out.",
     cta: "Contact us on WhatsApp",
   },
 };
