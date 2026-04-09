@@ -30,6 +30,18 @@ const adminLinks = [
     href: "/register",
   },
   {
+    title: "Rentals",
+    href: "/rentals",
+  },
+  {
+    title: "Inventory",
+    href: "/inventory",
+  },
+  {
+    title: "Rental Guide",
+    href: "/rentals/guide",
+  },
+  {
     title: "Payments",
     href: "/accounting/payments",
   },

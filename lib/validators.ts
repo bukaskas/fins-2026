@@ -57,3 +57,48 @@ export const kitesurfingBookingFormSchema = z.object({
 });
 
 export type KitesurfingBookingFormData = z.infer<typeof kitesurfingBookingFormSchema>;
+
+import { InventoryCategory, ItemCondition } from "@prisma/client";
+
+export const rentalLineSchema = z.object({
+  inventoryItemId: z.string().min(1, "Item is required"),
+  qty: z.number().int().min(1, "Quantity must be at least 1"),
+  unitPriceCents: z.number().int().min(0, "Price must be 0 or more"),
+});
+
+export const createRentalSchema = z
+  .object({
+    guestId: z.string().min(1, "Guest is required"),
+    startsAt: z.coerce.date(),
+    dueAt: z.coerce.date(),
+    notes: z.string().nullable().default(null),
+    lines: z.array(rentalLineSchema).min(1, "At least one item is required"),
+  })
+  .refine((d) => d.dueAt > d.startsAt, {
+    message: "Due date must be after start date",
+    path: ["dueAt"],
+  });
+
+export type CreateRentalData = z.infer<typeof createRentalSchema>;
+
+export const createInventoryItemSchema = z.object({
+  sku: z.string().min(1, "SKU is required"),
+  name: z.string().min(1, "Name is required"),
+  category: z.nativeEnum(InventoryCategory),
+  size: z.string().nullable().default(null),
+  totalQty: z.number().int().min(0, "Quantity must be 0 or more"),
+  condition: z.nativeEnum(ItemCondition).default(ItemCondition.GOOD),
+});
+
+export type CreateInventoryItemData = z.infer<typeof createInventoryItemSchema>;
+
+export const updateInventoryItemSchema = z.object({
+  name: z.string().min(1).optional(),
+  category: z.nativeEnum(InventoryCategory).optional(),
+  size: z.string().nullable().optional(),
+  totalQty: z.number().int().min(0).optional(),
+  condition: z.nativeEnum(ItemCondition).optional(),
+  isActive: z.boolean().optional(),
+});
+
+export type UpdateInventoryItemData = z.infer<typeof updateInventoryItemSchema>;

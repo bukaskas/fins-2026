@@ -1,8 +1,8 @@
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import Image, { StaticImageData } from "next/image";
-import kiteMobile from "@/public/images/hero_images/hero_mobile2.webp";
-import kiteDesktop from "@/public/images/hero_images/kitesurfing_desktop2.webp";
+import kiteMobile from "@/public/images/hero_images/hero-mobile-pharaoh.webp";
+import kiteDesktop from "@/public/images/hero_images/hero-desktop-pharaoh.webp";
 type PharaohHeroProps = {
   mobileSrc?: StaticImageData;
   desktopSrc?: StaticImageData;
