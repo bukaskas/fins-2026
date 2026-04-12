@@ -92,8 +92,8 @@ export async function quickAddBeachUse(formData: FormData) {
     // 3) No membership + no credit => charge outstanding
     const isOwner = user.role === "OWNER";
     const chargeCents = isOwner
-      ? Math.trunc(BEACH_USE_BASE_PRICE_CENTS * (1 - OWNER_DISCOUNT))
-      : BEACH_USE_BASE_PRICE_CENTS;
+      ? Math.trunc(DAY_USE_PRICE_CENTS * (1 - OWNER_DISCOUNT))
+      : DAY_USE_PRICE_CENTS;
 
     await tx.beachVisit.create({
       data: {
