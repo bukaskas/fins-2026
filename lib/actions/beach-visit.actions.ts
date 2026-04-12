@@ -6,8 +6,10 @@ import { Prisma, WalletLedgerReason, WalletType, WalletUnit } from "@prisma/clie
 
 
 const BEACH_USE_SKU = "BEACH_USE_DAY";
-const BEACH_USE_BASE_PRICE_CENTS = 50000; // 500 EGP
+const DAY_USE_PRICE_CENTS = 120000; // 500 EGP
 const OWNER_DISCOUNT = 0.2;
+const HOLIDAY_PRICE_MULTIPLIER = 1.25; // 25% increase on holidays
+
 
 export async function quickAddBeachUse(formData: FormData) {
   const guestId = String(formData.get("guestId") ?? "").trim();

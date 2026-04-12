@@ -127,6 +127,7 @@ enum Role {
   INSTRUCTOR
   KITER
   OWNER
+  DAYPASS
 }
 
 model User {

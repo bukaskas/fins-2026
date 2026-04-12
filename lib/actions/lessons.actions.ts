@@ -344,7 +344,7 @@ export async function createKitesurfingBookingFromPublic(
 
     const [h, m] = validated.time.split(":").map(Number);
     const startsAt = new Date(validated.date);
-    startsAt.setHours(h, m, 0, 0);
+    startsAt.setUTCHours(h, m, 0, 0);
     const endsAt = new Date(
       startsAt.getTime() +
       LESSON_DURATION_MINUTES[validated.lessonType] * 60 * 1000

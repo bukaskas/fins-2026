@@ -269,7 +269,18 @@ function BookingEditForm({ booking, instructors }: Props) {
                             mode="single"
                             selected={field.state.value}
                             onSelect={(date) => {
-                              field.handleChange(date);
+                              if (date) {
+                                const normalized = new Date(
+                                  Date.UTC(
+                                    date.getFullYear(),
+                                    date.getMonth(),
+                                    date.getDate(),
+                                  ),
+                                );
+                                field.handleChange(normalized);
+                              } else {
+                                field.handleChange(date);
+                              }
                               setOpen(false);
                             }}
                             defaultMonth={field.state.value}
@@ -369,20 +380,36 @@ function BookingEditForm({ booking, instructors }: Props) {
                 children={(field) => {
                   return (
                     <Field>
-                      <FieldLabel htmlFor={field.name}>Booking Status</FieldLabel>
+                      <FieldLabel htmlFor={field.name}>
+                        Booking Status
+                      </FieldLabel>
                       <Select
-                        onValueChange={(v) => field.handleChange(v as BookingStatus)}
+                        onValueChange={(v) =>
+                          field.handleChange(v as BookingStatus)
+                        }
                         value={field.state.value}
                       >
-                        <SelectTrigger id={field.name} className="w-full rounded-full" disabled={isSubmitting}>
+                        <SelectTrigger
+                          id={field.name}
+                          className="w-full rounded-full"
+                          disabled={isSubmitting}
+                        >
                           <SelectValue placeholder="Select booking status" />
                         </SelectTrigger>
                         <SelectContent>
                           <SelectGroup>
-                            <SelectItem value={BookingStatus.PENDING}>Pending</SelectItem>
-                            <SelectItem value={BookingStatus.CONFIRMED}>Confirmed</SelectItem>
-                            <SelectItem value={BookingStatus.DECLINED}>Declined</SelectItem>
-                            <SelectItem value={BookingStatus.CANCELED}>Canceled</SelectItem>
+                            <SelectItem value={BookingStatus.PENDING}>
+                              Pending
+                            </SelectItem>
+                            <SelectItem value={BookingStatus.CONFIRMED}>
+                              Confirmed
+                            </SelectItem>
+                            <SelectItem value={BookingStatus.DECLINED}>
+                              Declined
+                            </SelectItem>
+                            <SelectItem value={BookingStatus.CANCELED}>
+                              Canceled
+                            </SelectItem>
                           </SelectGroup>
                         </SelectContent>
                       </Select>
@@ -395,20 +422,36 @@ function BookingEditForm({ booking, instructors }: Props) {
                 children={(field) => {
                   return (
                     <Field>
-                      <FieldLabel htmlFor={field.name}>Payment Status</FieldLabel>
+                      <FieldLabel htmlFor={field.name}>
+                        Payment Status
+                      </FieldLabel>
                       <Select
-                        onValueChange={(v) => field.handleChange(v as PaymentStatus)}
+                        onValueChange={(v) =>
+                          field.handleChange(v as PaymentStatus)
+                        }
                         value={field.state.value}
                       >
-                        <SelectTrigger id={field.name} className="w-full rounded-full" disabled={isSubmitting}>
+                        <SelectTrigger
+                          id={field.name}
+                          className="w-full rounded-full"
+                          disabled={isSubmitting}
+                        >
                           <SelectValue placeholder="Select payment status" />
                         </SelectTrigger>
                         <SelectContent>
                           <SelectGroup>
-                            <SelectItem value={PaymentStatus.UNPAID}>Unpaid</SelectItem>
-                            <SelectItem value={PaymentStatus.DEPOSIT_PAID}>Deposit Paid</SelectItem>
-                            <SelectItem value={PaymentStatus.PAID}>Paid</SelectItem>
-                            <SelectItem value={PaymentStatus.REFUNDED}>Refunded</SelectItem>
+                            <SelectItem value={PaymentStatus.UNPAID}>
+                              Unpaid
+                            </SelectItem>
+                            <SelectItem value={PaymentStatus.DEPOSIT_PAID}>
+                              Deposit Paid
+                            </SelectItem>
+                            <SelectItem value={PaymentStatus.PAID}>
+                              Paid
+                            </SelectItem>
+                            <SelectItem value={PaymentStatus.REFUNDED}>
+                              Refunded
+                            </SelectItem>
                           </SelectGroup>
                         </SelectContent>
                       </Select>
@@ -439,7 +482,10 @@ function BookingEditForm({ booking, instructors }: Props) {
                           <SelectContent>
                             <SelectGroup>
                               {instructors.map((instructor) => (
-                                <SelectItem key={instructor.id} value={instructor.name ?? instructor.id}>
+                                <SelectItem
+                                  key={instructor.id}
+                                  value={instructor.name ?? instructor.id}
+                                >
                                   {instructor.name ?? "Unnamed"}
                                 </SelectItem>
                               ))}
@@ -464,7 +510,12 @@ function BookingEditForm({ booking, instructors }: Props) {
             className="rounded-full"
             disabled={isSubmitting}
             onClick={async () => {
-              if (!confirm(`Delete booking for ${booking.name}? This cannot be undone.`)) return;
+              if (
+                !confirm(
+                  `Delete booking for ${booking.name}? This cannot be undone.`,
+                )
+              )
+                return;
               setIsSubmitting(true);
               const result = await deleteBooking(booking.id);
               if (result.success) {

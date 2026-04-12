@@ -261,7 +261,18 @@ function DayUseBookingForm() {
                             mode="single"
                             selected={field.state.value}
                             onSelect={(date) => {
-                              field.handleChange(date);
+                              if (date) {
+                                const normalized = new Date(
+                                  Date.UTC(
+                                    date.getFullYear(),
+                                    date.getMonth(),
+                                    date.getDate(),
+                                  ),
+                                );
+                                field.handleChange(normalized);
+                              } else {
+                                field.handleChange(date);
+                              }
                               setOpen(false);
                             }}
                             defaultMonth={field.state.value}
