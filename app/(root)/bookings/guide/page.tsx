@@ -104,9 +104,7 @@ export default async function BookingGuidePage() {
           Notifications are routed per service type — configure the destination
           address via environment variables (e.g.{" "}
           <code className="bg-muted px-1 rounded">STAFF_EMAIL_DAY_USE</code>,{" "}
-          <code className="bg-muted px-1 rounded">
-            STAFF_EMAIL_KITESURFING
-          </code>
+          <code className="bg-muted px-1 rounded">STAFF_EMAIL_KITESURFING</code>
           ).
         </p>
       </section>
@@ -160,9 +158,7 @@ export default async function BookingGuidePage() {
                   <td className="py-2 pr-6">
                     <code className="bg-muted px-1 rounded">DECLINED</code>
                   </td>
-                  <td className="py-2">
-                    Send polite decline message to guest
-                  </td>
+                  <td className="py-2">Send polite decline message to guest</td>
                 </tr>
                 <tr>
                   <td className="py-2 pr-6">Cancel later</td>

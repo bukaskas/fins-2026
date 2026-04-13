@@ -1,4 +1,5 @@
 # Day Use Booking Process
+
 _Standard Operating Procedure — Fins Beach Club_
 
 ---
@@ -15,14 +16,14 @@ The guest navigates to `/day-use` and clicks **Make a Reservation**, which takes
 
 **Form fields:**
 
-| Field             | Required | Details                                                          |
-| ----------------- | -------- | ---------------------------------------------------------------- |
-| Full Name         | Yes      | First and family name (min 2 characters)                         |
-| Email             | Yes      | Valid email address                                              |
-| Phone             | Yes      | International format, default country Egypt (+20)               |
-| Number of People  | Yes      | Minimum 1                                                        |
-| Date              | Yes      | Future dates only — defaults to tomorrow                        |
-| Arrival Time      | No       | 30-minute intervals from 09:00 to 17:00                         |
+| Field            | Required | Details                                           |
+| ---------------- | -------- | ------------------------------------------------- |
+| Full Name        | Yes      | First and family name (min 2 characters)          |
+| Email            | Yes      | Valid email address                               |
+| Phone            | Yes      | International format, default country Egypt (+20) |
+| Number of People | Yes      | Minimum 1                                         |
+| Date             | Yes      | Future dates only — defaults to tomorrow          |
+| Arrival Time     | No       | 30-minute intervals from 09:00 to 17:00           |
 
 The service is automatically set to `"day-use"` and no instructor is assigned.
 
@@ -69,14 +70,14 @@ The guest receives an automated email immediately after submitting:
 
 Staff receive a notification email routed to the address configured in `STAFF_EMAIL_DAY_USE` (environment variable). The email contains:
 
-| Field            | Value                            |
-| ---------------- | -------------------------------- |
-| Customer name    | As entered in the form           |
-| Customer email   | As entered in the form           |
-| Customer phone   | As entered in the form           |
-| Service          | `day-use`                        |
-| Date             | Selected arrival date            |
-| Number of people | As entered in the form           |
+| Field            | Value                  |
+| ---------------- | ---------------------- |
+| Customer name    | As entered in the form |
+| Customer email   | As entered in the form |
+| Customer phone   | As entered in the form |
+| Service          | `day-use`              |
+| Date             | Selected arrival date  |
+| Number of people | As entered in the form |
 
 > **Configure:** Set `STAFF_EMAIL_DAY_USE` in your `.env` file to route notifications to the correct inbox, WhatsApp group, or internal system.
 
@@ -105,12 +106,15 @@ Navigate to **Admin → Bookings** (`/bookings`) and update the booking status:
 ### Sample WhatsApp messages
 
 **Requesting social account:**
+
 > Hi [Guest Name], thank you for your day use booking request at Fins Beach Club! Could you please share your Instagram or Facebook profile so we can complete your reservation? Looking forward to welcoming you!
 
 **Booking confirmed:**
+
 > Hi [Guest Name], great news — your day use booking at Fins Beach Club is confirmed for [Date]. Arrival time [Time or "whenever you like"]. See you soon! Any questions, reach us at +20 XXX XXX XXXX.
 
 **Booking declined:**
+
 > Hi [Guest Name], thank you for your interest in Fins Beach Club. Unfortunately we're unable to accommodate your request on this occasion. We hope to welcome you in the future!
 
 ---
@@ -140,9 +144,9 @@ Search for the guest by name, email, or phone, then click **Add Beach Use** on t
 - Creates a `BeachVisit` with type `REGULAR`, status `OPEN`
 - Creates an open `Order` for the outstanding balance:
 
-| Guest role | Price       |
-| ---------- | ----------- |
-| Regular    | **500 EGP** |
+| Guest role | Price                      |
+| ---------- | -------------------------- |
+| Regular    | **500 EGP**                |
 | OWNER      | **400 EGP** (20% discount) |
 
 - An `OrderLine` is created linked to product SKU `BEACH_USE_DAY`
