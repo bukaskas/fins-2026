@@ -6,7 +6,7 @@ import { Prisma, WalletLedgerReason, WalletType, WalletUnit } from "@prisma/clie
 
 
 const BEACH_USE_SKU = "BEACH_USE_DAY";
-const DAY_USE_PRICE_CENTS = 120000; // 500 EGP
+const DAY_USE_PRICE_CENTS = 120000; // 1200 EGP
 const OWNER_DISCOUNT = 0.2;
 const HOLIDAY_PRICE_MULTIPLIER = 1.25; // 25% increase on holidays
 
@@ -119,7 +119,7 @@ export async function quickAddBeachUse(formData: FormData) {
           name: "Beach Use Day",
           sku: BEACH_USE_SKU,
           type: "SERVICE",
-          priceCents: BEACH_USE_BASE_PRICE_CENTS,
+          priceCents: DAY_USE_PRICE_CENTS,
           currency: "EGP",
           isActive: true,
         },
