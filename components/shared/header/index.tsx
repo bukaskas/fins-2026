@@ -1,10 +1,11 @@
+import { NavScrollWrapper } from "./NavScrollWrapper";
 import Menu from "./menu";
 
 function Header() {
   return (
-    <header className="w-full z-50 ">
+    <NavScrollWrapper>
       <Menu />
-    </header>
+    </NavScrollWrapper>
   );
 }
 
