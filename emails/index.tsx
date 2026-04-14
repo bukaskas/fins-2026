@@ -31,7 +31,7 @@ export async function sendBookingEmail(
   });
 }
 
-const serviceToStaffEmail: Record<string, string> = {
+const serviceToStaffEmails: Record<string, string[]> = {
   "kitesurfing-course": STAFF_EMAILS.kitesurfing,
   "pharaoh-airstyle": STAFF_EMAILS.kitesurfing,
   "day-use": STAFF_EMAILS.dayUse,
@@ -48,12 +48,12 @@ export async function sendStaffNotificationEmail(
   numberOfKids?: number,
   totalPriceCents?: number,
 ) {
-  const staffEmail = serviceToStaffEmail[service];
-  if (!staffEmail) return;
+  const staffEmails = serviceToStaffEmails[service];
+  if (!staffEmails?.length) return;
 
   await resend.emails.send({
     from: EMAIL_ADDRESS,
-    to: staffEmail,
+    to: staffEmails,
     subject: `New booking: ${customerName} — ${service}`,
     react: (
       <StaffNotificationEmail
