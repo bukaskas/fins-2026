@@ -4,6 +4,7 @@ import {
   Container,
   Head,
   Heading,
+  Hr,
   Html,
   Preview,
   Section,
@@ -27,8 +28,8 @@ const serviceContent: Record<
     cta: "Contact us on WhatsApp",
   },
   "day-use": {
-    heading: "Your beach day is booked!",
-    body: "We can't wait to host you on {date}. Get ready to relax and enjoy the beach, sun, and sea at Fins. If you have any questions or special requests, feel free to reach out.",
+    heading: "Your beach day is booked! 🌊",
+    body: "We can't wait to host you on {date}.",
     cta: "Contact us on WhatsApp",
   },
   restaurant: {
@@ -44,6 +45,40 @@ const serviceContent: Record<
 };
 
 const defaultContent = serviceContent["kitesurfing-course"];
+
+const DayUseDetails = () => (
+  <>
+    <Hr className="my-4 border-gray-200" />
+
+    <Text className="text-sm font-semibold mb-1">💰 1,200 LE / per person</Text>
+    <Text className="text-sm mb-0">⏰ 9:00 AM – 11:00 PM</Text>
+
+    <Hr className="my-4 border-gray-200" />
+
+    <Text className="text-sm font-semibold mb-1">✅ Includes:</Text>
+    <Text className="text-sm leading-relaxed">
+      • Beach entrance{"\n"}• Swimming pool{"\n"}• Showers &amp; lounges{"\n"}•
+      Lockers (no rooms available)
+    </Text>
+
+    <Hr className="my-4 border-gray-200" />
+
+    <Text className="text-sm font-semibold mb-1">🚫 House Rules:</Text>
+    <Text className="text-sm leading-relaxed">
+      • No pets{"\n"}• No icebox{"\n"}• No speakers{"\n"}• No outside food or
+      drinks{"\n"}• Mixed groups &amp; families only
+    </Text>
+
+    <Hr className="my-4 border-gray-200" />
+
+    <Text className="text-sm text-gray-500 italic leading-relaxed">
+      Our team will be in touch with you shortly to confirm your booking. As
+      part of our process, we may ask you to share your social media account so
+      we can get to know you. If your account is private, a screenshot works
+      just fine. This helps us keep our community the way we love it 🤍
+    </Text>
+  </>
+);
 
 const BookingEmail = ({ username, date, bookingType }: BookingEmailProps) => {
   const content =
@@ -63,6 +98,7 @@ const BookingEmail = ({ username, date, bookingType }: BookingEmailProps) => {
             </Heading>
             <Text className="text-start text-sm">Hello {username},</Text>
             <Text className="text-start text-sm leading-relaxed">{body}</Text>
+            {bookingType === "day-use" && <DayUseDetails />}
             <Section className="text-center mt-[32px] mb-[32px]">
               <Button
                 className="py-2.5 px-5 bg-green-500 rounded-md text-black text-sm font-semibold no-underline text-center"

@@ -67,7 +67,7 @@ export default async function BookingGuidePage() {
       {/* Step 2 */}
       <section className="space-y-3">
         <h2 className="text-2xl font-semibold">
-          Step 2 — Guest Receives Confirmation Email
+          Step 2 — Guest Receives Reservation Email
         </h2>
         <p>
           Immediately after submitting, the guest receives an automated email
@@ -81,6 +81,61 @@ export default async function BookingGuidePage() {
           <li>A contact phone number for questions</li>
           <li>A WhatsApp button for one-tap contact</li>
         </ul>
+
+        <div className="space-y-2">
+          <h3 className="text-xl font-medium">Day Use — Email Sent to Guest</h3>
+          <p className="text-sm text-muted-foreground">
+            For Day Use bookings, the following information is included in or
+            alongside the confirmation email:
+          </p>
+          <div className="rounded-lg border bg-muted/40 p-5 space-y-4 text-sm">
+            <p className="font-semibold text-base">🌊 Fins Beach – Day Use</p>
+
+            <div className="space-y-1">
+              <p>
+                💰 <strong>1,200 LE / per person</strong>
+              </p>
+              <p>
+                ⏰ <strong>9:00 AM – 11:00 PM</strong>
+              </p>
+            </div>
+
+            <div className="space-y-1">
+              <p className="font-semibold">✅ Includes:</p>
+              <ul className="list-disc pl-5 space-y-0.5">
+                <li>Beach entrance</li>
+                <li>Swimming pool</li>
+                <li>Showers &amp; lounges</li>
+                <li>
+                  Lockers{" "}
+                  <span className="text-muted-foreground">
+                    (no rooms available)
+                  </span>
+                </li>
+              </ul>
+            </div>
+
+            <div className="space-y-1">
+              <p className="font-semibold">🚫 House Rules:</p>
+              <ul className="list-disc pl-5 space-y-0.5">
+                <li>No pets</li>
+                <li>No icebox</li>
+                <li>No speakers</li>
+                <li>No outside food or drinks</li>
+                <li>Mixed groups &amp; families only</li>
+              </ul>
+            </div>
+
+            <p className="italic text-muted-foreground">
+              Our team will be in touch with you shortly to confirm your
+              booking. As part of our process, we may ask you to share your
+              social media account so we can get to know you. If your account is
+              private, a screenshot works just fine. This helps us keep our
+              community the way we love it 🤍
+            </p>
+          </div>
+        </div>
+
         <p className="text-sm text-muted-foreground">
           The contact number must be staffed during advertised hours.
         </p>
@@ -193,8 +248,8 @@ export default async function BookingGuidePage() {
             </p>
             <p className="text-sm">
               Hi [Guest Name], great news — your booking at Fins Beach Club is
-              confirmed for [Date] at [Time]. Please arrive 15 minutes early.
-              See you soon! Any questions, reach us at +20 XXX XXX XXXX.
+              confirmed for [Date] at [Time]. See you soon! Any questions, reach
+              us at +20 XXX XXX XXXX.
             </p>
           </div>
 
