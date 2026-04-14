@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { KitesurfingHero } from "./KitesurfingHero";
 import { DayUseHero } from "./DayUseHero";
@@ -17,52 +17,61 @@ const heroComponents = [
 function HeroSection() {
   const [currentSlide, setCurrentSlide] = useState(0);
   const [isTransitioning, setIsTransitioning] = useState(false);
+  const transitionTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const touchStartX = useRef<number | null>(null);
 
-  // Auto-rotate every 8 seconds
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setIsTransitioning(true);
-      setTimeout(() => {
-        setCurrentSlide((prev) => (prev + 1) % heroComponents.length);
-        setIsTransitioning(false);
-      }, 300);
-    }, 20000);
-
-    return () => clearInterval(interval);
+  // Single navigation function — cancels any in-flight transition before starting a new one
+  const navigate = useCallback((getNext: (prev: number) => number) => {
+    if (transitionTimeoutRef.current) clearTimeout(transitionTimeoutRef.current);
+    setIsTransitioning(true);
+    transitionTimeoutRef.current = setTimeout(() => {
+      setCurrentSlide(getNext);
+      setIsTransitioning(false);
+    }, 300);
   }, []);
 
-  const goToNext = () => {
-    setIsTransitioning(true);
-    setTimeout(() => {
-      setCurrentSlide((prev) => (prev + 1) % heroComponents.length);
-      setIsTransitioning(false);
-    }, 300);
-  };
+  // Auto-rotate every 20 s — rebuilds whenever currentSlide changes so manual
+  // navigation resets the timer (prevents an immediate auto-advance after a swipe).
+  useEffect(() => {
+    const interval = setInterval(
+      () => navigate((p) => (p + 1) % heroComponents.length),
+      20000,
+    );
+    return () => clearInterval(interval);
+  }, [currentSlide, navigate]);
 
-  const goToPrevious = () => {
-    setIsTransitioning(true);
-    setTimeout(() => {
-      setCurrentSlide(
-        (prev) => (prev - 1 + heroComponents.length) % heroComponents.length,
-      );
-      setIsTransitioning(false);
-    }, 300);
-  };
+  // Clean up any pending timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (transitionTimeoutRef.current) clearTimeout(transitionTimeoutRef.current);
+    };
+  }, []);
 
+  const goToNext = () => navigate((p) => (p + 1) % heroComponents.length);
+  const goToPrevious = () => navigate((p) => (p - 1 + heroComponents.length) % heroComponents.length);
   const goToSlide = (index: number) => {
-    if (index !== currentSlide) {
-      setIsTransitioning(true);
-      setTimeout(() => {
-        setCurrentSlide(index);
-        setIsTransitioning(false);
-      }, 300);
-    }
+    if (index !== currentSlide) navigate(() => index);
+  };
+
+  // Touch swipe — 50 px threshold
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX;
+  };
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (touchStartX.current === null) return;
+    const delta = touchStartX.current - e.changedTouches[0].clientX;
+    if (Math.abs(delta) > 50) delta > 0 ? goToNext() : goToPrevious();
+    touchStartX.current = null;
   };
 
   const CurrentHeroComponent = heroComponents[currentSlide];
 
   return (
-    <div className="relative h-screen -mt-29  ">
+    <div
+      className="relative h-screen -mt-29"
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
+    >
       {/* Navigation Arrows */}
       <button
         onClick={goToPrevious}
@@ -85,10 +94,10 @@ function HeroSection() {
           <button
             key={index}
             onClick={() => goToSlide(index)}
-            className={`h-2 w-2 rounded-full transition-all ${
+            className={`h-2 rounded-full transition-all ${
               currentSlide === index
                 ? "w-8 bg-white"
-                : "bg-white/50 hover:bg-white/75"
+                : "w-2 bg-white/50 hover:bg-white/75"
             }`}
             aria-label={`Go to slide ${index + 1}`}
           />
@@ -97,7 +106,7 @@ function HeroSection() {
 
       {/* Hero Component with Transition */}
       <div
-        className={`transition-opacity duration-500 ease-in-out f-full ${
+        className={`transition-opacity duration-500 ease-in-out h-full ${
           isTransitioning ? "opacity-0" : "opacity-100"
         }`}
       >

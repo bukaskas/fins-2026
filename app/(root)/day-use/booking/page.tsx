@@ -109,6 +109,9 @@ function DayUseBookingForm() {
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [step, setStep] = React.useState<1 | 2 | 3>(1);
   const [calendarOpen, setCalendarOpen] = React.useState(false);
+  // Local display strings so users can clear and re-type without the field snapping back
+  const [adultsInput, setAdultsInput] = React.useState("1");
+  const [kidsInput, setKidsInput] = React.useState("0");
   const router = useRouter();
 
   const form = useForm({
@@ -297,13 +300,19 @@ function DayUseBookingForm() {
                               id={field.name}
                               type="number"
                               inputMode="numeric"
-                              value={field.state.value || ""}
-                              onBlur={field.handleBlur}
-                              onChange={(e) =>
-                                field.handleChange(
-                                  parseInt(e.target.value, 10) || 1,
-                                )
-                              }
+                              value={adultsInput}
+                              onChange={(e) => {
+                                setAdultsInput(e.target.value);
+                                const n = parseInt(e.target.value, 10);
+                                if (!isNaN(n) && n >= 1) field.handleChange(n);
+                              }}
+                              onBlur={() => {
+                                const n = parseInt(adultsInput, 10);
+                                const valid = isNaN(n) || n < 1 ? 1 : n;
+                                setAdultsInput(String(valid));
+                                field.handleChange(valid);
+                                field.handleBlur();
+                              }}
                               aria-invalid={isInvalid}
                               placeholder="1"
                               min="1"
@@ -331,13 +340,19 @@ function DayUseBookingForm() {
                               id={field.name}
                               type="number"
                               inputMode="numeric"
-                              value={field.state.value ?? ""}
-                              onBlur={field.handleBlur}
-                              onChange={(e) =>
-                                field.handleChange(
-                                  parseInt(e.target.value, 10) || 0,
-                                )
-                              }
+                              value={kidsInput}
+                              onChange={(e) => {
+                                setKidsInput(e.target.value);
+                                const n = parseInt(e.target.value, 10);
+                                if (!isNaN(n) && n >= 0) field.handleChange(n);
+                              }}
+                              onBlur={() => {
+                                const n = parseInt(kidsInput, 10);
+                                const valid = isNaN(n) || n < 0 ? 0 : n;
+                                setKidsInput(String(valid));
+                                field.handleChange(valid);
+                                field.handleBlur();
+                              }}
                               aria-invalid={isInvalid}
                               placeholder="0"
                               min="0"
