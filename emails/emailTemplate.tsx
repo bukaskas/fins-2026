@@ -16,6 +16,9 @@ interface BookingEmailProps {
   username?: string;
   date?: string;
   bookingType?: string;
+  numberOfPeople?: number;
+  numberOfKids?: number;
+  totalPriceCents?: number;
 }
 
 const serviceContent: Record<
@@ -46,11 +49,50 @@ const serviceContent: Record<
 
 const defaultContent = serviceContent["kitesurfing-course"];
 
-const DayUseDetails = () => (
+interface DayUseDetailsProps {
+  numberOfPeople?: number;
+  numberOfKids?: number;
+  totalPriceCents?: number;
+}
+
+const DayUseDetails = ({ numberOfPeople, numberOfKids, totalPriceCents }: DayUseDetailsProps) => {
+  const hasBreakdown =
+    totalPriceCents != null &&
+    numberOfPeople != null &&
+    numberOfPeople > 0;
+
+  const adultPrice = 120000;
+  const kidsPrice = 60000;
+  const adults = numberOfPeople ?? 0;
+  const kids = numberOfKids ?? 0;
+  const total = totalPriceCents ?? 0;
+
+  const fmt = (cents: number) => `${(cents / 100).toLocaleString("en-EG")} EGP`;
+
+  return (
   <>
     <Hr className="my-4 border-gray-200" />
 
-    <Text className="text-sm font-semibold mb-1">💰 1,200 LE / per person</Text>
+    {hasBreakdown ? (
+      <>
+        <Text className="text-sm font-semibold mb-1">💰 Price breakdown:</Text>
+        {adults > 0 && (
+          <Text className="text-sm m-0">
+            Adults: {adults} × {fmt(adultPrice)} = {fmt(adults * adultPrice)}
+          </Text>
+        )}
+        {kids > 0 && (
+          <Text className="text-sm m-0">
+            Kids: {kids} × {fmt(kidsPrice)} = {fmt(kids * kidsPrice)}
+          </Text>
+        )}
+        <Text className="text-sm font-semibold mt-1">
+          Total: {fmt(total)}
+        </Text>
+      </>
+    ) : (
+      <Text className="text-sm font-semibold mb-1">💰 1,200 LE / per person</Text>
+    )}
     <Text className="text-sm mb-0">⏰ 9:00 AM – 11:00 PM</Text>
 
     <Hr className="my-4 border-gray-200" />
@@ -78,9 +120,10 @@ const DayUseDetails = () => (
       just fine. This helps us keep our community the way we love it 🤍
     </Text>
   </>
-);
+  );
+};
 
-const BookingEmail = ({ username, date, bookingType }: BookingEmailProps) => {
+const BookingEmail = ({ username, date, bookingType, numberOfPeople, numberOfKids, totalPriceCents }: BookingEmailProps) => {
   const content =
     (bookingType ? serviceContent[bookingType] : null) ?? defaultContent;
   const body = content.body.replace("{date}", date ?? "your scheduled date");
@@ -98,7 +141,13 @@ const BookingEmail = ({ username, date, bookingType }: BookingEmailProps) => {
             </Heading>
             <Text className="text-start text-sm">Hello {username},</Text>
             <Text className="text-start text-sm leading-relaxed">{body}</Text>
-            {bookingType === "day-use" && <DayUseDetails />}
+            {bookingType === "day-use" && (
+              <DayUseDetails
+                numberOfPeople={numberOfPeople}
+                numberOfKids={numberOfKids}
+                totalPriceCents={totalPriceCents}
+              />
+            )}
             <Section className="text-center mt-[32px] mb-[32px]">
               <Button
                 className="py-2.5 px-5 bg-green-500 rounded-md text-black text-sm font-semibold no-underline text-center"

@@ -20,10 +20,21 @@ export async function createBooking(data: BookingFormData) {
         phone: validatedData.phone,
         service: validatedData.service,
         numberOfPeople: validatedData.numberOfPeople,
+        numberOfKids: validatedData.numberOfKids ?? 0,
+        totalPriceCents: validatedData.totalPriceCents ?? null,
       },
     });
 
-    await sendBookingEmail(validatedData.email, validatedData.name, validatedData.date, validatedData.service);
+    const isDayUse = validatedData.service === "day-use";
+    await sendBookingEmail(
+      validatedData.email,
+      validatedData.name,
+      validatedData.date,
+      validatedData.service,
+      isDayUse ? validatedData.numberOfPeople : undefined,
+      isDayUse ? (validatedData.numberOfKids ?? 0) : undefined,
+      isDayUse ? (validatedData.totalPriceCents ?? undefined) : undefined,
+    );
     await sendStaffNotificationEmail(
       validatedData.name,
       validatedData.email,
@@ -31,6 +42,8 @@ export async function createBooking(data: BookingFormData) {
       validatedData.date,
       validatedData.service,
       validatedData.numberOfPeople,
+      isDayUse ? (validatedData.numberOfKids ?? 0) : undefined,
+      isDayUse ? (validatedData.totalPriceCents ?? undefined) : undefined,
     );
 
     return ({

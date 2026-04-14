@@ -111,12 +111,14 @@ model Booking {
   email          String
   phone          String
   service        String
-  numberOfPeople Int           @default(1)
-  createdAt      DateTime      @default(now()) @db.Timestamp(6)
-  instructor     String?
-  time           String?
-  bookingStatus  BookingStatus @default(PENDING)
-  paymentStatus  PaymentStatus @default(UNPAID)
+  numberOfPeople  Int           @default(1)
+  numberOfKids    Int           @default(0)
+  totalPriceCents Int?
+  createdAt       DateTime      @default(now()) @db.Timestamp(6)
+  instructor      String?
+  time            String?
+  bookingStatus   BookingStatus @default(PENDING)
+  paymentStatus   PaymentStatus @default(UNPAID)
 }
 
 enum Role {

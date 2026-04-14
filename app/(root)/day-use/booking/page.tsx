@@ -9,14 +9,6 @@ import {
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { format } from "date-fns";
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { useForm } from "@tanstack/react-form";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -39,27 +31,98 @@ import { createBooking } from "@/lib/actions/booking.actions";
 import Image from "next/image";
 import { BookingFormData, bookingFormSchema } from "@/lib/validators";
 import { PhoneInput } from "@/app/(root)/kitesurfing/booking/phoneInput";
+import {
+  calculateDayUsePrice,
+  formatEGP,
+  getDateRate,
+  RateType,
+} from "@/lib/pricing";
+
+const RATE_LABELS: Record<RateType, { label: string; className: string }> = {
+  standard: {
+    label: "Standard rate",
+    className: "bg-blue-100 text-blue-800",
+  },
+  holiday: {
+    label: "Holiday rate (+25%)",
+    className: "bg-amber-100 text-amber-800",
+  },
+  discounted: {
+    label: "Discounted rate (−25%)",
+    className: "bg-green-100 text-green-800",
+  },
+};
+
+function RateBadge({ date }: { date: Date }) {
+  const rate = getDateRate(date);
+  const { label, className } = RATE_LABELS[rate];
+  return (
+    <span
+      className={`inline-block mt-2 px-3 py-1 rounded-full text-xs font-medium ${className}`}
+    >
+      {label}
+    </span>
+  );
+}
+
+function PriceBreakdown({
+  date,
+  adults,
+  kids,
+}: {
+  date: Date;
+  adults: number;
+  kids: number;
+}) {
+  const breakdown = calculateDayUsePrice(date, adults, kids);
+  return (
+    <div className="rounded-xl border bg-muted/50 p-4 space-y-2 text-sm">
+      {adults > 0 && (
+        <div className="flex justify-between">
+          <span>
+            Adults ({adults} × {formatEGP(breakdown.adultUnitCents)})
+          </span>
+          <span className="font-medium">
+            {formatEGP(breakdown.adultTotalCents)}
+          </span>
+        </div>
+      )}
+      {kids > 0 && (
+        <div className="flex justify-between">
+          <span>
+            Kids ({kids} × {formatEGP(breakdown.kidsUnitCents)})
+          </span>
+          <span className="font-medium">
+            {formatEGP(breakdown.kidsTotalCents)}
+          </span>
+        </div>
+      )}
+      <div className="border-t pt-2 flex justify-between font-semibold">
+        <span>Total</span>
+        <span>{formatEGP(breakdown.totalCents)}</span>
+      </div>
+    </div>
+  );
+}
 
 function DayUseBookingForm() {
   const [isSubmitting, setIsSubmitting] = React.useState(false);
-  const [date, setDate] = React.useState<Date | null>(null);
-
-  React.useEffect(() => {
-    setDate(new Date(Date.now() + 86400000));
-  }, []);
-
-  const [open, setOpen] = React.useState(false);
+  const [step, setStep] = React.useState<1 | 2 | 3>(1);
+  const [calendarOpen, setCalendarOpen] = React.useState(false);
   const router = useRouter();
 
   const form = useForm({
     defaultValues: {
       name: "",
-      date: date,
+      date: new Date(Date.now() + 86400000),
       email: "",
       phone: "",
       service: "day-use",
       numberOfPeople: 1,
+      numberOfKids: 0,
+      totalPriceCents: null,
       time: null,
+      instructor: null,
     } as BookingFormData,
     validators: {
       onSubmit: ({ value }) => {
@@ -76,13 +139,19 @@ function DayUseBookingForm() {
       }
       setIsSubmitting(true);
       try {
-        const normalizedValue = {
+        const breakdown = calculateDayUsePrice(
+          value.date,
+          value.numberOfPeople,
+          value.numberOfKids ?? 0,
+        );
+        const normalizedValue: BookingFormData = {
           ...value,
           service: "day-use",
           instructor: null,
           time: value.time ?? null,
+          totalPriceCents: breakdown.totalCents,
         };
-        const result = await createBooking(normalizedValue as BookingFormData);
+        const result = await createBooking(normalizedValue);
         if (result.success && result.bookingId && result.date) {
           toast(result.message);
           router.push(
@@ -99,6 +168,20 @@ function DayUseBookingForm() {
     },
   });
 
+  // Step progress indicator
+  const StepIndicator = () => (
+    <div className="flex items-center justify-center gap-2 mb-4">
+      {([1, 2, 3] as const).map((s) => (
+        <div
+          key={s}
+          className={`h-2 w-8 rounded-full transition-colors ${
+            s <= step ? "bg-primary" : "bg-muted"
+          }`}
+        />
+      ))}
+    </div>
+  );
+
   return (
     <div className="md:flex md:m-2">
       <Image
@@ -110,9 +193,13 @@ function DayUseBookingForm() {
         <CardHeader>
           <CardTitle>Day Use booking</CardTitle>
           <CardDescription>
-            Fill in the info to reserve your spot!
+            {step === 1 && "Select your arrival date"}
+            {step === 2 && "How many tickets?"}
+            {step === 3 && "Your contact details"}
           </CardDescription>
+          <StepIndicator />
         </CardHeader>
+
         <CardContent>
           <form
             id="day-use-booking-form"
@@ -121,240 +208,329 @@ function DayUseBookingForm() {
               form.handleSubmit();
             }}
           >
-            <FieldGroup>
-              <form.Field
-                name="name"
-                children={(field) => {
-                  const isInvalid =
-                    field.state.meta.isTouched && !field.state.meta.isValid;
-                  return (
-                    <Field data-invalid={isInvalid}>
-                      <FieldLabel htmlFor={field.name}>Full Name</FieldLabel>
-                      <Input
-                        id={field.name}
-                        type="text"
-                        value={field.state.value}
-                        onBlur={field.handleBlur}
-                        onChange={(e) => field.handleChange(e.target.value)}
-                        aria-invalid={isInvalid}
-                        placeholder="First and Family name"
-                        autoComplete="off"
-                        disabled={isSubmitting}
-                        className="rounded-full"
-                      />
-                      {isInvalid && (
-                        <FieldError errors={field.state.meta.errors} />
-                      )}
-                    </Field>
-                  );
-                }}
-              />
-              <form.Field
-                name="email"
-                children={(field) => {
-                  const isInvalid =
-                    field.state.meta.isTouched && !field.state.meta.isValid;
-                  return (
-                    <Field data-invalid={isInvalid}>
-                      <FieldLabel htmlFor={field.name}>Email</FieldLabel>
-                      <Input
-                        id={field.name}
-                        type="email"
-                        value={field.state.value}
-                        onBlur={field.handleBlur}
-                        onChange={(e) => field.handleChange(e.target.value)}
-                        aria-invalid={isInvalid}
-                        placeholder="Email address"
-                        disabled={isSubmitting}
-                        className="rounded-full"
-                      />
-                      {isInvalid && (
-                        <FieldError errors={field.state.meta.errors} />
-                      )}
-                    </Field>
-                  );
-                }}
-              />
-              <form.Field
-                name="phone"
-                children={(field) => {
-                  const isInvalid =
-                    field.state.meta.isTouched && !field.state.meta.isValid;
-                  return (
-                    <Field data-invalid={isInvalid}>
-                      <FieldLabel htmlFor={field.name}>Phone</FieldLabel>
-                      <PhoneInput
-                        id={field.name}
-                        type="text"
-                        value={field.state.value}
-                        onBlur={field.handleBlur}
-                        onChange={field.handleChange}
-                        aria-invalid={isInvalid}
-                        international
-                        defaultCountry="EG"
-                        disabled={isSubmitting}
-                      />
-                      {isInvalid && (
-                        <FieldError errors={field.state.meta.errors} />
-                      )}
-                    </Field>
-                  );
-                }}
-              />
-              <form.Field
-                name="numberOfPeople"
-                children={(field) => {
-                  const isInvalid =
-                    field.state.meta.isTouched && !field.state.meta.isValid;
-                  return (
-                    <Field data-invalid={isInvalid}>
-                      <FieldLabel htmlFor={field.name}>
-                        Number of People
-                      </FieldLabel>
-                      <Input
-                        id={field.name}
-                        type="number"
-                        inputMode="numeric"
-                        value={field.state.value || ""}
-                        onBlur={field.handleBlur}
-                        onChange={(e) =>
-                          field.handleChange(parseInt(e.target.value, 10))
-                        }
-                        aria-invalid={isInvalid}
-                        placeholder="1"
-                        min="1"
-                        disabled={isSubmitting}
-                        className="rounded-full"
-                      />
-                      {isInvalid && (
-                        <FieldError errors={field.state.meta.errors} />
-                      )}
-                    </Field>
-                  );
-                }}
-              />
-              <form.Field
-                name="date"
-                children={(field) => {
-                  const isInvalid =
-                    field.state.meta.isTouched && !field.state.meta.isValid;
-                  return (
-                    <Field data-invalid={isInvalid}>
-                      <FieldLabel htmlFor={field.name}>Arrival Date</FieldLabel>
-                      <Popover open={open} onOpenChange={setOpen}>
-                        <PopoverTrigger asChild>
-                          <Button
-                            variant="outline"
-                            id={field.name}
-                            className="justify-start font-normal rounded-full"
-                            disabled={isSubmitting}
-                          >
-                            {field.state.value ? (
-                              format(field.state.value, "PPP")
-                            ) : (
-                              <span>Pick a date</span>
-                            )}
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                          <Calendar
-                            mode="single"
-                            selected={field.state.value}
-                            onSelect={(date) => {
-                              if (date) {
-                                const normalized = new Date(
-                                  Date.UTC(
-                                    date.getFullYear(),
-                                    date.getMonth(),
-                                    date.getDate(),
-                                  ),
-                                );
-                                field.handleChange(normalized);
-                              } else {
-                                field.handleChange(date);
-                              }
-                              setOpen(false);
-                            }}
-                            defaultMonth={field.state.value}
-                            disabled={{ before: new Date() }}
-                            required={true}
-                          />
-                        </PopoverContent>
-                      </Popover>
-                      {isInvalid && (
-                        <FieldError errors={field.state.meta.errors} />
-                      )}
-                    </Field>
-                  );
-                }}
-              />
-              <form.Field
-                name="time"
-                children={(field) => {
-                  const isInvalid =
-                    field.state.meta.isTouched && !field.state.meta.isValid;
-                  return (
-                    <Field data-invalid={isInvalid}>
-                      <FieldLabel htmlFor={field.name}>Arrival Time</FieldLabel>
-                      <Select
-                        onValueChange={field.handleChange}
-                        value={field.state.value ?? undefined}
-                      >
-                        <SelectTrigger
-                          id={field.name}
-                          className="w-full rounded-full"
-                          disabled={isSubmitting}
+            {/* ── STEP 1: Date ── */}
+            {step === 1 && (
+              <FieldGroup>
+                <form.Field
+                  name="date"
+                  children={(field) => {
+                    const isInvalid =
+                      field.state.meta.isTouched && !field.state.meta.isValid;
+                    return (
+                      <Field data-invalid={isInvalid}>
+                        <FieldLabel htmlFor={field.name}>
+                          Arrival Date
+                        </FieldLabel>
+                        <Popover
+                          open={calendarOpen}
+                          onOpenChange={setCalendarOpen}
                         >
-                          <SelectValue placeholder="Select a time" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectGroup>
-                            <SelectItem value="09:00">09:00</SelectItem>
-                            <SelectItem value="09:30">09:30</SelectItem>
-                            <SelectItem value="10:00">10:00</SelectItem>
-                            <SelectItem value="10:30">10:30</SelectItem>
-                            <SelectItem value="11:00">11:00</SelectItem>
-                            <SelectItem value="11:30">11:30</SelectItem>
-                            <SelectItem value="12:00">12:00</SelectItem>
-                            <SelectItem value="12:30">12:30</SelectItem>
-                            <SelectItem value="13:00">13:00</SelectItem>
-                            <SelectItem value="14:00">14:00</SelectItem>
-                            <SelectItem value="15:00">15:00</SelectItem>
-                            <SelectItem value="16:00">16:00</SelectItem>
-                            <SelectItem value="17:00">17:00</SelectItem>
-                          </SelectGroup>
-                        </SelectContent>
-                      </Select>
-                      {isInvalid && (
-                        <FieldError errors={field.state.meta.errors} />
-                      )}
-                    </Field>
-                  );
-                }}
+                          <PopoverTrigger asChild>
+                            <Button
+                              variant="outline"
+                              id={field.name}
+                              className="justify-start font-normal rounded-full w-full"
+                            >
+                              {field.state.value
+                                ? format(field.state.value, "PPP")
+                                : "Pick a date"}
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar
+                              mode="single"
+                              selected={field.state.value}
+                              onSelect={(date) => {
+                                if (date) {
+                                  const normalized = new Date(
+                                    Date.UTC(
+                                      date.getFullYear(),
+                                      date.getMonth(),
+                                      date.getDate(),
+                                    ),
+                                  );
+                                  field.handleChange(normalized);
+                                } else {
+                                  field.handleChange(date);
+                                }
+                                setCalendarOpen(false);
+                              }}
+                              defaultMonth={field.state.value}
+                              disabled={{ before: new Date() }}
+                              required={true}
+                            />
+                          </PopoverContent>
+                        </Popover>
+                        {field.state.value && (
+                          <RateBadge date={field.state.value} />
+                        )}
+                        {isInvalid && (
+                          <FieldError errors={field.state.meta.errors} />
+                        )}
+                      </Field>
+                    );
+                  }}
+                />
+              </FieldGroup>
+            )}
+
+            {/* ── STEP 2: Tickets + Price ── */}
+            {step === 2 && (
+              <form.Subscribe
+                selector={(state) => ({
+                  date: state.values.date,
+                  adults: state.values.numberOfPeople,
+                  kids: state.values.numberOfKids,
+                })}
+                children={({ date, adults, kids }) => (
+                  <FieldGroup>
+                    <form.Field
+                      name="numberOfPeople"
+                      children={(field) => {
+                        const isInvalid =
+                          field.state.meta.isTouched &&
+                          !field.state.meta.isValid;
+                        return (
+                          <Field data-invalid={isInvalid}>
+                            <FieldLabel htmlFor={field.name}>Adults</FieldLabel>
+                            <Input
+                              id={field.name}
+                              type="number"
+                              inputMode="numeric"
+                              value={field.state.value || ""}
+                              onBlur={field.handleBlur}
+                              onChange={(e) =>
+                                field.handleChange(
+                                  parseInt(e.target.value, 10) || 1,
+                                )
+                              }
+                              aria-invalid={isInvalid}
+                              placeholder="1"
+                              min="1"
+                              className="rounded-full"
+                            />
+                            {isInvalid && (
+                              <FieldError errors={field.state.meta.errors} />
+                            )}
+                          </Field>
+                        );
+                      }}
+                    />
+                    <form.Field
+                      name="numberOfKids"
+                      children={(field) => {
+                        const isInvalid =
+                          field.state.meta.isTouched &&
+                          !field.state.meta.isValid;
+                        return (
+                          <Field data-invalid={isInvalid}>
+                            <FieldLabel htmlFor={field.name}>
+                              Kids (under 12)
+                            </FieldLabel>
+                            <Input
+                              id={field.name}
+                              type="number"
+                              inputMode="numeric"
+                              value={field.state.value ?? ""}
+                              onBlur={field.handleBlur}
+                              onChange={(e) =>
+                                field.handleChange(
+                                  parseInt(e.target.value, 10) || 0,
+                                )
+                              }
+                              aria-invalid={isInvalid}
+                              placeholder="0"
+                              min="0"
+                              className="rounded-full"
+                            />
+                            {isInvalid && (
+                              <FieldError errors={field.state.meta.errors} />
+                            )}
+                          </Field>
+                        );
+                      }}
+                    />
+                    {date && (adults > 0 || (kids ?? 0) > 0) && (
+                      <PriceBreakdown
+                        date={date}
+                        adults={adults}
+                        kids={kids ?? 0}
+                      />
+                    )}
+                  </FieldGroup>
+                )}
               />
-            </FieldGroup>
+            )}
+
+            {/* ── STEP 3: Contact info + Summary ── */}
+            {step === 3 && (
+              <form.Subscribe
+                selector={(state) => ({
+                  date: state.values.date,
+                  adults: state.values.numberOfPeople,
+                  kids: state.values.numberOfKids,
+                })}
+                children={({ date, adults, kids }) => (
+                  <FieldGroup>
+                    {/* Summary */}
+                    {date && (
+                      <div className="rounded-xl border bg-muted/50 p-3 text-sm space-y-1 mb-2">
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Date</span>
+                          <span className="font-medium">
+                            {format(date, "PPP")}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Adults</span>
+                          <span>{adults}</span>
+                        </div>
+                        {(kids ?? 0) > 0 && (
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Kids</span>
+                            <span>{kids}</span>
+                          </div>
+                        )}
+                        <div className="border-t pt-1 flex justify-between font-semibold">
+                          <span>Total</span>
+                          <span>
+                            {formatEGP(
+                              calculateDayUsePrice(date, adults, kids ?? 0)
+                                .totalCents,
+                            )}
+                          </span>
+                        </div>
+                      </div>
+                    )}
+
+                    <form.Field
+                      name="name"
+                      children={(field) => {
+                        const isInvalid =
+                          field.state.meta.isTouched &&
+                          !field.state.meta.isValid;
+                        return (
+                          <Field data-invalid={isInvalid}>
+                            <FieldLabel htmlFor={field.name}>
+                              Full Name
+                            </FieldLabel>
+                            <Input
+                              id={field.name}
+                              type="text"
+                              value={field.state.value}
+                              onBlur={field.handleBlur}
+                              onChange={(e) =>
+                                field.handleChange(e.target.value)
+                              }
+                              aria-invalid={isInvalid}
+                              placeholder="First and Family name"
+                              autoComplete="off"
+                              disabled={isSubmitting}
+                              className="rounded-full"
+                            />
+                            {isInvalid && (
+                              <FieldError errors={field.state.meta.errors} />
+                            )}
+                          </Field>
+                        );
+                      }}
+                    />
+                    <form.Field
+                      name="email"
+                      children={(field) => {
+                        const isInvalid =
+                          field.state.meta.isTouched &&
+                          !field.state.meta.isValid;
+                        return (
+                          <Field data-invalid={isInvalid}>
+                            <FieldLabel htmlFor={field.name}>Email</FieldLabel>
+                            <Input
+                              id={field.name}
+                              type="email"
+                              value={field.state.value}
+                              onBlur={field.handleBlur}
+                              onChange={(e) =>
+                                field.handleChange(e.target.value)
+                              }
+                              aria-invalid={isInvalid}
+                              placeholder="Email address"
+                              disabled={isSubmitting}
+                              className="rounded-full"
+                            />
+                            {isInvalid && (
+                              <FieldError errors={field.state.meta.errors} />
+                            )}
+                          </Field>
+                        );
+                      }}
+                    />
+                    <form.Field
+                      name="phone"
+                      children={(field) => {
+                        const isInvalid =
+                          field.state.meta.isTouched &&
+                          !field.state.meta.isValid;
+                        return (
+                          <Field data-invalid={isInvalid}>
+                            <FieldLabel htmlFor={field.name}>Phone</FieldLabel>
+                            <PhoneInput
+                              id={field.name}
+                              type="text"
+                              value={field.state.value}
+                              onBlur={field.handleBlur}
+                              onChange={field.handleChange}
+                              aria-invalid={isInvalid}
+                              international
+                              defaultCountry="EG"
+                              disabled={isSubmitting}
+                            />
+                            {isInvalid && (
+                              <FieldError errors={field.state.meta.errors} />
+                            )}
+                          </Field>
+                        );
+                      }}
+                    />
+                  </FieldGroup>
+                )}
+              />
+            )}
           </form>
         </CardContent>
-        <CardFooter className="flex justify-end">
-          <Field orientation="horizontal" className="flex justify-end">
+
+        <CardFooter className="flex justify-between">
+          {step > 1 ? (
             <Button
               type="button"
               variant="outline"
-              onClick={() => form.reset()}
+              onClick={() => setStep((s) => (s - 1) as 1 | 2 | 3)}
               disabled={isSubmitting}
               className="rounded-full"
             >
-              Reset
+              Back
             </Button>
+          ) : (
+            <div />
+          )}
+
+          {step < 3 ? (
+            <Button
+              type="button"
+              className="rounded-full"
+              onClick={() => setStep((s) => (s + 1) as 1 | 2 | 3)}
+            >
+              Next
+            </Button>
+          ) : (
             <Button
               className="rounded-full"
               type="submit"
               form="day-use-booking-form"
               disabled={isSubmitting}
             >
-              Submit
+              {isSubmitting ? "Submitting…" : "Submit"}
             </Button>
-          </Field>
+          )}
         </CardFooter>
       </Card>
     </div>

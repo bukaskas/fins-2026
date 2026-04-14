@@ -8,6 +8,8 @@ export const bookingFormSchema = z.object({
   email: z.string().email("Invalid email address"),
   service: z.string().min(1, "Service is required"),
   numberOfPeople: z.number().int().min(1, "At least 1 person required"),
+  numberOfKids: z.number().int().min(0).default(0),
+  totalPriceCents: z.number().int().min(0).nullable().default(null),
   time: z.string().nullable().default(null),
   instructor: z.string().nullable().default(null),
   bookingStatus: z.nativeEnum(BookingStatus).default(BookingStatus.PENDING),

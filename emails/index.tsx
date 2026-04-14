@@ -5,12 +5,29 @@ import { APP_NAME, EMAIL_ADDRESS, STAFF_EMAILS } from "@/lib/constants";
 import RegistrationEmail from "./registrationEmail";
 import StaffNotificationEmail from "./staffNotificationEmail";
 
-export async function sendBookingEmail(to: string, name: string, date: Date, bookingType?: string) {
+export async function sendBookingEmail(
+  to: string,
+  name: string,
+  date: Date,
+  bookingType?: string,
+  numberOfPeople?: number,
+  numberOfKids?: number,
+  totalPriceCents?: number,
+) {
   await resend.emails.send({
     from: EMAIL_ADDRESS,
     to,
     subject: `Welcome to ${APP_NAME}!`,
-    react: <BookingEmail username={name} date={date.toDateString()} bookingType={bookingType} />,
+    react: (
+      <BookingEmail
+        username={name}
+        date={date.toDateString()}
+        bookingType={bookingType}
+        numberOfPeople={numberOfPeople}
+        numberOfKids={numberOfKids}
+        totalPriceCents={totalPriceCents}
+      />
+    ),
   });
 }
 
@@ -28,6 +45,8 @@ export async function sendStaffNotificationEmail(
   date: Date,
   service: string,
   numberOfPeople: number,
+  numberOfKids?: number,
+  totalPriceCents?: number,
 ) {
   const staffEmail = serviceToStaffEmail[service];
   if (!staffEmail) return;
@@ -44,6 +63,8 @@ export async function sendStaffNotificationEmail(
         date={date.toDateString()}
         service={service}
         numberOfPeople={numberOfPeople}
+        numberOfKids={numberOfKids}
+        totalPriceCents={totalPriceCents}
       />
     ),
   });
