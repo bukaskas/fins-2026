@@ -1,8 +1,8 @@
-import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import Image, { StaticImageData } from "next/image";
 import kiteMobile from "@/public/images/hero_images/hero_mobile2.webp";
 import kiteDesktop from "@/public/images/hero_images/kitesurfing_desktop2.webp";
+
 type KitesurfingHeroProps = {
   mobileSrc?: StaticImageData;
   desktopSrc?: StaticImageData;
@@ -12,56 +12,113 @@ export function KitesurfingHero({
   mobileSrc = kiteMobile,
   desktopSrc = kiteDesktop,
 }: KitesurfingHeroProps) {
+  const accent = "#38bdf8";
+
   return (
-    <div className="relative isolate h-screen flex items-center justify-center">
-      {/* Background images: mobile and desktop */}
+    <div className="relative isolate h-screen overflow-hidden">
+      {/* Background images */}
       <Image
         src={mobileSrc}
-        alt=""
+        alt="Kitesurfing at Fins Sokhna"
         fill
         priority
         sizes="100vw"
-        className="absolute inset-0 -z-20 object-cover sm:hidden bg-white"
+        className="absolute inset-0 -z-20 object-cover sm:hidden"
       />
       <Image
         src={desktopSrc}
-        alt=""
+        alt="Kitesurfing at Fins Sokhna"
         fill
         priority
         sizes="100vw"
         className="absolute inset-0 -z-20 hidden sm:block object-cover"
       />
 
-      <div className="mx-auto max-w-2xl px-10">
-        <div className="hidden sm:mb-8 sm:flex sm:justify-center">
-          <div className="relative rounded-full px-3 py-1 text-sm/6 text-gray-600 ring-1 ring-gray-900/10 hover:ring-gray-900/20">
-            Learn kitesurfing with IKO certified instructors.{" "}
-            <a href="/kitesurfing" className="font-semibold text-blue-600">
-              <span aria-hidden="true" className="absolute inset-0" />
-              Read more <span aria-hidden="true">&rarr;</span>
-            </a>
-          </div>
+      {/* Gradient layers */}
+      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-black/5" />
+      <div className="absolute inset-0 bg-gradient-to-r from-black/35 to-transparent" />
+
+      {/* Content */}
+      <div
+        className="absolute inset-0 flex flex-col justify-end pb-20 px-8 md:px-14 lg:px-20"
+        style={{ animation: "heroContentReveal 0.9s cubic-bezier(.22,1,.36,1) 0.15s both" }}
+      >
+        <style>{`
+          @keyframes heroContentReveal {
+            from { opacity: 0; transform: translateY(22px); }
+            to   { opacity: 1; transform: translateY(0); }
+          }
+        `}</style>
+
+        {/* Eyebrow */}
+        <div className="flex items-center gap-3 mb-5">
+          <span className="h-px w-9 flex-shrink-0" style={{ background: accent }} />
+          <span
+            className="text-[0.62rem] tracking-[0.32em] uppercase font-[family-name:var(--font-raleway)] font-medium"
+            style={{ color: accent }}
+          >
+            IKO Certified · Red Sea · Sokhna
+          </span>
         </div>
-        <div className="text-center bg-white/30  rounded-2xl p-4">
-          <h1 className="text-5xl font-semibold tracking-tight text-balance text-gray-900 sm:text-7xl">
-            Kitesurfing lessons
-          </h1>
-          <p className="mt-8 text-lg font-medium text-pretty sm:text-xl/8 ">
-            Escape the city and discover kitesurfing in our perfect shallow
-            lagoon with steady winds and beautiful beaches near Cairo.
-          </p>
-          <div className="mt-10 flex items-center justify-center gap-x-6">
-            <Button asChild className="rounded-full text-xl">
-              <Link href="/kitesurfing/booking">Book now</Link>
-            </Button>
-            <Link
-              href="https://wa.me/201080500099?text=Hello%2C%0AI%20want%20to%20book%20beginner%20course"
-              className="text-sm/6 font-semibold text-gray-900"
+
+        {/* Headline */}
+        <h1 className="font-[family-name:var(--font-raleway)] text-white leading-none mb-5">
+          <span className="block text-[clamp(4.5rem,13vw,10rem)] font-[100] tracking-[-0.025em] leading-[0.88]">
+            Kite
+          </span>
+          <span
+            className="block text-[clamp(1.3rem,3.5vw,2.8rem)] font-[800] tracking-[0.22em] uppercase mt-1"
+            style={{ color: accent }}
+          >
+            Surfing
+          </span>
+        </h1>
+
+        {/* Description */}
+        <p className="text-white/60 text-sm md:text-[0.9rem] max-w-sm mb-5 font-[family-name:var(--font-raleway)] font-[300] leading-relaxed">
+          Escape the city. Discover kitesurfing in our shallow lagoon with
+          steady winds and beautiful beaches near Cairo.
+        </p>
+
+        <div className="w-14 h-px bg-white/20 mb-5" />
+
+        {/* Tags */}
+        <div className="flex flex-wrap gap-2 mb-8">
+          {["Beginners Welcome", "Private & Group", "Near Cairo"].map((tag) => (
+            <span
+              key={tag}
+              className="px-3 py-[5px] border border-white/20 text-white/55 text-[0.58rem] tracking-[0.16em] uppercase font-[family-name:var(--font-raleway)] backdrop-blur-sm"
             >
-              Learn more <span aria-hidden="true">→</span>
-            </Link>
-          </div>
+              {tag}
+            </span>
+          ))}
         </div>
+
+        {/* CTAs */}
+        <div className="flex items-center gap-7">
+          <Link
+            href="/kitesurfing/booking"
+            className="group inline-flex items-center gap-2 text-black text-[0.75rem] font-[700] tracking-[0.14em] uppercase px-6 py-3 font-[family-name:var(--font-raleway)] transition-opacity duration-200 hover:opacity-85"
+            style={{ background: accent }}
+          >
+            Book a Lesson
+            <span className="group-hover:translate-x-1 transition-transform duration-200 text-sm">→</span>
+          </Link>
+          <Link
+            href="https://wa.me/201080500099?text=Hello%2C%0AI%20want%20to%20book%20beginner%20course"
+            className="text-white/55 hover:text-white text-[0.68rem] tracking-[0.22em] uppercase font-[family-name:var(--font-raleway)] transition-colors duration-200"
+          >
+            Learn more ↗
+          </Link>
+        </div>
+      </div>
+
+      {/* Vertical side text */}
+      <div className="absolute right-6 bottom-20 hidden lg:flex flex-col items-center gap-3 pointer-events-none">
+        <span className="text-white/15 text-[0.55rem] tracking-[0.5em] uppercase font-[family-name:var(--font-raleway)] [writing-mode:vertical-rl]">
+          Red Sea · Egypt
+        </span>
+        <span className="block w-px h-10 bg-white/10" />
       </div>
     </div>
   );
