@@ -3,8 +3,6 @@ import Link from "next/link";
 import restaurantPhoto from "@/public/images/restaurant/restaurant.webp";
 import restaurantMobile from "@/public/images/restaurant/restaurant_mobilefins.webp";
 import webphoto17 from "@/public/images/webphotos_fins/webphoto_17.webp";
-import webphoto18 from "@/public/images/webphotos_fins/webphoto_18.webp";
-import webphoto19 from "@/public/images/webphotos_fins/webphoto_19.webp";
 
 const menuHighlights = [
   {
@@ -46,7 +44,6 @@ function RestaurantPage() {
       {/* ── Intro strip ─────────────────────────────────────── */}
       <section style={{ borderBottom: "1px solid #e7e0d5" }}>
         <div className="max-w-7xl mx-auto px-8 md:px-14 lg:px-20 py-12 md:py-16 flex flex-col md:flex-row md:items-end md:justify-between gap-8">
-
           {/* Left: headline */}
           <div className="rest-reveal-1">
             <p
@@ -102,10 +99,12 @@ function RestaurantPage() {
 
       {/* ── Menu highlights ──────────────────────────────────── */}
       <section className="max-w-7xl mx-auto px-8 md:px-14 lg:px-20 py-20 md:py-28">
-
         {/* Section label */}
         <div className="flex items-center gap-3 mb-14 rest-reveal-1">
-          <span className="h-px w-7 flex-shrink-0" style={{ background: "#fb923c" }} />
+          <span
+            className="h-px w-7 flex-shrink-0"
+            style={{ background: "#fb923c" }}
+          />
           <span
             className="text-[0.58rem] tracking-[0.4em] uppercase font-[family-name:var(--font-raleway)] font-[500]"
             style={{ color: "#fb923c" }}
@@ -169,14 +168,15 @@ function RestaurantPage() {
             style={{ color: "#fb923c" }}
           >
             View Full Menu
-            <span className="group-hover:translate-x-1 transition-transform duration-200">→</span>
+            <span className="group-hover:translate-x-1 transition-transform duration-200">
+              →
+            </span>
           </Link>
         </div>
       </section>
 
       {/* ── Photo mosaic ─────────────────────────────────────── */}
       <section className="max-w-7xl mx-auto px-8 md:px-14 lg:px-20 pb-20 md:pb-28">
-
         {/* Top: wide panoramic */}
         <div className="relative aspect-[16/7] overflow-hidden mb-3 md:mb-4">
           <Image
@@ -214,7 +214,6 @@ function RestaurantPage() {
       {/* ── Reserve CTA ──────────────────────────────────────── */}
       <section style={{ background: "#1c1917" }}>
         <div className="max-w-7xl mx-auto px-8 md:px-14 lg:px-20 py-20 md:py-28 flex flex-col md:flex-row md:items-end md:justify-between gap-12">
-
           {/* Left: heading */}
           <div>
             <p
@@ -246,7 +245,9 @@ function RestaurantPage() {
               style={{ background: "#fb923c" }}
             >
               Reserve via WhatsApp
-              <span className="group-hover:translate-x-1 transition-transform duration-200">→</span>
+              <span className="group-hover:translate-x-1 transition-transform duration-200">
+                →
+              </span>
             </Link>
             <Link
               href="https://drive.google.com/file/d/1ucvNArsKuwd_Em9CXWguJKIIshlh-dG0/view?usp=sharing"
@@ -259,7 +260,9 @@ function RestaurantPage() {
               }}
             >
               View Menu
-              <span className="group-hover:translate-x-1 transition-transform duration-200">↗</span>
+              <span className="group-hover:translate-x-1 transition-transform duration-200">
+                ↗
+              </span>
             </Link>
             <p
               className="text-[0.62rem] tracking-[0.16em] font-[family-name:var(--font-raleway)] font-[300] mt-2"
