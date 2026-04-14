@@ -77,7 +77,7 @@ export function RestaurantHero({
         {/* Description */}
         <p className="text-white/60 text-sm md:text-[0.9rem] max-w-sm mb-5 font-[family-name:var(--font-raleway)] font-[300] leading-relaxed">
           Savor international cuisine, burgers and pizza with stunning
-          beach views. Reserve your table today.
+          beach views.
         </p>
 
         <div className="w-14 h-px bg-white/20 mb-5" />

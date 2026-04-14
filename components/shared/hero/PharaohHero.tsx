@@ -76,8 +76,8 @@ export function PharaohHero({
 
         {/* Description */}
         <p className="text-white/60 text-sm md:text-[0.9rem] max-w-sm mb-5 font-[family-name:var(--font-raleway)] font-[300] leading-relaxed">
-          The best kiters, music on the beach, activities for families.
-          Riders pushing their level — one unforgettable day.
+          Watch the region's best riders push their limits on open water —
+          raw speed, big air, and a crowd that goes wild.
         </p>
 
         <div className="w-14 h-px bg-white/20 mb-5" />

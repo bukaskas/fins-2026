@@ -91,7 +91,7 @@ function HeroSection() {
           {[
             "9:00 AM – 11:00 PM",
             "From 1,200 EGP",
-            "Pool · Beach · Lounge",
+            "Pool · Lagoon · Lounge",
           ].map((tag) => (
             <span
               key={tag}

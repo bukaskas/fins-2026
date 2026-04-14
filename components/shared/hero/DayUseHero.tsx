@@ -77,7 +77,7 @@ export function DayUseHero({
         {/* Description */}
         <p className="text-white/60 text-sm md:text-[0.9rem] max-w-sm mb-5 font-[family-name:var(--font-raleway)] font-[300] leading-relaxed">
           Amazing food, soft sand, activities and more. Everything you need
-          for a perfect day out on the Red Sea.
+          for a perfect day out.
         </p>
 
         <div className="w-14 h-px bg-white/20 mb-5" />

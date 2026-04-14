@@ -76,8 +76,8 @@ export function KitesurfingHero({
 
         {/* Description */}
         <p className="text-white/60 text-sm md:text-[0.9rem] max-w-sm mb-5 font-[family-name:var(--font-raleway)] font-[300] leading-relaxed">
-          Escape the city. Discover kitesurfing in our shallow lagoon with
-          steady winds and beautiful beaches near Cairo.
+          Escape the city. Discover kitesurfing in our shallow lagoon —
+          steady winds, shallow water, and courses for all levels.
         </p>
 
         <div className="w-14 h-px bg-white/20 mb-5" />
