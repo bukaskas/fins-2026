@@ -18,7 +18,6 @@ async function DayUseSuccessPage({
   const params = await searchParams;
   const bookingId = params.bookingId;
   const date = params.date ? new Date(params.date) : null;
-  const bookingType = params.type ?? "Day Use";
 
   if (!bookingId || !date) {
     return (
@@ -40,6 +39,8 @@ async function DayUseSuccessPage({
     );
   }
 
+  const formattedDate = `${date.getUTCDate()}/${date.getUTCMonth() + 1}/${date.getUTCFullYear()}`;
+
   return (
     <div className="flex items-center justify-center min-h-[60vh] p-4">
       <Card className="w-full max-w-md">
@@ -47,36 +48,63 @@ async function DayUseSuccessPage({
           <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-green-100">
             <CheckCircle2 className="h-6 w-6 text-green-600" />
           </div>
-          <CardTitle className="text-2xl">Booking received</CardTitle>
+          <CardTitle className="text-2xl">Booking received!</CardTitle>
           <CardDescription>
-            Thank you for booking your {bookingType} experience.
+            Your spot on <strong>{formattedDate}</strong> has been requested.
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="rounded-lg bg-muted p-4 space-y-3">
-            <div className="flex justify-between">
-              <span className="text-sm font-medium text-muted-foreground">
-                Booking ID:
-              </span>
-              <span className="text-sm font-mono">{bookingId}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-sm font-medium text-muted-foreground">
-                Date:
-              </span>
-              <span className="text-sm font-semibold">
-                {date.getDate()}/{date.getMonth() + 1}/{date.getFullYear()}
-              </span>
-            </div>
+
+        <CardContent className="space-y-5">
+          {/* Booking reference */}
+          <div className="rounded-lg bg-muted px-4 py-3 flex justify-between items-center">
+            <span className="text-sm text-muted-foreground">Booking ID</span>
+            <span className="text-sm font-mono">{bookingId}</span>
           </div>
-          <p className="text-sm text-center text-muted-foreground">
-            You should receive an email with info regarding your booking
-            shortly. If you have any questions, feel free to contact us.
-          </p>
+
+          {/* What happens next */}
+          <div className="space-y-3">
+            <p className="text-sm font-semibold">What happens next</p>
+            <ol className="space-y-2 text-sm text-muted-foreground list-none">
+              <li className="flex gap-3">
+                <span className="flex-shrink-0 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs font-bold">1</span>
+                <span>Our team will review your booking and reach out shortly to confirm your spot.</span>
+              </li>
+              <li className="flex gap-3">
+                <span className="flex-shrink-0 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs font-bold">2</span>
+                <span>We may ask you to share your Instagram or social media account so we can get to know you. If your account is private, a screenshot works fine.</span>
+              </li>
+              <li className="flex gap-3">
+                <span className="flex-shrink-0 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs font-bold">3</span>
+                <span>Once confirmed, show up on the day and enjoy! Gates open at <strong>9:00 AM</strong> and close at <strong>11:00 PM</strong>.</span>
+              </li>
+            </ol>
+          </div>
+
+          {/* Includes */}
+          <div className="rounded-lg border p-4 space-y-2 text-sm">
+            <p className="font-semibold">Included with your ticket</p>
+            <ul className="space-y-1 text-muted-foreground">
+              <li>Beach entrance</li>
+              <li>Swimming pool</li>
+              <li>Showers &amp; lounges</li>
+              <li>Lockers (no rooms available)</li>
+            </ul>
+          </div>
+
+          {/* House rules */}
+          <div className="rounded-lg border border-destructive/20 bg-destructive/5 p-4 space-y-2 text-sm">
+            <p className="font-semibold">House rules</p>
+            <ul className="space-y-1 text-muted-foreground">
+              <li>No pets, icebox, or speakers</li>
+              <li>No outside food or drinks</li>
+              <li>Mixed groups &amp; families only</li>
+            </ul>
+          </div>
         </CardContent>
+
         <CardFooter className="flex flex-col gap-2">
           <Button asChild className="w-full">
-            <Link href="https://wa.me/201080500099">Contact Us</Link>
+            <Link href="https://wa.me/201080500099">Contact Us on WhatsApp</Link>
           </Button>
           <Button asChild variant="outline" className="w-full">
             <Link href="/">Return to Home</Link>
