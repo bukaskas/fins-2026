@@ -16,7 +16,7 @@ function DayUsePage() {
     <section className=" font-[family-name:var(--font-raleway)] ">
       <HeroSection />
 
-      <div className="flex flex-col md:flex-row">
+      <div id="experience" className="flex flex-col md:flex-row">
         <BeachExperienceImage />
         <FoodExperienceImage />
       </div>
@@ -32,24 +32,107 @@ export default DayUsePage;
 
 function HeroSection() {
   return (
-    <div className="relative h-[90vh] -mt-30 ">
+    <div className="relative h-screen min-h-[600px] -mt-30 overflow-hidden">
+      <style>{`
+        @keyframes fadeUp {
+          from { opacity: 0; transform: translateY(28px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+        .hero-eyebrow   { animation: fadeUp 0.9s cubic-bezier(.22,1,.36,1) 0.1s both; }
+        .hero-title-1   { animation: fadeUp 0.9s cubic-bezier(.22,1,.36,1) 0.25s both; }
+        .hero-title-2   { animation: fadeUp 0.9s cubic-bezier(.22,1,.36,1) 0.4s both; }
+        .hero-divider   { animation: fadeUp 0.7s cubic-bezier(.22,1,.36,1) 0.55s both; }
+        .hero-tags      { animation: fadeUp 0.8s cubic-bezier(.22,1,.36,1) 0.65s both; }
+        .hero-ctas      { animation: fadeUp 0.8s cubic-bezier(.22,1,.36,1) 0.78s both; }
+        .hero-side-text { animation: fadeUp 1s cubic-bezier(.22,1,.36,1) 1s both; }
+      `}</style>
+
+      {/* Photo */}
       <Image
         src={heroDayUse}
         alt="Day Use experience at Fins Sokhna"
-        className="object-cover"
+        className="object-cover object-center scale-[1.03]"
         fill
         priority
       />
-      <div className="absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-black/50 to-transparent" />
-      <h4 className="absolute bottom-[7%] left-1/2 -translate-x-1/2 text-center text-white font-bold text-4xl ">
-        Day Use at Fins
-      </h4>
-      <Button
-        className="absolute bottom-[12%] left-1/2 -translate-x-1/2 rounded-full"
-        variant="outline"
-      >
-        <Link href="/day-use/booking">Make a Reservation</Link>
-      </Button>
+
+      {/* Gradient layers */}
+      <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/25 to-black/10" />
+      <div className="absolute inset-0 bg-gradient-to-r from-black/35 to-transparent" />
+
+      {/* Main content — bottom-left aligned */}
+      <div className="absolute inset-0 flex flex-col justify-end pb-14 px-8 md:px-14 lg:px-20">
+
+        {/* Eyebrow */}
+        <div className="hero-eyebrow flex items-center gap-3 mb-5">
+          <span className="block h-px w-10 bg-amber-400 flex-shrink-0" />
+          <span className="text-amber-400 text-[0.65rem] tracking-[0.35em] uppercase font-[family-name:var(--font-raleway)] font-medium">
+            Fins Beach Club &nbsp;·&nbsp; Red Sea &nbsp;·&nbsp; Sokhna
+          </span>
+        </div>
+
+        {/* Headline */}
+        <div className="mb-5">
+          <h1 className="font-[family-name:var(--font-raleway)] leading-none text-white">
+            <span className="hero-title-1 block text-[clamp(5rem,14vw,11rem)] font-[100] tracking-[-0.02em] leading-[0.9]">
+              Beach
+            </span>
+            <span className="hero-title-2 block text-[clamp(1.4rem,4vw,3.5rem)] font-[800] tracking-[0.22em] uppercase text-amber-300 mt-1">
+              Day Use
+            </span>
+          </h1>
+        </div>
+
+        {/* Thin rule */}
+        <div className="hero-divider w-20 h-px bg-white/25 mb-5" />
+
+        {/* Info tags */}
+        <div className="hero-tags flex flex-wrap gap-2 mb-8">
+          {[
+            "9:00 AM – 11:00 PM",
+            "From 1,200 EGP",
+            "Pool · Beach · Lounge",
+          ].map((tag) => (
+            <span
+              key={tag}
+              className="px-3 py-1 border border-white/25 text-white/75 text-[0.65rem] tracking-[0.18em] uppercase backdrop-blur-sm font-[family-name:var(--font-raleway)]"
+            >
+              {tag}
+            </span>
+          ))}
+        </div>
+
+        {/* CTAs */}
+        <div className="hero-ctas flex items-center gap-7">
+          <Link
+            href="/day-use/booking"
+            className="group inline-flex items-center gap-2 bg-amber-400 hover:bg-amber-300 text-black text-sm font-[700] tracking-[0.12em] uppercase px-7 py-3 font-[family-name:var(--font-raleway)] transition-colors duration-200"
+          >
+            Reserve Your Day
+            <span className="group-hover:translate-x-1 transition-transform duration-200">→</span>
+          </Link>
+          <a
+            href="#experience"
+            className="text-white/60 hover:text-white text-[0.7rem] tracking-[0.25em] uppercase font-[family-name:var(--font-raleway)] transition-colors duration-200"
+          >
+            Explore ↓
+          </a>
+        </div>
+      </div>
+
+      {/* Vertical side text */}
+      <div className="hero-side-text absolute right-7 bottom-16 hidden lg:flex flex-col items-center gap-3">
+        <span className="text-white/20 text-[0.6rem] tracking-[0.5em] uppercase font-[family-name:var(--font-raleway)] [writing-mode:vertical-rl]">
+          Red Sea · Egypt
+        </span>
+        <span className="block w-px h-12 bg-white/15" />
+      </div>
+
+      {/* Scroll hint */}
+      <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex flex-col items-center gap-1 opacity-40">
+        <span className="text-white text-[0.55rem] tracking-[0.35em] uppercase font-[family-name:var(--font-raleway)]">Scroll</span>
+        <span className="block w-px h-6 bg-white animate-pulse" />
+      </div>
     </div>
   );
 }

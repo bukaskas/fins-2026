@@ -44,7 +44,7 @@ export function DayUseHero({
         </div>
         <div className="text-center bg-white/30 rounded-2xl p-4">
           <h1 className="text-5xl font-semibold tracking-tight text-balance text-gray-900 sm:text-7xl">
-            Beach
+            Day Use
           </h1>
           <p className="mt-8 text-lg font-medium text-pretty sm:text-xl/8 ">
             Amazing food, soft sand, activities and more. All you need for a
@@ -52,7 +52,7 @@ export function DayUseHero({
           </p>
           <div className="mt-10 flex items-center justify-center gap-x-6">
             <Button asChild className="rounded-full text-xl">
-              <Link href="/kitesurfing/booking">Book now</Link>
+              <Link href="/day-use/booking">Book now</Link>
             </Button>
             <Link
               href="/day-use"
