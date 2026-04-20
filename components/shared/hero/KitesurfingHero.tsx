@@ -41,7 +41,10 @@ export function KitesurfingHero({
       {/* Content */}
       <div
         className="absolute inset-0 flex flex-col justify-end pb-20 px-8 md:px-14 lg:px-20"
-        style={{ animation: "heroContentReveal 0.9s cubic-bezier(.22,1,.36,1) 0.15s both" }}
+        style={{
+          animation:
+            "heroContentReveal 0.9s cubic-bezier(.22,1,.36,1) 0.15s both",
+        }}
       >
         <style>{`
           @keyframes heroContentReveal {
@@ -52,7 +55,10 @@ export function KitesurfingHero({
 
         {/* Eyebrow */}
         <div className="flex items-center gap-3 mb-5">
-          <span className="h-px w-9 flex-shrink-0" style={{ background: accent }} />
+          <span
+            className="h-px w-9 flex-shrink-0"
+            style={{ background: accent }}
+          />
           <span
             className="text-[0.62rem] tracking-[0.32em] uppercase font-[family-name:var(--font-raleway)] font-medium"
             style={{ color: accent }}
@@ -76,15 +82,15 @@ export function KitesurfingHero({
 
         {/* Description */}
         <p className="text-white/60 text-sm md:text-[0.9rem] max-w-sm mb-5 font-[family-name:var(--font-raleway)] font-[300] leading-relaxed">
-          Escape the city. Discover kitesurfing in our shallow lagoon —
-          steady winds, shallow water, and courses for all levels.
+          Escape the city. Discover kitesurfing in our shallow lagoon — steady
+          winds, shallow water, and courses for all levels.
         </p>
 
         <div className="w-14 h-px bg-white/20 mb-5" />
 
         {/* Tags */}
-        <div className="flex flex-wrap gap-2 mb-8">
-          {["Beginners Welcome", "Private & Group", "Near Cairo"].map((tag) => (
+        {/* <div className="flex flex-wrap gap-2 mb-8">
+          {["Courses for all levels", "Private & Group"].map((tag) => (
             <span
               key={tag}
               className="px-3 py-[5px] border border-white/20 text-white/55 text-[0.58rem] tracking-[0.16em] uppercase font-[family-name:var(--font-raleway)] backdrop-blur-sm"
@@ -92,7 +98,7 @@ export function KitesurfingHero({
               {tag}
             </span>
           ))}
-        </div>
+        </div> */}
 
         {/* CTAs */}
         <div className="flex items-center gap-7">
@@ -102,10 +108,12 @@ export function KitesurfingHero({
             style={{ background: accent }}
           >
             Book a Lesson
-            <span className="group-hover:translate-x-1 transition-transform duration-200 text-sm">→</span>
+            <span className="group-hover:translate-x-1 transition-transform duration-200 text-sm">
+              →
+            </span>
           </Link>
           <Link
-            href="https://wa.me/201080500099?text=Hello%2C%0AI%20want%20to%20book%20beginner%20course"
+            href="/kitesurfing#courses"
             className="text-white/55 hover:text-white text-[0.68rem] tracking-[0.22em] uppercase font-[family-name:var(--font-raleway)] transition-colors duration-200"
           >
             Learn more ↗

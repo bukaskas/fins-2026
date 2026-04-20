@@ -57,7 +57,7 @@ export function PharaohHero({
             className="text-[0.62rem] tracking-[0.32em] uppercase font-[family-name:var(--font-raleway)] font-medium"
             style={{ color: accent }}
           >
-            Kite Competition · Save the Date
+            Kite Competition · 1st of May
           </span>
         </div>
 
@@ -83,23 +83,7 @@ export function PharaohHero({
         <div className="w-14 h-px bg-white/20 mb-5" />
 
         {/* Date badge + tags row */}
-        <div className="flex flex-wrap items-center gap-2 mb-8">
-          {/* Featured date */}
-          <span
-            className="px-3 py-[5px] text-black text-[0.58rem] tracking-[0.16em] uppercase font-[family-name:var(--font-raleway)] font-[700]"
-            style={{ background: accent }}
-          >
-            1st of May
-          </span>
-          {["Music · Beach", "Grown Ups & Kids", "Sokhna"].map((tag) => (
-            <span
-              key={tag}
-              className="px-3 py-[5px] border border-white/20 text-white/55 text-[0.58rem] tracking-[0.16em] uppercase font-[family-name:var(--font-raleway)] backdrop-blur-sm"
-            >
-              {tag}
-            </span>
-          ))}
-        </div>
+
 
         {/* CTAs */}
         <div className="flex items-center gap-7">

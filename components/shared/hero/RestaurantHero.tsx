@@ -83,7 +83,7 @@ export function RestaurantHero({
         <div className="w-14 h-px bg-white/20 mb-5" />
 
         {/* Tags */}
-        <div className="flex flex-wrap gap-2 mb-8">
+        {/* <div className="flex flex-wrap gap-2 mb-8">
           {["Burgers · Pizza · Salads", "Sea View", "Open Daily"].map((tag) => (
             <span
               key={tag}
@@ -92,7 +92,7 @@ export function RestaurantHero({
               {tag}
             </span>
           ))}
-        </div>
+        </div> */}
 
         {/* CTAs */}
         <div className="flex items-center gap-7">

@@ -2,7 +2,6 @@
 
 import * as React from "react"
 import * as DialogPrimitive from "@radix-ui/react-dialog"
-import { XIcon } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 
@@ -38,7 +37,9 @@ function DialogOverlay({
     <DialogPrimitive.Overlay
       data-slot="dialog-overlay"
       className={cn(
-        "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 fixed inset-0 z-50 bg-black/50",
+        "fixed inset-0 z-50 bg-black/75 backdrop-blur-sm",
+        "data-[state=open]:animate-in data-[state=closed]:animate-out",
+        "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
         className
       )}
       {...props}
@@ -60,7 +61,18 @@ function DialogContent({
       <DialogPrimitive.Content
         data-slot="dialog-content"
         className={cn(
-          "bg-background data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 fixed top-[50%] left-[50%] z-50 grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4 rounded-lg border p-6 shadow-lg duration-200 outline-none sm:max-w-lg",
+          // Layout & positioning
+          "fixed top-1/2 left-1/2 z-50 -translate-x-1/2 -translate-y-1/2",
+          "w-full max-w-[calc(100%-2rem)] sm:max-w-lg",
+          // Dark cinematic surface
+          "bg-[#0c0c0c] border border-white/10",
+          // Spacing
+          "grid gap-0 p-0 outline-none",
+          // Radix animation — slide-up reveal matching heroContentReveal
+          "data-[state=open]:animate-in data-[state=closed]:animate-out",
+          "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
+          "data-[state=closed]:slide-out-to-bottom-4 data-[state=open]:slide-in-from-bottom-4",
+          "duration-300",
           className
         )}
         {...props}
@@ -69,10 +81,16 @@ function DialogContent({
         {showCloseButton && (
           <DialogPrimitive.Close
             data-slot="dialog-close"
-            className="ring-offset-background focus:ring-ring data-[state=open]:bg-accent data-[state=open]:text-muted-foreground absolute top-4 right-4 rounded-xs opacity-70 transition-opacity hover:opacity-100 focus:ring-2 focus:ring-offset-2 focus:outline-hidden disabled:pointer-events-none [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4"
+            className={cn(
+              "absolute top-5 right-5",
+              "text-white/30 hover:text-white/80 transition-colors duration-200",
+              "text-xl leading-none font-[100] font-[family-name:var(--font-raleway)]",
+              "focus:outline-none focus:ring-1 focus:ring-white/20 focus:ring-offset-0",
+              "disabled:pointer-events-none",
+            )}
+            aria-label="Close"
           >
-            <XIcon />
-            <span className="sr-only">Close</span>
+            ✕
           </DialogPrimitive.Close>
         )}
       </DialogPrimitive.Content>
@@ -84,7 +102,20 @@ function DialogHeader({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="dialog-header"
-      className={cn("flex flex-col gap-2 text-center sm:text-left", className)}
+      className={cn(
+        "flex flex-col gap-3 px-8 pt-8 pb-6 border-b border-white/8",
+        className
+      )}
+      {...props}
+    />
+  )
+}
+
+function DialogBody({ className, ...props }: React.ComponentProps<"div">) {
+  return (
+    <div
+      data-slot="dialog-body"
+      className={cn("px-8 py-6", className)}
       {...props}
     />
   )
@@ -95,7 +126,7 @@ function DialogFooter({ className, ...props }: React.ComponentProps<"div">) {
     <div
       data-slot="dialog-footer"
       className={cn(
-        "flex flex-col-reverse gap-2 sm:flex-row sm:justify-end",
+        "flex flex-col-reverse gap-3 px-8 py-6 border-t border-white/8 sm:flex-row sm:justify-end",
         className
       )}
       {...props}
@@ -105,14 +136,39 @@ function DialogFooter({ className, ...props }: React.ComponentProps<"div">) {
 
 function DialogTitle({
   className,
+  accent,
+  eyebrow,
   ...props
-}: React.ComponentProps<typeof DialogPrimitive.Title>) {
+}: React.ComponentProps<typeof DialogPrimitive.Title> & {
+  accent?: string
+  eyebrow?: string
+}) {
+  const accentColor = accent ?? "#fbbf24"
+
   return (
-    <DialogPrimitive.Title
-      data-slot="dialog-title"
-      className={cn("text-lg leading-none font-semibold", className)}
-      {...props}
-    />
+    <div className="flex flex-col gap-3">
+      {/* Eyebrow line — mirrors hero pattern */}
+      {eyebrow && (
+        <div className="flex items-center gap-3">
+          <span className="h-px w-7 flex-shrink-0" style={{ background: accentColor }} />
+          <span
+            className="text-[0.58rem] tracking-[0.32em] uppercase font-[family-name:var(--font-raleway)] font-medium"
+            style={{ color: accentColor }}
+          >
+            {eyebrow}
+          </span>
+        </div>
+      )}
+      <DialogPrimitive.Title
+        data-slot="dialog-title"
+        className={cn(
+          "font-[family-name:var(--font-raleway)] text-white leading-none",
+          "text-[clamp(1.6rem,4vw,2.4rem)] font-[100] tracking-[-0.02em]",
+          className
+        )}
+        {...props}
+      />
+    </div>
   )
 }
 
@@ -123,7 +179,10 @@ function DialogDescription({
   return (
     <DialogPrimitive.Description
       data-slot="dialog-description"
-      className={cn("text-muted-foreground text-sm", className)}
+      className={cn(
+        "text-white/55 text-sm font-[family-name:var(--font-raleway)] font-[300] leading-relaxed",
+        className
+      )}
       {...props}
     />
   )
@@ -133,6 +192,7 @@ export {
   Dialog,
   DialogClose,
   DialogContent,
+  DialogBody,
   DialogDescription,
   DialogFooter,
   DialogHeader,

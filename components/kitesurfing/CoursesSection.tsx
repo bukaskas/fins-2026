@@ -7,21 +7,12 @@ import refresher from "@/public/images/kitesurfing/refresher.webp";
 import kidsCourse from "@/public/images/kitesurfing/kids_course.webp";
 import {
   Dialog,
+  DialogBody,
   DialogContent,
-  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { useGSAP } from "@gsap/react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
@@ -129,13 +120,13 @@ function CourseCard({
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle className="font-[family-name:var(--font-raleway)] font-[600]">
+                <DialogTitle eyebrow="Kitesurfing · Fins Sokhna" accent={accent}>
                   {dialogTitle}
                 </DialogTitle>
-                <DialogDescription asChild>
-                  <div>{dialogContent}</div>
-                </DialogDescription>
               </DialogHeader>
+              <DialogBody>
+                {dialogContent}
+              </DialogBody>
             </DialogContent>
           </Dialog>
         )}
@@ -147,10 +138,14 @@ function CourseCard({
 const BOOKING_HREF = "/kitesurfing/booking";
 
 const bookBtn = (
-  <div className="flex justify-end mt-2">
-    <Button asChild className="rounded-full">
-      <Link href={BOOKING_HREF}>Book now</Link>
-    </Button>
+  <div className="flex justify-end mt-4 pt-4 border-t border-white/10">
+    <Link
+      href={BOOKING_HREF}
+      className="inline-flex items-center gap-2 text-black text-[0.72rem] font-[700] tracking-[0.14em] uppercase px-5 py-2.5 font-[family-name:var(--font-raleway)] transition-opacity duration-200 hover:opacity-85"
+      style={{ background: accent }}
+    >
+      Book now →
+    </Link>
   </div>
 );
 
@@ -165,25 +160,25 @@ const courses: CourseCardProps[] = [
     dialogTitle: "Intro Course — try kitesurfing in one session",
     dialogContent: (
       <div className="text-left space-y-4">
-        <p className="text-sm text-muted-foreground">
+        <p className="text-sm text-white/55 font-[family-name:var(--font-raleway)] font-[300] leading-relaxed">
           The intro course is designed for those planning to try kitesurfing for
           one session — to experience what we need to learn to become a kitesurfer.
         </p>
-        <p className="text-sm text-muted-foreground">
+        <p className="text-sm text-white/55 font-[family-name:var(--font-raleway)] font-[300] leading-relaxed">
           We focus on kite control, safety, and the basic knowledge required
           before getting on the board. Main focus: understanding how the kite
           works and staying safe.
         </p>
-        <p className="text-sm text-muted-foreground">
-          Duration: <strong>2 hours</strong>, done in one session.
+        <p className="text-sm text-white/55 font-[family-name:var(--font-raleway)] font-[300] leading-relaxed">
+          Duration: <strong className="text-white/80 font-[500]">2 hours</strong>, done in one session.
         </p>
-        <div className="space-y-1.5">
-          <div className="text-sm font-semibold">Pricing</div>
-          <div className="text-sm">
-            Private: <strong>7,500 EGP</strong>
+        <div className="space-y-2 pt-2">
+          <div className="text-[0.6rem] tracking-[0.28em] uppercase font-[family-name:var(--font-raleway)] font-[600]" style={{ color: accent }}>Pricing</div>
+          <div className="text-sm text-white/70 font-[family-name:var(--font-raleway)] font-[300]">
+            Private: <span className="text-white font-[500]">7,500 EGP</span>
           </div>
-          <div className="text-sm">
-            Group: <strong>5,000 EGP</strong> per person (2–4 persons)
+          <div className="text-sm text-white/70 font-[family-name:var(--font-raleway)] font-[300]">
+            Group: <span className="text-white font-[500]">5,000 EGP</span> per person (2–4 persons)
           </div>
         </div>
         {bookBtn}
@@ -208,24 +203,24 @@ const courses: CourseCardProps[] = [
     dialogTitle: "Refresher Course",
     dialogContent: (
       <div className="text-left space-y-4">
-        <p className="text-sm text-muted-foreground">
+        <p className="text-sm text-white/55 font-[family-name:var(--font-raleway)] font-[300] leading-relaxed">
           Designed for those who completed a course before but want to refresh
           and improve their skills to reach an independent level.
         </p>
-        <p className="text-sm text-muted-foreground">
+        <p className="text-sm text-white/55 font-[family-name:var(--font-raleway)] font-[300] leading-relaxed">
           We check your current skills and work on what you need to ride safely
           on your own.
         </p>
-        <p className="text-sm text-muted-foreground">
-          Duration: <strong>2-hour session</strong>
+        <p className="text-sm text-white/55 font-[family-name:var(--font-raleway)] font-[300] leading-relaxed">
+          Duration: <strong className="text-white/80 font-[500]">2-hour session</strong>
         </p>
-        <div className="space-y-1.5">
-          <div className="text-sm font-semibold">Pricing</div>
-          <div className="text-sm">
-            Private: <strong>7,500 EGP</strong>
+        <div className="space-y-2 pt-2">
+          <div className="text-[0.6rem] tracking-[0.28em] uppercase font-[family-name:var(--font-raleway)] font-[600]" style={{ color: accent }}>Pricing</div>
+          <div className="text-sm text-white/70 font-[family-name:var(--font-raleway)] font-[300]">
+            Private: <span className="text-white font-[500]">7,500 EGP</span>
           </div>
-          <div className="text-sm">
-            Group: <strong>5,000 EGP</strong> per person (2–4 persons)
+          <div className="text-sm text-white/70 font-[family-name:var(--font-raleway)] font-[300]">
+            Group: <span className="text-white font-[500]">5,000 EGP</span> per person (2–4 persons)
           </div>
         </div>
         {bookBtn}
@@ -241,37 +236,30 @@ const courses: CourseCardProps[] = [
     dialogTitle: "Kids Courses",
     dialogContent: (
       <div className="space-y-4">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Course</TableHead>
-              <TableHead>Duration</TableHead>
-              <TableHead>Price</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            <TableRow>
-              <TableCell className="font-medium">Intro</TableCell>
-              <TableCell>2 hours</TableCell>
-              <TableCell>5,000 EGP</TableCell>
-            </TableRow>
-            <TableRow>
-              <TableCell className="font-medium">Private Beginner</TableCell>
-              <TableCell>6 hours</TableCell>
-              <TableCell>15,000 EGP</TableCell>
-            </TableRow>
-            <TableRow>
-              <TableCell className="font-medium">Group Beginner</TableCell>
-              <TableCell>8 hours</TableCell>
-              <TableCell>11,250 EGP</TableCell>
-            </TableRow>
-            <TableRow>
-              <TableCell className="font-medium">Refresher</TableCell>
-              <TableCell>2 hours</TableCell>
-              <TableCell>5,000 EGP</TableCell>
-            </TableRow>
-          </TableBody>
-        </Table>
+        <div className="text-[0.6rem] tracking-[0.28em] uppercase font-[family-name:var(--font-raleway)] font-[600] mb-3" style={{ color: accent }}>
+          Pricing · Ages 6–18
+        </div>
+        <div className="border border-white/10 divide-y divide-white/8">
+          {/* Header */}
+          <div className="grid grid-cols-3 px-4 py-2.5">
+            {["Course", "Duration", "Price"].map((h) => (
+              <span key={h} className="text-[0.58rem] tracking-[0.2em] uppercase text-white/35 font-[family-name:var(--font-raleway)] font-[500]">{h}</span>
+            ))}
+          </div>
+          {/* Rows */}
+          {[
+            { course: "Intro", duration: "2 hours", price: "5,000 EGP" },
+            { course: "Private Beginner", duration: "6 hours", price: "15,000 EGP" },
+            { course: "Group Beginner", duration: "8 hours", price: "11,250 EGP" },
+            { course: "Refresher", duration: "2 hours", price: "5,000 EGP" },
+          ].map((row) => (
+            <div key={row.course} className="grid grid-cols-3 px-4 py-3">
+              <span className="text-sm text-white/80 font-[family-name:var(--font-raleway)] font-[400]">{row.course}</span>
+              <span className="text-sm text-white/45 font-[family-name:var(--font-raleway)] font-[300]">{row.duration}</span>
+              <span className="text-sm text-white font-[family-name:var(--font-raleway)] font-[500]">{row.price}</span>
+            </div>
+          ))}
+        </div>
         {bookBtn}
       </div>
     ),

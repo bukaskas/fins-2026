@@ -83,7 +83,7 @@ export function DayUseHero({
         <div className="w-14 h-px bg-white/20 mb-5" />
 
         {/* Tags */}
-        <div className="flex flex-wrap gap-2 mb-8">
+        {/* <div className="flex flex-wrap gap-2 mb-8">
           {["9:00 AM – 11:00 PM", "From 1,200 EGP", "Pool · Lounge · Beach"].map((tag) => (
             <span
               key={tag}
@@ -92,7 +92,7 @@ export function DayUseHero({
               {tag}
             </span>
           ))}
-        </div>
+        </div> */}
 
         {/* CTAs */}
         <div className="flex items-center gap-7">
