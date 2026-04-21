@@ -401,11 +401,23 @@ function BookingEditForm({ booking, instructors }: Props) {
                             <SelectItem value={BookingStatus.PENDING}>
                               Pending
                             </SelectItem>
+                            <SelectItem value={BookingStatus.REQUEST_SENT}>
+                              Request Sent
+                            </SelectItem>
+                            <SelectItem value={BookingStatus.UNDER_REVIEW}>
+                              Under Review
+                            </SelectItem>
+                            <SelectItem value={BookingStatus.WAITING_PAYMENT}>
+                              Waiting Payment
+                            </SelectItem>
                             <SelectItem value={BookingStatus.CONFIRMED}>
                               Confirmed
                             </SelectItem>
                             <SelectItem value={BookingStatus.DECLINED}>
                               Declined
+                            </SelectItem>
+                            <SelectItem value={BookingStatus.NO_RESPONSE_EXPIRED}>
+                              No Response / Expired
                             </SelectItem>
                             <SelectItem value={BookingStatus.CANCELED}>
                               Canceled
