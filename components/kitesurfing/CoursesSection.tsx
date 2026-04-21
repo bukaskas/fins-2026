@@ -152,12 +152,21 @@ const bookBtn = (
 const courses: CourseCardProps[] = [
   {
     index: "01",
+    tag: "Level 1 & Level 2 IKO course",
+    title: "Beginner Course",
+    subtitle: "Learn to kite and get on the board",
+    image: beginnerPhoto,
+    priority: true,
+    moreInfoHref: "/kitesurfing/beginner-course",
+  },
+  {
+    index: "02",
     tag: "2 hours",
-    title: "Intro Course",
+    title: "Intro Session",
     subtitle: "One session to get a taste of kitesurfing",
     image: privateCourse,
     priority: true,
-    dialogTitle: "Intro Course — try kitesurfing in one session",
+    dialogTitle: "Intro Session — try kitesurfing in one session",
     dialogContent: (
       <div className="text-left space-y-4">
         <p className="text-sm text-white/55 font-[family-name:var(--font-raleway)] font-[300] leading-relaxed">
@@ -185,15 +194,7 @@ const courses: CourseCardProps[] = [
       </div>
     ),
   },
-  {
-    index: "02",
-    tag: "Full course",
-    title: "Beginner Course",
-    subtitle: "Learn to kite and ride the board",
-    image: beginnerPhoto,
-    priority: true,
-    moreInfoHref: "/kitesurfing/beginner-course",
-  },
+  
   {
     index: "03",
     tag: "2 hours",
