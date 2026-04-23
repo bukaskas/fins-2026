@@ -132,13 +132,16 @@ export async function deleteBooking(id: string) {
   }
 }
 
-export async function getBookingsByDate(date: string) {
+export async function getBookingsByDate(date: string, statuses?: BookingStatus[]) {
   try {
     const start = new Date(`${date}T00:00:00.000Z`);
     const end = new Date(`${date}T23:59:59.999Z`);
 
     const bookings = await prisma.booking.findMany({
-      where: { date: { gte: start, lte: end } },
+      where: {
+        date: { gte: start, lte: end },
+        ...(statuses && statuses.length > 0 ? { bookingStatus: { in: statuses } } : {}),
+      },
       orderBy: [{ time: 'asc' }, { createdAt: 'asc' }],
     });
 

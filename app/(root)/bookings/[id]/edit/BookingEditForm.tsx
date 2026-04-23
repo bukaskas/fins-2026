@@ -94,7 +94,7 @@ function BookingEditForm({ booking, instructors }: Props) {
         );
         if (result?.success && result.bookingId && result.date) {
           toast(result.message);
-          router.push(`/bookings`);
+          router.back();
         } else {
           toast(result?.message || "Failed to update booking");
           setIsSubmitting(false);

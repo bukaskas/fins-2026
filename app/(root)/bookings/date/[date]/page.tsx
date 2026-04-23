@@ -1,29 +1,86 @@
 import { getBookingsByDate } from "@/lib/actions/booking.actions";
 import BookingComponent from "@/components/kitesurfing/BookingComponent";
-import { Button } from "@/components/ui/button";
-import type { Booking } from "@prisma/client";
+import { BookingStatus, type Booking } from "@prisma/client";
 import { format } from "date-fns";
 import Link from "next/link";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
+const STATUS_FILTERS: {
+  label: string;
+  value: string;
+  statuses: BookingStatus[];
+}[] = [
+  { label: "All",               value: "all",       statuses: [] },
+  { label: "Confirmed",         value: "confirmed", statuses: [BookingStatus.CONFIRMED] },
+  {
+    label: "Pending",
+    value: "pending",
+    statuses: [
+      BookingStatus.PENDING,
+      BookingStatus.REQUEST_SENT,
+      BookingStatus.UNDER_REVIEW,
+      BookingStatus.WAITING_PAYMENT,
+    ],
+  },
+  {
+    label: "Declined / Expired",
+    value: "declined",
+    statuses: [
+      BookingStatus.DECLINED,
+      BookingStatus.NO_RESPONSE_EXPIRED,
+      BookingStatus.CANCELED,
+    ],
+  },
+];
+
+// Human-readable service names
+const SERVICE_LABELS: Record<string, string> = {
+  "kitesurfing-course": "Kitesurfing",
+  "day-use":            "Day Use",
+  "restaurant":         "Restaurant",
+};
+
+// Eyebrow accent color per service
+const SERVICE_ACCENT: Record<string, string> = {
+  "kitesurfing-course": "#38bdf8",
+  "day-use":            "#fbbf24",
+  "restaurant":         "#fb923c",
+};
+
 async function BookingsByDatePage({
   params,
+  searchParams,
 }: {
   params: Promise<{ date: string }>;
+  searchParams: Promise<{ status?: string }>;
 }) {
-  const { date } = await params;
+  const [{ date }, { status = "all" }] = await Promise.all([
+    params,
+    searchParams,
+  ]);
 
-  const result = await getBookingsByDate(date);
+  const activeFilter =
+    STATUS_FILTERS.find((f) => f.value === status) ?? STATUS_FILTERS[0];
 
-  if (!result.success) {
-    return <div>Error: {result.message}</div>;
+  const [filteredResult, allResult] = await Promise.all([
+    getBookingsByDate(
+      date,
+      activeFilter.statuses.length > 0 ? activeFilter.statuses : undefined,
+    ),
+    getBookingsByDate(date),
+  ]);
+
+  if (!filteredResult.success) {
+    return <div>Error: {filteredResult.message}</div>;
   }
 
-  const bookings = result.data as Booking[];
+  const bookings = filteredResult.data as Booking[];
+  const allBookings = allResult.success ? (allResult.data as Booking[]) : [];
 
   const totalPeople = bookings.reduce((s, b) => s + b.numberOfPeople, 0);
+  const allTotalPeople = allBookings.reduce((s, b) => s + b.numberOfPeople, 0);
 
   // Group by service
   const grouped = bookings.reduce(
@@ -36,81 +93,203 @@ async function BookingsByDatePage({
     {} as Record<string, Booking[]>,
   );
 
-  const formattedDate = format(new Date(date), "EEEE, MMMM d, yyyy");
+  const dayLabel   = format(new Date(date), "EEEE");
+  const dateLabel  = format(new Date(date), "MMMM d");
+  const yearLabel  = format(new Date(date), "yyyy");
+  const baseHref   = `/bookings/date/${date}`;
 
   return (
-    <div className="p-6">
-      <div className="mb-8 flex items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <Button asChild variant="ghost" size="sm">
-            <Link href="/bookings/dashboard">← Dashboard</Link>
-          </Button>
-          <div>
-            <h1 className="text-3xl font-bold">{formattedDate}</h1>
-            {bookings.length > 0 && (
-              <p className="text-muted-foreground text-sm mt-1">
-                {bookings.length} booking{bookings.length !== 1 ? "s" : ""}{" "}
-                &middot; {totalPeople} people
+    <div className="min-h-screen bg-[#faf9f7]">
+      {/* ── Header ── */}
+      <div className="bg-white border-b border-[#ece8e3]">
+        <div className="max-w-4xl mx-auto px-6 pt-8 pb-6">
+
+          {/* Back link */}
+          <Link
+            href="/bookings/dashboard"
+            className="inline-flex items-center gap-1.5 text-[0.65rem] tracking-[0.2em] uppercase font-[family-name:var(--font-raleway)] font-[600] text-[#8a8480] hover:text-[#1a1614] transition-colors duration-150 mb-6"
+          >
+            <span>←</span> Dashboard
+          </Link>
+
+          {/* Date + stats */}
+          <div className="flex items-end justify-between gap-4 flex-wrap">
+            <div>
+              <p className="font-[family-name:var(--font-raleway)] text-[0.62rem] tracking-[0.32em] uppercase font-[600] text-[#8a8480] mb-1">
+                {dayLabel} · {yearLabel}
               </p>
-            )}
-          </div>
-        </div>
-        <Button asChild className="rounded-full">
-          <Link href="/kitesurfing/booking">Create New Booking</Link>
-        </Button>
-      </div>
+              <h1 className="font-[family-name:var(--font-raleway)] text-[clamp(2rem,5vw,3.5rem)] font-[100] tracking-[-0.02em] text-[#1a1614] leading-none">
+                {dateLabel}
+              </h1>
 
-      {bookings.length === 0 ? (
-        <p className="text-muted-foreground">No bookings for this date.</p>
-      ) : (
-        Object.entries(grouped).map(([service, serviceBookings]) => {
-          // For kitesurfing, sub-group by instructor
-          if (service === "kitesurfing-course") {
-            const byInstructor = serviceBookings.reduce(
-              (acc, b) => {
-                const instructor = b.instructor || "Unassigned";
-                if (!acc[instructor]) acc[instructor] = [];
-                acc[instructor].push(b);
-                return acc;
-              },
-              {} as Record<string, Booking[]>,
-            );
-
-            return (
-              <div key={service} className="mb-8">
-                <h3 className="text-2xl font-bold mb-4 border-b pb-2 capitalize">
-                  {service.replace(/-/g, " ")}
-                </h3>
-                {Object.entries(byInstructor).map(([instructor, list]) => (
-                  <div key={instructor} className="mb-5">
-                    <h4 className="text-lg font-semibold mb-2 text-muted-foreground">
-                      {instructor}
-                    </h4>
-                    <div className="space-y-2">
-                      {list.map((b) => (
-                        <BookingComponent key={b.id} booking={b} />
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            );
-          }
-
-          return (
-            <div key={service} className="mb-8">
-              <h3 className="text-2xl font-bold mb-4 border-b pb-2 capitalize">
-                {service.replace(/-/g, " ")}
-              </h3>
-              <div className="space-y-2">
-                {serviceBookings.map((b) => (
-                  <BookingComponent key={b.id} booking={b} />
-                ))}
+              {/* Stats row */}
+              <div className="flex items-center gap-3 mt-3 flex-wrap">
+                <StatChip value={allBookings.length} label="bookings" />
+                <span className="text-[#d6d0c8]">·</span>
+                <StatChip value={allTotalPeople} label="people" />
+                {activeFilter.value !== "all" && bookings.length !== allBookings.length && (
+                  <>
+                    <span className="text-[#d6d0c8]">·</span>
+                    <StatChip
+                      value={bookings.length}
+                      label={activeFilter.label.toLowerCase()}
+                      accent
+                    />
+                    <span className="text-[#d6d0c8]">·</span>
+                    <StatChip value={totalPeople} label="showing" accent />
+                  </>
+                )}
               </div>
             </div>
-          );
-        })
-      )}
+
+            <Link
+              href="/kitesurfing/booking"
+              className="inline-flex items-center gap-2 bg-[#1a1614] text-white text-[0.72rem] font-[700] tracking-[0.14em] uppercase px-5 py-2.5 font-[family-name:var(--font-raleway)] hover:bg-[#2a2420] transition-colors duration-200 shrink-0"
+            >
+              + New Booking
+            </Link>
+          </div>
+
+          {/* ── Filter tabs ── */}
+          <div className="flex gap-0 mt-8 border-b border-[#ece8e3]">
+            {STATUS_FILTERS.map((f) => {
+              const isActive = activeFilter.value === f.value;
+              return (
+                <Link
+                  key={f.value}
+                  href={f.value === "all" ? baseHref : `${baseHref}?status=${f.value}`}
+                  className="relative pb-3 mr-6 font-[family-name:var(--font-raleway)] text-[0.72rem] tracking-[0.1em] uppercase font-[600] transition-colors duration-150"
+                  style={{ color: isActive ? "#1a1614" : "#8a8480" }}
+                >
+                  {f.label}
+                  {isActive && (
+                    <span className="absolute bottom-0 left-0 right-0 h-[2px] bg-[#1a1614]" />
+                  )}
+                </Link>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
+      {/* ── Content ── */}
+      <div className="max-w-4xl mx-auto px-6 py-8">
+        {bookings.length === 0 ? (
+          <div className="py-16 text-center">
+            <p className="font-[family-name:var(--font-raleway)] text-[0.75rem] tracking-[0.2em] uppercase text-[#b0a89f]">
+              No {activeFilter.value === "all" ? "" : activeFilter.label.toLowerCase() + " "}
+              bookings for this date
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-10">
+            {Object.entries(grouped).map(([service, serviceBookings]) => {
+              const accent = SERVICE_ACCENT[service] ?? "#8a8480";
+              const serviceLabel = SERVICE_LABELS[service] ?? service.replace(/-/g, " ");
+
+              if (service === "kitesurfing-course") {
+                const byInstructor = serviceBookings.reduce(
+                  (acc, b) => {
+                    const instructor = b.instructor || "Unassigned";
+                    if (!acc[instructor]) acc[instructor] = [];
+                    acc[instructor].push(b);
+                    return acc;
+                  },
+                  {} as Record<string, Booking[]>,
+                );
+
+                return (
+                  <section key={service}>
+                    <ServiceHeader
+                      label={serviceLabel}
+                      count={serviceBookings.length}
+                      accent={accent}
+                    />
+                    <div className="space-y-6">
+                      {Object.entries(byInstructor).map(([instructor, list]) => (
+                        <div key={instructor}>
+                          <p className="font-[family-name:var(--font-raleway)] text-[0.62rem] tracking-[0.28em] uppercase font-[500] text-[#8a8480] mb-2 pl-1">
+                            {instructor}
+                          </p>
+                          <div className="space-y-px">
+                            {list.map((b) => (
+                              <BookingComponent key={b.id} booking={b} />
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </section>
+                );
+              }
+
+              return (
+                <section key={service}>
+                  <ServiceHeader
+                    label={serviceLabel}
+                    count={serviceBookings.length}
+                    accent={accent}
+                  />
+                  <div className="space-y-px">
+                    {serviceBookings.map((b) => (
+                      <BookingComponent key={b.id} booking={b} />
+                    ))}
+                  </div>
+                </section>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── Small helpers ────────────────────────────────────────────────────────────
+
+function StatChip({
+  value,
+  label,
+  accent = false,
+}: {
+  value: number;
+  label: string;
+  accent?: boolean;
+}) {
+  return (
+    <span
+      className="font-[family-name:var(--font-raleway)] text-[0.75rem]"
+      style={{ color: accent ? "#1a1614" : "#8a8480" }}
+    >
+      <span className="font-[700]" style={{ color: accent ? "#1a1614" : "#3d3633" }}>
+        {value}
+      </span>{" "}
+      {label}
+    </span>
+  );
+}
+
+function ServiceHeader({
+  label,
+  count,
+  accent,
+}: {
+  label: string;
+  count: number;
+  accent: string;
+}) {
+  return (
+    <div className="flex items-center gap-3 mb-3">
+      <span className="h-px w-7 shrink-0" style={{ background: accent }} />
+      <span
+        className="text-[0.58rem] tracking-[0.32em] uppercase font-[family-name:var(--font-raleway)] font-[600]"
+        style={{ color: accent }}
+      >
+        {label}
+      </span>
+      <span className="text-[0.58rem] tracking-[0.2em] uppercase font-[family-name:var(--font-raleway)] font-[500] text-[#b0a89f]">
+        {count} {count === 1 ? "booking" : "bookings"}
+      </span>
     </div>
   );
 }

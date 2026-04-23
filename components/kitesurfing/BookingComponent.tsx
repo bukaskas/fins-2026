@@ -1,9 +1,7 @@
-import { Card, CardContent } from "@/components/ui/card";
 import Link from "next/link";
 import type { Booking } from "@prisma/client";
+import { BookingStatus, PaymentStatus } from "@prisma/client";
 import { Users, Pencil } from "lucide-react";
-import { Button } from "../ui/button";
-import { BookingStatusBadge, PaymentStatusBadge } from "@/components/bookings/StatusBadge";
 
 function WhatsAppIcon({ className }: { className?: string }) {
   return (
@@ -20,63 +18,126 @@ function WhatsAppIcon({ className }: { className?: string }) {
   );
 }
 
+// Left border accent color keyed to booking status — scannable at a glance
+const STATUS_BORDER: Record<BookingStatus, string> = {
+  PENDING:             "#f59e0b",
+  REQUEST_SENT:        "#38bdf8",
+  UNDER_REVIEW:        "#fb923c",
+  WAITING_PAYMENT:     "#a78bfa",
+  CONFIRMED:           "#22c55e",
+  DECLINED:            "#ef4444",
+  NO_RESPONSE_EXPIRED: "#9ca3af",
+  CANCELED:            "#d1d5db",
+};
+
+const STATUS_LABEL: Record<BookingStatus, string> = {
+  PENDING:             "Pending",
+  REQUEST_SENT:        "Request Sent",
+  UNDER_REVIEW:        "Under Review",
+  WAITING_PAYMENT:     "Waiting Payment",
+  CONFIRMED:           "Confirmed",
+  DECLINED:            "Declined",
+  NO_RESPONSE_EXPIRED: "No Response",
+  CANCELED:            "Canceled",
+};
+
+const PAYMENT_LABEL: Record<PaymentStatus, string> = {
+  UNPAID:       "Unpaid",
+  DEPOSIT_PAID: "Deposit",
+  PAID:         "Paid",
+  REFUNDED:     "Refunded",
+};
+
+const PAYMENT_COLOR: Record<PaymentStatus, string> = {
+  UNPAID:       "#9ca3af",
+  DEPOSIT_PAID: "#60a5fa",
+  PAID:         "#22c55e",
+  REFUNDED:     "#c084fc",
+};
+
 function BookingComponent({ booking }: { booking: Booking }) {
   const dateObj = new Date(booking.date);
   const day = dateObj.getUTCDate();
   const month = dateObj.getUTCMonth() + 1;
 
   const waLink = `https://wa.me/${booking.phone.replace(/\D/g, "")}?text=Hello%20${encodeURIComponent(booking.name)}%2C%20this%20is%20Fins%20regarding%20your%20booking.`;
+  const borderColor = STATUS_BORDER[booking.bookingStatus];
 
   return (
-    <Card className="mx-2 sm:mx-4">
-      <CardContent className="flex flex-wrap items-center gap-x-4 gap-y-2 py-3 px-4">
-        {/* Date */}
-        <span className="text-sm font-semibold tabular-nums w-12 shrink-0">
+    <div
+      className="group flex items-stretch bg-white border border-[#ece8e3] hover:border-[#d6d0c8] hover:bg-[#faf9f7] transition-all duration-150"
+      style={{ borderLeft: `3px solid ${borderColor}` }}
+    >
+      {/* Time column */}
+      <div className="flex items-center justify-center w-16 shrink-0 border-r border-[#ece8e3] px-2">
+        <span className="font-[family-name:var(--font-roboto)] text-[0.65rem] text-[#8a8480] tabular-nums">
+          {booking.time ?? "—"}
+        </span>
+      </div>
+
+      {/* Date — shown on list pages where date context isn't implicit */}
+      <div className="hidden sm:flex items-center justify-center w-12 shrink-0 border-r border-[#ece8e3] px-2">
+        <span className="font-[family-name:var(--font-raleway)] text-[0.65rem] font-[600] text-[#8a8480] tabular-nums">
           {day}/{month}
         </span>
+      </div>
 
-        {/* Time */}
-        {booking.time && (
-          <span className="text-sm text-muted-foreground shrink-0">
-            {booking.time}
-          </span>
-        )}
-
-        {/* Name */}
-        <span className="text-sm font-medium flex-1 min-w-[100px]">
+      {/* Name + people */}
+      <div className="flex-1 flex items-center gap-3 px-4 py-3 min-w-0">
+        <span className="font-[family-name:var(--font-raleway)] font-[500] text-[0.88rem] text-[#1a1614] truncate">
           {booking.name}
         </span>
-
-        {/* People count */}
-        <span className="flex items-center gap-1 text-sm text-muted-foreground shrink-0">
-          <Users className="h-3.5 w-3.5" />
-          {booking.numberOfPeople}
+        <span className="flex items-center gap-1 text-[#8a8480] shrink-0">
+          <Users className="h-3 w-3" />
+          <span className="font-[family-name:var(--font-raleway)] text-[0.72rem]">
+            {booking.numberOfPeople}
+          </span>
         </span>
+      </div>
 
-        {/* WhatsApp button */}
+      {/* Status + payment */}
+      <div className="hidden md:flex items-center gap-3 px-4 border-l border-[#ece8e3]">
+        {/* Booking status dot + label */}
+        <div className="flex items-center gap-1.5">
+          <span
+            className="w-1.5 h-1.5 rounded-full shrink-0"
+            style={{ background: borderColor }}
+          />
+          <span className="font-[family-name:var(--font-raleway)] text-[0.65rem] tracking-[0.08em] uppercase font-[500] text-[#5a5450]">
+            {STATUS_LABEL[booking.bookingStatus]}
+          </span>
+        </div>
+
+        {/* Payment divider + label */}
+        <span className="text-[#d6d0c8]">·</span>
+        <span
+          className="font-[family-name:var(--font-raleway)] text-[0.65rem] tracking-[0.08em] uppercase font-[500]"
+          style={{ color: PAYMENT_COLOR[booking.paymentStatus] }}
+        >
+          {PAYMENT_LABEL[booking.paymentStatus]}
+        </span>
+      </div>
+
+      {/* Actions */}
+      <div className="flex items-center gap-1 px-3 border-l border-[#ece8e3]">
         <Link
           href={waLink}
           target="_blank"
           rel="noopener noreferrer"
-          className="flex items-center gap-1.5 text-sm text-green-600 hover:text-green-700 font-medium shrink-0"
+          className="flex items-center justify-center w-7 h-7 text-[#22c55e] hover:bg-green-50 rounded transition-colors duration-150"
+          title={`WhatsApp ${booking.name}`}
         >
-          <WhatsAppIcon className="h-4 w-4" />
-          <span className="hidden sm:inline">{booking.phone}</span>
+          <WhatsAppIcon className="h-3.5 w-3.5" />
         </Link>
-
-        {/* Status badges */}
-        <BookingStatusBadge status={booking.bookingStatus} />
-        <PaymentStatusBadge status={booking.paymentStatus} />
-
-        {/* Edit */}
-        <Button variant="outline" size="sm" asChild className="shrink-0 h-7 px-2">
-          <Link href={`/bookings/${booking.id}/edit`}>
-            <Pencil className="h-3.5 w-3.5 sm:mr-1" />
-            <span className="hidden sm:inline">Edit</span>
-          </Link>
-        </Button>
-      </CardContent>
-    </Card>
+        <Link
+          href={`/bookings/${booking.id}/edit`}
+          className="flex items-center justify-center w-7 h-7 text-[#8a8480] hover:text-[#1a1614] hover:bg-[#f0ece8] rounded transition-colors duration-150"
+          title="Edit booking"
+        >
+          <Pencil className="h-3.5 w-3.5" />
+        </Link>
+      </div>
+    </div>
   );
 }
 
