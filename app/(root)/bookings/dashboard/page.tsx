@@ -2,14 +2,31 @@ import { getBookingCountsByDate } from "@/lib/actions/booking.actions";
 import { BookingCalendar } from "@/components/bookings/BookingCalendar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { BookingStatus } from "@prisma/client";
 import { format } from "date-fns";
 import Link from "next/link";
+
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
-async function BookingsDashboardPage() {
-  const result = await getBookingCountsByDate();
+const STATUS_FILTERS: { label: string; value: string; statuses: BookingStatus[] }[] = [
+  { label: "All",       value: "all",       statuses: [] },
+  { label: "Confirmed", value: "confirmed", statuses: [BookingStatus.CONFIRMED] },
+  { label: "Pending",   value: "pending",   statuses: [BookingStatus.PENDING, BookingStatus.REQUEST_SENT, BookingStatus.UNDER_REVIEW, BookingStatus.WAITING_PAYMENT] },
+];
+
+async function BookingsDashboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ status?: string }>;
+}) {
+  const { status = "all" } = await searchParams;
+
+  const activeFilter = STATUS_FILTERS.find((f) => f.value === status) ?? STATUS_FILTERS[0];
+  const result = await getBookingCountsByDate(
+    activeFilter.statuses.length > 0 ? activeFilter.statuses : undefined
+  );
 
   const counts = result.success
     ? (result.data as {
@@ -54,6 +71,23 @@ async function BookingsDashboardPage() {
         <Button asChild className="rounded-full">
           <Link href="/kitesurfing/booking">Create New Booking</Link>
         </Button>
+      </div>
+
+      {/* Status filter */}
+      <div className="mb-6 flex gap-2 flex-wrap">
+        {STATUS_FILTERS.map((f) => (
+          <Button
+            key={f.value}
+            asChild
+            variant={activeFilter.value === f.value ? "default" : "outline"}
+            className="rounded-full"
+            size="sm"
+          >
+            <Link href={f.value === "all" ? "/bookings/dashboard" : `/bookings/dashboard?status=${f.value}`}>
+              {f.label}
+            </Link>
+          </Button>
+        ))}
       </div>
 
       {/* Stat cards */}

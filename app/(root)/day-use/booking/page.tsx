@@ -334,7 +334,7 @@ function DayUseBookingForm() {
                         return (
                           <Field data-invalid={isInvalid}>
                             <FieldLabel htmlFor={field.name}>
-                              Kids (under 12)
+                              Kids (5 to 8 years old)
                             </FieldLabel>
                             <Input
                               id={field.name}

@@ -4,6 +4,7 @@ import { prisma } from "@/db/prisma";
 import { isRedirectError } from "next/dist/client/components/redirect-error";
 import { BookingFormData, bookingFormSchema } from "../validators";
 import { sendBookingEmail, sendStaffNotificationEmail } from "@/emails/index";
+import { BookingStatus } from "@prisma/client";
 
 
 
@@ -87,14 +88,17 @@ export async function getBookingsByService(service: string) {
   }
 }
 
-export async function getBookingCountsByDate() {
+export async function getBookingCountsByDate(statuses?: BookingStatus[]) {
   try {
     const today = new Date();
     const start = new Date(today.getFullYear(), today.getMonth() - 3, 1);
     const end = new Date(today.getFullYear(), today.getMonth() + 4, 0, 23, 59, 59);
 
     const bookings = await prisma.booking.findMany({
-      where: { date: { gte: start, lte: end } },
+      where: {
+        date: { gte: start, lte: end },
+        ...(statuses && statuses.length > 0 ? { bookingStatus: { in: statuses } } : {}),
+      },
       select: { date: true, numberOfPeople: true },
     });
 
