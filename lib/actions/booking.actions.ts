@@ -196,6 +196,17 @@ export async function getBookingById(id: string) {
   }
 }
 
+export async function updateBookingStatus(id: string, status: BookingStatus) {
+  try {
+    await prisma.booking.update({ where: { id }, data: { bookingStatus: status } });
+    revalidatePath('/bookings', 'layout');
+    return { success: true };
+  } catch (error) {
+    console.error('Status update error:', error);
+    return { success: false, message: `Failed to update status. Error: ${error instanceof Error ? error.message : String(error)}` };
+  }
+}
+
 export async function getFutureKitesurfingBookings() {
   try {
     const today = new Date();

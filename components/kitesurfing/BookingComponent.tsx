@@ -1,7 +1,19 @@
+"use client";
+
+import { useState } from "react";
 import Link from "next/link";
 import type { Booking } from "@prisma/client";
 import { BookingStatus, PaymentStatus } from "@prisma/client";
 import { Users, Pencil } from "lucide-react";
+import { toast } from "sonner";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { updateBookingStatus } from "@/lib/actions/booking.actions";
 
 function WhatsAppIcon({ className }: { className?: string }) {
   return (
@@ -18,7 +30,6 @@ function WhatsAppIcon({ className }: { className?: string }) {
   );
 }
 
-// Left border accent color keyed to booking status — scannable at a glance
 const STATUS_BORDER: Record<BookingStatus, string> = {
   PENDING:             "#f59e0b",
   REQUEST_SENT:        "#38bdf8",
@@ -41,6 +52,8 @@ const STATUS_LABEL: Record<BookingStatus, string> = {
   CANCELED:            "Canceled",
 };
 
+const ALL_STATUSES = Object.values(BookingStatus);
+
 const PAYMENT_LABEL: Record<PaymentStatus, string> = {
   UNPAID:       "Unpaid",
   DEPOSIT_PAID: "Deposit",
@@ -55,13 +68,67 @@ const PAYMENT_COLOR: Record<PaymentStatus, string> = {
   REFUNDED:     "#c084fc",
 };
 
+function fmtEGP(cents: number): string {
+  return `${(cents / 100).toLocaleString("en-EG")} EGP`;
+}
+
+function buildWaLinks(booking: Booking) {
+  const phone = booking.phone.replace(/\D/g, "");
+  const name = booking.name;
+
+  const messageText = `Hello ${name}, this is Fins regarding your booking.`;
+
+  const instagramText =
+    `Hi ${name}! As part of our booking confirmation, could you please share your Instagram account? ` +
+    `This helps us keep our Fins community the way we love it 🤍 If your account is private, a screenshot works just fine!`;
+
+  const paymentInfo =
+    `💳 *To confirm your reservation:*\n` +
+    `Please send a *50% deposit*\n\n` +
+    `⚠️ Deposit is *non-refundable* and reservations *cannot be postponed.*\n\n` +
+    `🏦 *Bank:* Arab African International Bank\n` +
+    `🔢 *Account No:* 1105202510010201\n` +
+    `👤 *Account Name:* Fins Kite Surfing\n\n` +
+    `After payment, please send a *screenshot of the transaction* with full details. Thank you`;
+
+  const amountLines =
+    booking.totalPriceCents != null
+      ? `Total: ${fmtEGP(booking.totalPriceCents)}\n` +
+        `Deposit amount: ${fmtEGP(Math.round(booking.totalPriceCents / 2))}\n\n`
+      : "";
+
+  const depositText = `Hi ${name}!\n\n${amountLines}Payment info:\n${paymentInfo}`;
+
+  const base = `https://wa.me/${phone}?text=`;
+  return {
+    message:   base + encodeURIComponent(messageText),
+    instagram: base + encodeURIComponent(instagramText),
+    deposit:   base + encodeURIComponent(depositText),
+  };
+}
+
 function BookingComponent({ booking }: { booking: Booking }) {
+  const [status, setStatus] = useState<BookingStatus>(booking.bookingStatus);
+  const [isPending, setIsPending] = useState(false);
+
   const dateObj = new Date(booking.date);
   const day = dateObj.getUTCDate();
   const month = dateObj.getUTCMonth() + 1;
 
-  const waLink = `https://wa.me/${booking.phone.replace(/\D/g, "")}?text=Hello%20${encodeURIComponent(booking.name)}%2C%20this%20is%20Fins%20regarding%20your%20booking.`;
-  const borderColor = STATUS_BORDER[booking.bookingStatus];
+  const borderColor = STATUS_BORDER[status];
+  const waLinks = buildWaLinks(booking);
+
+  async function handleStatusChange(next: BookingStatus) {
+    const prev = status;
+    setStatus(next);
+    setIsPending(true);
+    const result = await updateBookingStatus(booking.id, next);
+    setIsPending(false);
+    if (!result.success) {
+      setStatus(prev);
+      toast.error("Failed to update status");
+    }
+  }
 
   return (
     <div
@@ -75,7 +142,7 @@ function BookingComponent({ booking }: { booking: Booking }) {
         </span>
       </div>
 
-      {/* Date — shown on list pages where date context isn't implicit */}
+      {/* Date */}
       <div className="hidden sm:flex items-center justify-center w-12 shrink-0 border-r border-[#ece8e3] px-2">
         <span className="font-[family-name:var(--font-raleway)] text-[0.65rem] font-[600] text-[#8a8480] tabular-nums">
           {day}/{month}
@@ -97,18 +164,40 @@ function BookingComponent({ booking }: { booking: Booking }) {
 
       {/* Status + payment */}
       <div className="hidden md:flex items-center gap-3 px-4 border-l border-[#ece8e3]">
-        {/* Booking status dot + label */}
-        <div className="flex items-center gap-1.5">
-          <span
-            className="w-1.5 h-1.5 rounded-full shrink-0"
-            style={{ background: borderColor }}
-          />
-          <span className="font-[family-name:var(--font-raleway)] text-[0.65rem] tracking-[0.08em] uppercase font-[500] text-[#5a5450]">
-            {STATUS_LABEL[booking.bookingStatus]}
-          </span>
-        </div>
+        {/* Inline status dropdown */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button
+              disabled={isPending}
+              className="flex items-center gap-1.5 hover:opacity-70 transition-opacity duration-150 disabled:opacity-40"
+              title="Change status"
+            >
+              <span
+                className="w-1.5 h-1.5 rounded-full shrink-0"
+                style={{ background: borderColor }}
+              />
+              <span className="font-[family-name:var(--font-raleway)] text-[0.65rem] tracking-[0.08em] uppercase font-[500] text-[#5a5450]">
+                {STATUS_LABEL[status]}
+              </span>
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" className="w-44">
+            {ALL_STATUSES.map((s) => (
+              <DropdownMenuItem
+                key={s}
+                onSelect={() => handleStatusChange(s)}
+                className="flex items-center gap-2"
+              >
+                <span
+                  className="w-1.5 h-1.5 rounded-full shrink-0"
+                  style={{ background: STATUS_BORDER[s] }}
+                />
+                <span className="text-[0.72rem]">{STATUS_LABEL[s]}</span>
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
 
-        {/* Payment divider + label */}
         <span className="text-[#d6d0c8]">·</span>
         <span
           className="font-[family-name:var(--font-raleway)] text-[0.65rem] tracking-[0.08em] uppercase font-[500]"
@@ -120,15 +209,34 @@ function BookingComponent({ booking }: { booking: Booking }) {
 
       {/* Actions */}
       <div className="flex items-center gap-1 px-3 border-l border-[#ece8e3]">
-        <Link
-          href={waLink}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex items-center justify-center w-7 h-7 text-[#22c55e] hover:bg-green-50 rounded transition-colors duration-150"
-          title={`WhatsApp ${booking.name}`}
-        >
-          <WhatsAppIcon className="h-3.5 w-3.5" />
-        </Link>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button
+              className="flex items-center justify-center w-7 h-7 text-[#22c55e] hover:bg-green-50 rounded transition-colors duration-150"
+              title="WhatsApp actions"
+            >
+              <WhatsAppIcon className="h-3.5 w-3.5" />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-48">
+            <DropdownMenuItem asChild>
+              <a href={waLinks.message} target="_blank" rel="noopener noreferrer">
+                Message guest
+              </a>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <a href={waLinks.instagram} target="_blank" rel="noopener noreferrer">
+                Request Instagram
+              </a>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <a href={waLinks.deposit} target="_blank" rel="noopener noreferrer">
+                Send deposit details
+              </a>
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+
         <Link
           href={`/bookings/${booking.id}/edit`}
           className="flex items-center justify-center w-7 h-7 text-[#8a8480] hover:text-[#1a1614] hover:bg-[#f0ece8] rounded transition-colors duration-150"
