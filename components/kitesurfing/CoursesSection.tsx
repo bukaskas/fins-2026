@@ -109,10 +109,7 @@ function CourseCard({
           </Link>
         ) : (
           <Dialog>
-            <DialogTrigger
-              className={ctaClass}
-              style={{ color: accent }}
-            >
+            <DialogTrigger className={ctaClass} style={{ color: accent }}>
               Details & Pricing
               <span className="group-hover:translate-x-1 transition-transform duration-200">
                 →
@@ -120,13 +117,14 @@ function CourseCard({
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle eyebrow="Kitesurfing · Fins Sokhna" accent={accent}>
+                <DialogTitle
+                  eyebrow="Kitesurfing · Fins Sokhna"
+                  accent={accent}
+                >
                   {dialogTitle}
                 </DialogTitle>
               </DialogHeader>
-              <DialogBody>
-                {dialogContent}
-              </DialogBody>
+              <DialogBody>{dialogContent}</DialogBody>
             </DialogContent>
           </Dialog>
         )}
@@ -154,7 +152,7 @@ const courses: CourseCardProps[] = [
     index: "01",
     tag: "Level 1 & Level 2 IKO course",
     title: "Beginner Course",
-    subtitle: "Learn to kite and get on the board",
+    subtitle: "Learn to control the kite and get on the board",
     image: beginnerPhoto,
     priority: true,
     moreInfoHref: "/kitesurfing/beginner-course",
@@ -171,7 +169,8 @@ const courses: CourseCardProps[] = [
       <div className="text-left space-y-4">
         <p className="text-sm text-white/55 font-[family-name:var(--font-raleway)] font-[300] leading-relaxed">
           The intro course is designed for those planning to try kitesurfing for
-          one session — to experience what we need to learn to become a kitesurfer.
+          one session — to experience what we need to learn to become a
+          kitesurfer.
         </p>
         <p className="text-sm text-white/55 font-[family-name:var(--font-raleway)] font-[300] leading-relaxed">
           We focus on kite control, safety, and the basic knowledge required
@@ -179,22 +178,30 @@ const courses: CourseCardProps[] = [
           works and staying safe.
         </p>
         <p className="text-sm text-white/55 font-[family-name:var(--font-raleway)] font-[300] leading-relaxed">
-          Duration: <strong className="text-white/80 font-[500]">2 hours</strong>, done in one session.
+          Duration:{" "}
+          <strong className="text-white/80 font-[500]">2 hours</strong>, done in
+          one session.
         </p>
         <div className="space-y-2 pt-2">
-          <div className="text-[0.6rem] tracking-[0.28em] uppercase font-[family-name:var(--font-raleway)] font-[600]" style={{ color: accent }}>Pricing</div>
+          <div
+            className="text-[0.6rem] tracking-[0.28em] uppercase font-[family-name:var(--font-raleway)] font-[600]"
+            style={{ color: accent }}
+          >
+            Pricing
+          </div>
           <div className="text-sm text-white/70 font-[family-name:var(--font-raleway)] font-[300]">
             Private: <span className="text-white font-[500]">7,500 EGP</span>
           </div>
           <div className="text-sm text-white/70 font-[family-name:var(--font-raleway)] font-[300]">
-            Group: <span className="text-white font-[500]">5,000 EGP</span> per person (2–4 persons)
+            Group: <span className="text-white font-[500]">5,000 EGP</span> per
+            person (2–4 persons)
           </div>
         </div>
         {bookBtn}
       </div>
     ),
   },
-  
+
   {
     index: "03",
     tag: "2 hours",
@@ -213,15 +220,22 @@ const courses: CourseCardProps[] = [
           on your own.
         </p>
         <p className="text-sm text-white/55 font-[family-name:var(--font-raleway)] font-[300] leading-relaxed">
-          Duration: <strong className="text-white/80 font-[500]">2-hour session</strong>
+          Duration:{" "}
+          <strong className="text-white/80 font-[500]">2-hour session</strong>
         </p>
         <div className="space-y-2 pt-2">
-          <div className="text-[0.6rem] tracking-[0.28em] uppercase font-[family-name:var(--font-raleway)] font-[600]" style={{ color: accent }}>Pricing</div>
+          <div
+            className="text-[0.6rem] tracking-[0.28em] uppercase font-[family-name:var(--font-raleway)] font-[600]"
+            style={{ color: accent }}
+          >
+            Pricing
+          </div>
           <div className="text-sm text-white/70 font-[family-name:var(--font-raleway)] font-[300]">
             Private: <span className="text-white font-[500]">7,500 EGP</span>
           </div>
           <div className="text-sm text-white/70 font-[family-name:var(--font-raleway)] font-[300]">
-            Group: <span className="text-white font-[500]">5,000 EGP</span> per person (2–4 persons)
+            Group: <span className="text-white font-[500]">5,000 EGP</span> per
+            person (2–4 persons)
           </div>
         </div>
         {bookBtn}
@@ -237,27 +251,49 @@ const courses: CourseCardProps[] = [
     dialogTitle: "Kids Courses",
     dialogContent: (
       <div className="space-y-4">
-        <div className="text-[0.6rem] tracking-[0.28em] uppercase font-[family-name:var(--font-raleway)] font-[600] mb-3" style={{ color: accent }}>
+        <div
+          className="text-[0.6rem] tracking-[0.28em] uppercase font-[family-name:var(--font-raleway)] font-[600] mb-3"
+          style={{ color: accent }}
+        >
           Pricing · Ages 6–18
         </div>
         <div className="border border-white/10 divide-y divide-white/8">
           {/* Header */}
           <div className="grid grid-cols-3 px-4 py-2.5">
             {["Course", "Duration", "Price"].map((h) => (
-              <span key={h} className="text-[0.58rem] tracking-[0.2em] uppercase text-white/35 font-[family-name:var(--font-raleway)] font-[500]">{h}</span>
+              <span
+                key={h}
+                className="text-[0.58rem] tracking-[0.2em] uppercase text-white/35 font-[family-name:var(--font-raleway)] font-[500]"
+              >
+                {h}
+              </span>
             ))}
           </div>
           {/* Rows */}
           {[
             { course: "Intro", duration: "2 hours", price: "5,000 EGP" },
-            { course: "Private Beginner", duration: "6 hours", price: "15,000 EGP" },
-            { course: "Group Beginner", duration: "8 hours", price: "11,250 EGP" },
+            {
+              course: "Private Beginner",
+              duration: "6 hours",
+              price: "15,000 EGP",
+            },
+            {
+              course: "Group Beginner",
+              duration: "8 hours",
+              price: "11,250 EGP",
+            },
             { course: "Refresher", duration: "2 hours", price: "5,000 EGP" },
           ].map((row) => (
             <div key={row.course} className="grid grid-cols-3 px-4 py-3">
-              <span className="text-sm text-white/80 font-[family-name:var(--font-raleway)] font-[400]">{row.course}</span>
-              <span className="text-sm text-white/45 font-[family-name:var(--font-raleway)] font-[300]">{row.duration}</span>
-              <span className="text-sm text-white font-[family-name:var(--font-raleway)] font-[500]">{row.price}</span>
+              <span className="text-sm text-white/80 font-[family-name:var(--font-raleway)] font-[400]">
+                {row.course}
+              </span>
+              <span className="text-sm text-white/45 font-[family-name:var(--font-raleway)] font-[300]">
+                {row.duration}
+              </span>
+              <span className="text-sm text-white font-[family-name:var(--font-raleway)] font-[500]">
+                {row.price}
+              </span>
             </div>
           ))}
         </div>
@@ -306,8 +342,8 @@ function ContentSection() {
             </span>
           </h2>
           <p className="text-[0.85rem] text-[#64748b] font-[family-name:var(--font-raleway)] font-[300] max-w-xs leading-relaxed">
-            From your very first session to riding solo — choose the course
-            that fits where you are right now.
+            From your very first session to riding solo — choose the course that
+            fits where you are right now.
           </p>
         </div>
       </div>

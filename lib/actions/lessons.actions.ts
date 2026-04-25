@@ -347,7 +347,7 @@ export async function createKitesurfingBookingFromPublic(
     startsAt.setUTCHours(h, m, 0, 0);
     const endsAt = new Date(
       startsAt.getTime() +
-      LESSON_DURATION_MINUTES[validated.lessonType] * 60 * 1000
+      LESSON_DURATION_MINUTES[LessonType.PRIVATE] * 60 * 1000
     );
 
     let user = await prisma.user.findUnique({
@@ -372,8 +372,8 @@ export async function createKitesurfingBookingFromPublic(
         data: {
           startsAt,
           endsAt,
-          lessonType: validated.lessonType,
-          capacity: validated.numberOfPeople,
+          lessonType: LessonType.PRIVATE,
+          capacity: 1,
           instructorId: null,
           notes: validated.notes,
         },

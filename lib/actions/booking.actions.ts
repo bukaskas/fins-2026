@@ -2,6 +2,7 @@
 
 import { prisma } from "@/db/prisma";
 import { isRedirectError } from "next/dist/client/components/redirect-error";
+import { revalidatePath } from "next/cache";
 import { BookingFormData, bookingFormSchema } from "../validators";
 import { sendBookingEmail, sendStaffNotificationEmail } from "@/emails/index";
 import { BookingStatus } from "@prisma/client";
@@ -125,6 +126,7 @@ export async function getBookingCountsByDate(statuses?: BookingStatus[]) {
 export async function deleteBooking(id: string) {
   try {
     await prisma.booking.delete({ where: { id } });
+    revalidatePath('/bookings', 'layout');
     return { success: true };
   } catch (error) {
     console.error('Error deleting booking:', error);
@@ -171,6 +173,7 @@ export async function updateBooking(id: string, data: BookingFormData) {
       },
     });
 
+    revalidatePath('/bookings', 'layout');
     return ({
       success: true,
       message: `Booking updated at ${validatedData.date.toISOString()}`,
