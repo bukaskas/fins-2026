@@ -4,6 +4,7 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 import { APP_NAME, EMAIL_ADDRESS, STAFF_EMAILS } from "@/lib/constants";
 import RegistrationEmail from "./registrationEmail";
 import StaffNotificationEmail from "./staffNotificationEmail";
+import PharaohAirstyleEmail from "./pharaohEmail";
 
 export async function sendBookingEmail(
   to: string,
@@ -14,6 +15,16 @@ export async function sendBookingEmail(
   numberOfKids?: number,
   totalPriceCents?: number,
 ) {
+  if (bookingType === "pharaoh-airstyle") {
+    await resend.emails.send({
+      from: EMAIL_ADDRESS,
+      to,
+      subject: "Pharaoh Airstyle Event — Spot Reserved! 🎉",
+      react: <PharaohAirstyleEmail username={name} />,
+    });
+    return;
+  }
+
   await resend.emails.send({
     from: EMAIL_ADDRESS,
     to,
