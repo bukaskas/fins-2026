@@ -135,11 +135,39 @@ function BookingComponent({ booking }: { booking: Booking }) {
       className="group flex items-stretch bg-white border border-[#ece8e3] hover:border-[#d6d0c8] hover:bg-[#faf9f7] transition-all duration-150"
       style={{ borderLeft: `3px solid ${borderColor}` }}
     >
-      {/* Time column */}
-      <div className="flex items-center justify-center w-16 shrink-0 border-r border-[#ece8e3] px-2">
+      {/* Time column — also holds the mobile status trigger */}
+      <div className="flex flex-col items-center justify-center w-16 shrink-0 border-r border-[#ece8e3] px-2 gap-1.5">
         <span className="font-[family-name:var(--font-roboto)] text-[0.65rem] text-[#8a8480] tabular-nums">
           {booking.time ?? "—"}
         </span>
+        {/* Mobile-only status dot — opens the same dropdown */}
+        <div className="md:hidden">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                disabled={isPending}
+                className="w-3 h-3 rounded-full transition-opacity hover:opacity-70 disabled:opacity-40"
+                style={{ background: borderColor }}
+                title={STATUS_LABEL[status]}
+              />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="w-44">
+              {ALL_STATUSES.map((s) => (
+                <DropdownMenuItem
+                  key={s}
+                  onSelect={() => handleStatusChange(s)}
+                  className="flex items-center gap-2"
+                >
+                  <span
+                    className="w-1.5 h-1.5 rounded-full shrink-0"
+                    style={{ background: STATUS_BORDER[s] }}
+                  />
+                  <span className="text-[0.72rem]">{STATUS_LABEL[s]}</span>
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       </div>
 
       {/* Date */}

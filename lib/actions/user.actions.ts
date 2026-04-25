@@ -5,6 +5,7 @@ import bcryptjs from "bcryptjs";
 
 import { Prisma, Role } from "@prisma/client";
 import { sendRegistrationEmail } from "@/emails";
+import { redirect } from "next/navigation";
 
 // ...existing code...
 
@@ -150,6 +151,24 @@ export async function listInstructors() {
     select: { id: true, name: true },
     orderBy: { name: "asc" },
   });
+}
+
+export async function createStudent(formData: FormData) {
+  const name = String(formData.get("name") ?? "").trim();
+  const email = String(formData.get("email") ?? "").trim();
+  const phone = String(formData.get("phone") ?? "").trim() || null;
+
+  if (!name) throw new Error("Name is required.");
+  if (!email) throw new Error("Email is required.");
+
+  const hashedPassword = await bcryptjs.hash(crypto.randomUUID(), 10);
+
+  const user = await prisma.user.create({
+    data: { name, email, phone, password: hashedPassword },
+    select: { id: true },
+  });
+
+  redirect(`/lessons/new?guestId=${user.id}`);
 }
 
 export async function listUsers(query?: string) {

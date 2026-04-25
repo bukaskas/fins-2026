@@ -13,6 +13,7 @@ import {
   LessonBookingsTable,
   type LessonBookingRow,
 } from "@/components/bookings/LessonBookingsTable";
+import Link from "next/link";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -62,7 +63,23 @@ export default async function SchedulePage() {
   return (
     <div className="container mx-auto py-6 px-4 space-y-10">
       <div>
-        <h1 className="text-2xl font-bold mb-4">Schedule</h1>
+        <div className="flex items-center justify-between mb-4">
+          <h1 className="text-2xl font-bold">Schedule</h1>
+          <div className="flex gap-2">
+            <Link
+              href="/lessons/new"
+              className="rounded border px-3 py-1.5 text-sm hover:bg-muted/40 transition-colors"
+            >
+              + New Lesson
+            </Link>
+            <Link
+              href="/students/new"
+              className="rounded border px-3 py-1.5 text-sm hover:bg-muted/40 transition-colors"
+            >
+              + Add Student
+            </Link>
+          </div>
+        </div>
         <ScheduleBoard
           instructors={instructors}
           initialSessions={sessions as SessionWithBookings[]}

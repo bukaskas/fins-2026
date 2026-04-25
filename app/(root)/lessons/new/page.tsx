@@ -4,6 +4,7 @@ import {
   getLessonFormUsers,
 } from "@/lib/actions/lessons.actions";
 import StudentSearchField from "@/components/lessons/StudentSearchField";
+import Link from "next/link";
 
 type Props = {
   searchParams: Promise<{ guestId?: string }>;
@@ -15,7 +16,15 @@ export default async function NewLessonPage({ searchParams }: Props) {
 
   return (
     <main className="mx-auto max-w-xl p-6">
-      <h1 className="mb-4 text-2xl font-semibold">New Lesson Session</h1>
+      <div className="flex items-center justify-between mb-4">
+        <h1 className="text-2xl font-semibold">New Lesson Session</h1>
+        <Link
+          href="/students/new"
+          className="rounded border px-3 py-1.5 text-sm hover:bg-muted/40 transition-colors"
+        >
+          + Add Student
+        </Link>
+      </div>
 
       <form
         action={createLessonSessionFromForm}
