@@ -12,8 +12,12 @@ const STATUS_FILTERS: {
   value: string;
   statuses: BookingStatus[];
 }[] = [
-  { label: "All",       value: "all",       statuses: [] },
-  { label: "Confirmed", value: "confirmed", statuses: [BookingStatus.CONFIRMED] },
+  { label: "All", value: "all", statuses: [] },
+  {
+    label: "Confirmed",
+    value: "confirmed",
+    statuses: [BookingStatus.CONFIRMED],
+  },
   {
     label: "Pending",
     value: "pending",
@@ -41,33 +45,44 @@ async function BookingsDashboardPage({
   );
 
   const counts = result.success
-    ? (result.data as { date: string; totalPeople: number; bookingCount: number }[])
+    ? (result.data as {
+        date: string;
+        totalPeople: number;
+        bookingCount: number;
+      }[])
     : [];
 
   const now = new Date();
   const thisMonth = format(now, "yyyy-MM");
 
   const thisMonthCounts = counts.filter((c) => c.date.startsWith(thisMonth));
-  const totalBookingsThisMonth = thisMonthCounts.reduce((s, c) => s + c.bookingCount, 0);
-  const totalPeopleThisMonth   = thisMonthCounts.reduce((s, c) => s + c.totalPeople, 0);
+  const totalBookingsThisMonth = thisMonthCounts.reduce(
+    (s, c) => s + c.bookingCount,
+    0,
+  );
+  const totalPeopleThisMonth = thisMonthCounts.reduce(
+    (s, c) => s + c.totalPeople,
+    0,
+  );
 
-  const today       = format(now, "yyyy-MM-dd");
+  const today = format(now, "yyyy-MM-dd");
   const futureCounts = counts.filter((c) => c.date >= today);
-  const busiestDay  = futureCounts.reduce<{ date: string; totalPeople: number } | null>(
+  const busiestDay = futureCounts.reduce<{
+    date: string;
+    totalPeople: number;
+  } | null>(
     (best, c) => (!best || c.totalPeople > best.totalPeople ? c : best),
     null,
   );
 
   const monthLabel = format(now, "MMMM");
-  const yearLabel  = format(now, "yyyy");
+  const yearLabel = format(now, "yyyy");
 
   return (
     <div className="min-h-screen bg-[#faf9f7]">
-
       {/* ── Header panel ── */}
       <div className="bg-white border-b border-[#ece8e3]">
         <div className="max-w-5xl mx-auto px-6 pt-8 pb-0">
-
           {/* Top bar: back + new booking */}
           <div className="flex items-center justify-between mb-8">
             <Link
@@ -77,7 +92,7 @@ async function BookingsDashboardPage({
               ← Bookings
             </Link>
             <Link
-              href="/kitesurfing/booking"
+              href="/day-use/booking"
               className="inline-flex items-center gap-2 bg-[#1a1614] text-white text-[0.72rem] font-[700] tracking-[0.14em] uppercase px-5 py-2.5 font-[family-name:var(--font-raleway)] hover:bg-[#2a2420] transition-colors duration-200"
             >
               + New Booking
@@ -197,9 +212,17 @@ async function BookingsDashboardPage({
             View by service
           </p>
           {[
-            { label: "Kitesurfing", href: "/bookings/kitesurfing", accent: "#38bdf8" },
-            { label: "Day Use",     href: "/bookings/day-use",     accent: "#fbbf24" },
-            { label: "Restaurant",  href: "/bookings/restaurant",  accent: "#fb923c" },
+            {
+              label: "Kitesurfing",
+              href: "/bookings/kitesurfing",
+              accent: "#38bdf8",
+            },
+            { label: "Day Use", href: "/bookings/day-use", accent: "#fbbf24" },
+            {
+              label: "Restaurant",
+              href: "/bookings/restaurant",
+              accent: "#fb923c",
+            },
           ].map((nav) => (
             <Link
               key={nav.href}
@@ -215,7 +238,6 @@ async function BookingsDashboardPage({
           ))}
         </div>
       </div>
-
     </div>
   );
 }
