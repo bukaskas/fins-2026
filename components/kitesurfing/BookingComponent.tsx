@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import type { Booking } from "@prisma/client";
-import { BookingStatus, PaymentStatus } from "@prisma/client";
+import { BookingStatus } from "@prisma/client";
 import { Users, Pencil, Phone, ClipboardCopy } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -54,19 +54,6 @@ const STATUS_LABEL: Record<BookingStatus, string> = {
 
 const ALL_STATUSES = Object.values(BookingStatus);
 
-const PAYMENT_LABEL: Record<PaymentStatus, string> = {
-  UNPAID: "Unpaid",
-  DEPOSIT_PAID: "Deposit",
-  PAID: "Paid",
-  REFUNDED: "Refunded",
-};
-
-const PAYMENT_COLOR: Record<PaymentStatus, string> = {
-  UNPAID: "#9ca3af",
-  DEPOSIT_PAID: "#60a5fa",
-  PAID: "#22c55e",
-  REFUNDED: "#c084fc",
-};
 
 function fmtEGP(cents: number): string {
   return `${(cents / 100).toLocaleString("en-EG")} EGP`;
@@ -125,7 +112,9 @@ function BookingComponent({ booking }: { booking: Booking }) {
       `Phone: ${booking.phone}`,
       `Email: ${booking.email}`,
       `Status: ${STATUS_LABEL[status]}`,
-      `Payment: ${PAYMENT_LABEL[booking.paymentStatus]}`,
+      booking.amountPaidCents > 0
+        ? `Paid: ${booking.amountPaidCents / 100} EGP`
+        : `Paid: 0 EGP`,
       booking.instructor ? `Instructor: ${booking.instructor}` : null,
     ].filter(Boolean);
     navigator.clipboard.writeText(lines.join("\n"));
@@ -243,9 +232,11 @@ function BookingComponent({ booking }: { booking: Booking }) {
         <span className="text-[#d6d0c8]">·</span>
         <span
           className="font-[family-name:var(--font-raleway)] text-[0.65rem] tracking-[0.08em] uppercase font-[500]"
-          style={{ color: PAYMENT_COLOR[booking.paymentStatus] }}
+          style={{ color: booking.amountPaidCents > 0 ? "#22c55e" : "#9ca3af" }}
         >
-          {PAYMENT_LABEL[booking.paymentStatus]}
+          {booking.amountPaidCents > 0
+            ? `${(booking.amountPaidCents / 100).toLocaleString("en-EG")} EGP`
+            : "Unpaid"}
         </span>
       </div>
 

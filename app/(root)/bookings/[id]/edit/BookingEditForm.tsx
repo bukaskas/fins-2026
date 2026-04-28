@@ -3,7 +3,7 @@
 import React from "react";
 import { useRouter } from "next/navigation";
 import type { Booking } from "@prisma/client";
-import { BookingStatus, PaymentStatus } from "@prisma/client";
+import { BookingStatus } from "@prisma/client";
 import { useForm } from "@tanstack/react-form";
 import { toast } from "sonner";
 import Image from "next/image";
@@ -65,7 +65,7 @@ function BookingEditForm({ booking, instructors }: Props) {
       instructor: booking.instructor,
       time: booking.time,
       bookingStatus: booking.bookingStatus,
-      paymentStatus: booking.paymentStatus,
+      amountPaidCents: booking.amountPaidCents ?? 0,
     } as BookingFormData,
     validators: {
       onSubmit: ({ value }) => {
@@ -430,46 +430,28 @@ function BookingEditForm({ booking, instructors }: Props) {
                 }}
               />
               <form.Field
-                name="paymentStatus"
-                children={(field) => {
-                  return (
-                    <Field>
-                      <FieldLabel htmlFor={field.name}>
-                        Payment Status
-                      </FieldLabel>
-                      <Select
-                        onValueChange={(v) =>
-                          field.handleChange(v as PaymentStatus)
-                        }
-                        value={field.state.value}
-                      >
-                        <SelectTrigger
-                          id={field.name}
-                          className="w-full rounded-full"
-                          disabled={isSubmitting}
-                        >
-                          <SelectValue placeholder="Select payment status" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectGroup>
-                            <SelectItem value={PaymentStatus.UNPAID}>
-                              Unpaid
-                            </SelectItem>
-                            <SelectItem value={PaymentStatus.DEPOSIT_PAID}>
-                              Deposit Paid
-                            </SelectItem>
-                            <SelectItem value={PaymentStatus.PAID}>
-                              Paid
-                            </SelectItem>
-                            <SelectItem value={PaymentStatus.REFUNDED}>
-                              Refunded
-                            </SelectItem>
-                          </SelectGroup>
-                        </SelectContent>
-                      </Select>
-                    </Field>
-                  );
-                }}
+                name="amountPaidCents"
+                children={(field) => (
+                  <Field>
+                    <FieldLabel htmlFor={field.name}>Amount Paid (EGP)</FieldLabel>
+                    <Input
+                      id={field.name}
+                      type="number"
+                      inputMode="numeric"
+                      min="0"
+                      step="1"
+                      value={field.state.value != null ? field.state.value / 100 : ""}
+                      onChange={(e) =>
+                        field.handleChange(
+                          Math.round(parseFloat(e.target.value || "0") * 100),
+                        )
+                      }
+                      disabled={isSubmitting}
+                      className="rounded-full"
+                      placeholder="0"
+                    />
+                  </Field>
+                )}
               />
               <form.Field
                 name="instructor"

@@ -171,7 +171,7 @@ export async function updateBooking(id: string, data: BookingFormData) {
         instructor: validatedData.instructor ?? null,
         time: validatedData.time ?? null,
         bookingStatus: validatedData.bookingStatus,
-        paymentStatus: validatedData.paymentStatus,
+        amountPaidCents: validatedData.amountPaidCents,
       },
     });
 

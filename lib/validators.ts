@@ -1,5 +1,5 @@
 import { email, z } from "zod";
-import { BookingStatus, PaymentStatus } from "@prisma/client";
+import { BookingStatus } from "@prisma/client";
 
 export const bookingFormSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters long"),
@@ -13,7 +13,7 @@ export const bookingFormSchema = z.object({
   time: z.string().nullable().default(null),
   instructor: z.string().nullable().default(null),
   bookingStatus: z.nativeEnum(BookingStatus).default(BookingStatus.PENDING),
-  paymentStatus: z.nativeEnum(PaymentStatus).default(PaymentStatus.UNPAID),
+  amountPaidCents: z.number().int().min(0).default(0),
 });
 export type BookingFormData = z.infer<typeof bookingFormSchema>;
 
