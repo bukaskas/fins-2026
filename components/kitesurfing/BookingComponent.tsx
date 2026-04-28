@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import type { Booking } from "@prisma/client";
 import { BookingStatus, PaymentStatus } from "@prisma/client";
-import { Users, Pencil, Phone } from "lucide-react";
+import { Users, Pencil, Phone, ClipboardCopy } from "lucide-react";
 import { toast } from "sonner";
 import {
   DropdownMenu,
@@ -114,6 +114,23 @@ function BookingComponent({ booking }: { booking: Booking }) {
 
   const borderColor = STATUS_BORDER[status];
   const waData = buildWaData(booking);
+
+  function copyDetails() {
+    const lines = [
+      `Name: ${booking.name}`,
+      `Date: ${day}/${month}`,
+      booking.time ? `Time: ${booking.time}` : null,
+      `Service: ${booking.service ?? "—"}`,
+      `People: ${booking.numberOfPeople ?? 1}`,
+      `Phone: ${booking.phone}`,
+      `Email: ${booking.email}`,
+      `Status: ${STATUS_LABEL[status]}`,
+      `Payment: ${PAYMENT_LABEL[booking.paymentStatus]}`,
+      booking.instructor ? `Instructor: ${booking.instructor}` : null,
+    ].filter(Boolean);
+    navigator.clipboard.writeText(lines.join("\n"));
+    toast.success("Booking details copied!");
+  }
 
   async function handleStatusChange(next: BookingStatus) {
     const prev = status;
@@ -272,6 +289,14 @@ function BookingComponent({ booking }: { booking: Booking }) {
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
+
+        <button
+          onClick={copyDetails}
+          className="flex items-center justify-center w-7 h-7 text-[#8a8480] hover:text-[#1a1614] hover:bg-[#f0ece8] rounded transition-colors duration-150"
+          title="Copy booking details"
+        >
+          <ClipboardCopy className="h-3.5 w-3.5" />
+        </button>
 
         <a
           href={`tel:${booking.phone}`}
