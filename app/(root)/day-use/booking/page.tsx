@@ -37,6 +37,7 @@ import {
   getDateRate,
   RateType,
 } from "@/lib/pricing";
+import { Checkbox } from "@/components/ui/checkbox";
 
 const RATE_LABELS: Record<RateType, { label: string; className: string }> = {
   standard: {
@@ -109,6 +110,7 @@ function DayUseBookingForm() {
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [step, setStep] = React.useState<1 | 2 | 3>(1);
   const [calendarOpen, setCalendarOpen] = React.useState(false);
+  const [isMixedGroup, setIsMixedGroup] = React.useState(false);
   // Local display strings so users can clear and re-type without the field snapping back
   const [adultsInput, setAdultsInput] = React.useState("1");
   const [kidsInput, setKidsInput] = React.useState("0");
@@ -334,7 +336,7 @@ function DayUseBookingForm() {
                         return (
                           <Field data-invalid={isInvalid}>
                             <FieldLabel htmlFor={field.name}>
-                              Kids (5 to 8 years old)
+                              Kids (5 to 8 years old) above 8 count as adult
                             </FieldLabel>
                             <Input
                               id={field.name}
@@ -372,6 +374,20 @@ function DayUseBookingForm() {
                         kids={kids ?? 0}
                       />
                     )}
+                    <div className="flex items-start gap-3 pt-1">
+                      <Checkbox
+                        id="mixed-group"
+                        checked={isMixedGroup}
+                        onCheckedChange={(v) => setIsMixedGroup(!!v)}
+                        className="mt-0.5"
+                      />
+                      <label
+                        htmlFor="mixed-group"
+                        className="text-sm leading-snug cursor-pointer select-none"
+                      >
+                        Our group is mixed (men &amp; women)
+                      </label>
+                    </div>
                   </FieldGroup>
                 )}
               />
@@ -533,6 +549,7 @@ function DayUseBookingForm() {
               type="button"
               className="rounded-full"
               onClick={() => setStep((s) => (s + 1) as 1 | 2 | 3)}
+              disabled={step === 2 && !isMixedGroup}
             >
               Next
             </Button>

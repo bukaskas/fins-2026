@@ -9,6 +9,8 @@ import {
 } from "@/components/ui/card";
 import { CheckCircle2 } from "lucide-react";
 import Link from "next/link";
+import { getBookingById } from "@/lib/actions/booking.actions";
+import { format } from "date-fns";
 
 async function DayUseSuccessPage({
   searchParams,
@@ -17,9 +19,8 @@ async function DayUseSuccessPage({
 }) {
   const params = await searchParams;
   const bookingId = params.bookingId;
-  const date = params.date ? new Date(params.date) : null;
 
-  if (!bookingId || !date) {
+  if (!bookingId) {
     return (
       <div className="flex items-center justify-center min-h-[60vh] p-4">
         <Card className="w-full max-w-md">
@@ -39,7 +40,29 @@ async function DayUseSuccessPage({
     );
   }
 
-  const formattedDate = `${date.getUTCDate()}/${date.getUTCMonth() + 1}/${date.getUTCFullYear()}`;
+  const booking = await getBookingById(bookingId);
+
+  if (!booking) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh] p-4">
+        <Card className="w-full max-w-md">
+          <CardHeader>
+            <CardTitle className="text-destructive">Booking not found</CardTitle>
+            <CardDescription>
+              We could not find your booking. Please contact us.
+            </CardDescription>
+          </CardHeader>
+          <CardFooter>
+            <Button asChild>
+              <Link href="/day-use/booking">Back to Booking</Link>
+            </Button>
+          </CardFooter>
+        </Card>
+      </div>
+    );
+  }
+
+  const formattedDate = format(new Date(booking.date), "d MMMM yyyy");
 
   return (
     <div className="flex items-center justify-center min-h-[60vh] p-4">
@@ -55,10 +78,27 @@ async function DayUseSuccessPage({
         </CardHeader>
 
         <CardContent className="space-y-5">
-          {/* Booking reference */}
-          <div className="rounded-lg bg-muted px-4 py-3 flex justify-between items-center">
-            <span className="text-sm text-muted-foreground">Booking ID</span>
-            <span className="text-sm font-mono">{bookingId}</span>
+          {/* Booking details */}
+          <div className="rounded-lg bg-muted px-4 py-3 space-y-2 text-sm">
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Date</span>
+              <span className="font-medium">{formattedDate}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Name</span>
+              <span className="font-medium">{booking.name}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Phone</span>
+              <span className="font-medium">{booking.phone}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">People</span>
+              <span className="font-medium">
+                {booking.numberOfPeople} adult{booking.numberOfPeople !== 1 ? "s" : ""}
+                {(booking.numberOfKids ?? 0) > 0 && `, ${booking.numberOfKids} kid${booking.numberOfKids !== 1 ? "s" : ""}`}
+              </span>
+            </div>
           </div>
 
           {/* What happens next */}
