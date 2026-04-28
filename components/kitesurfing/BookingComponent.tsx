@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import type { Booking } from "@prisma/client";
 import { BookingStatus, PaymentStatus } from "@prisma/client";
-import { Users, Pencil } from "lucide-react";
+import { Users, Pencil, Phone } from "lucide-react";
 import { toast } from "sonner";
 import {
   DropdownMenu,
@@ -273,6 +273,13 @@ function BookingComponent({ booking }: { booking: Booking }) {
           </DropdownMenuContent>
         </DropdownMenu>
 
+        <a
+          href={`tel:${phone}`}
+          className="flex items-center justify-center w-7 h-7 text-[#3b82f6] hover:bg-blue-50 rounded transition-colors duration-150"
+          title="Call"
+        >
+          <Phone className="h-3.5 w-3.5" />
+        </a>
         <Link
           href={`/bookings/${booking.id}/edit`}
           className="flex items-center justify-center w-7 h-7 text-[#8a8480] hover:text-[#1a1614] hover:bg-[#f0ece8] rounded transition-colors duration-150"
