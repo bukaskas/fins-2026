@@ -13,7 +13,12 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { updateBookingStatus } from "@/lib/actions/booking.actions";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { updateBookingStatus, updateBookingAmountPaid } from "@/lib/actions/booking.actions";
 
 function WhatsAppIcon({ className }: { className?: string }) {
   return (
@@ -54,6 +59,12 @@ const STATUS_LABEL: Record<BookingStatus, string> = {
 
 const ALL_STATUSES = Object.values(BookingStatus);
 
+const SERVICE_BADGE: Record<string, { dot: string; label: string }> = {
+  "kitesurfing-course": { dot: "#38bdf8", label: "Kite" },
+  "day-use":            { dot: "#fbbf24", label: "Day" },
+  "restaurant":         { dot: "#fb923c", label: "Rest" },
+};
+
 
 function fmtEGP(cents: number): string {
   return `${(cents / 100).toLocaleString("en-EG")} EGP`;
@@ -91,9 +102,48 @@ function buildWaData(booking: Booking) {
   };
 }
 
+function DepositPopover({
+  initial,
+  saving,
+  onSave,
+}: {
+  initial: number;
+  saving: boolean;
+  onSave: (egp: string) => void;
+}) {
+  const [val, setVal] = useState(initial > 0 ? String(initial / 100) : "");
+  return (
+    <div className="space-y-2">
+      <p className="text-[0.65rem] tracking-[0.1em] uppercase font-[600] text-[#8a8480] font-[family-name:var(--font-raleway)]">
+        Amount paid (EGP)
+      </p>
+      <input
+        type="number"
+        min="0"
+        step="1"
+        value={val}
+        onChange={(e) => setVal(e.target.value)}
+        placeholder="0"
+        autoFocus
+        className="w-full border border-[#ece8e3] rounded px-2.5 py-1.5 text-sm focus:outline-none focus:border-[#1a1614]"
+      />
+      <button
+        onClick={() => onSave(val)}
+        disabled={saving}
+        className="w-full bg-[#1a1614] text-white text-[0.65rem] tracking-[0.1em] uppercase font-[700] font-[family-name:var(--font-raleway)] py-1.5 rounded hover:bg-[#2a2420] transition-colors disabled:opacity-50"
+      >
+        {saving ? "Saving…" : "Save"}
+      </button>
+    </div>
+  );
+}
+
 function BookingComponent({ booking }: { booking: Booking }) {
   const [status, setStatus] = useState<BookingStatus>(booking.bookingStatus);
   const [isPending, setIsPending] = useState(false);
+  const [amountPaid, setAmountPaid] = useState(booking.amountPaidCents);
+  const [depositOpen, setDepositOpen] = useState(false);
+  const [depositSaving, setDepositSaving] = useState(false);
 
   const dateObj = new Date(booking.date);
   const day = dateObj.getUTCDate();
@@ -112,13 +162,27 @@ function BookingComponent({ booking }: { booking: Booking }) {
       `Phone: ${booking.phone}`,
       `Email: ${booking.email}`,
       `Status: ${STATUS_LABEL[status]}`,
-      booking.amountPaidCents > 0
-        ? `Paid: ${booking.amountPaidCents / 100} EGP`
+      amountPaid > 0
+        ? `Paid: ${amountPaid / 100} EGP`
         : `Paid: 0 EGP`,
       booking.instructor ? `Instructor: ${booking.instructor}` : null,
     ].filter(Boolean);
     navigator.clipboard.writeText(lines.join("\n"));
     toast.success("Booking details copied!");
+  }
+
+  async function handleSaveDeposit(egpValue: string) {
+    const cents = Math.round(parseFloat(egpValue || "0") * 100);
+    setDepositSaving(true);
+    const result = await updateBookingAmountPaid(booking.id, cents);
+    setDepositSaving(false);
+    if (result.success) {
+      setAmountPaid(cents);
+      setDepositOpen(false);
+      toast.success("Deposit saved");
+    } else {
+      toast.error("Failed to save deposit");
+    }
   }
 
   async function handleStatusChange(next: BookingStatus) {
@@ -182,6 +246,17 @@ function BookingComponent({ booking }: { booking: Booking }) {
 
       {/* Name + people */}
       <div className="flex-1 flex items-center gap-3 px-4 py-3 min-w-0">
+        {(() => {
+          const badge = SERVICE_BADGE[booking.service ?? ""];
+          return badge ? (
+            <span className="hidden md:flex items-center gap-1 shrink-0">
+              <span className="w-1.5 h-1.5 rounded-full" style={{ background: badge.dot }} />
+              <span className="font-[family-name:var(--font-raleway)] text-[0.58rem] tracking-[0.1em] uppercase font-[600]" style={{ color: badge.dot }}>
+                {badge.label}
+              </span>
+            </span>
+          ) : null;
+        })()}
         <span className="font-[family-name:var(--font-raleway)] font-[500] text-[0.88rem] text-[#1a1614] truncate">
           {booking.name}
         </span>
@@ -230,14 +305,26 @@ function BookingComponent({ booking }: { booking: Booking }) {
         </DropdownMenu>
 
         <span className="text-[#d6d0c8]">·</span>
-        <span
-          className="font-[family-name:var(--font-raleway)] text-[0.65rem] tracking-[0.08em] uppercase font-[500]"
-          style={{ color: booking.amountPaidCents > 0 ? "#22c55e" : "#9ca3af" }}
-        >
-          {booking.amountPaidCents > 0
-            ? `${(booking.amountPaidCents / 100).toLocaleString("en-EG")} EGP`
-            : "Unpaid"}
-        </span>
+        <Popover open={depositOpen} onOpenChange={setDepositOpen}>
+          <PopoverTrigger asChild>
+            <button
+              className="font-[family-name:var(--font-raleway)] text-[0.65rem] tracking-[0.08em] uppercase font-[500] hover:opacity-70 transition-opacity duration-150"
+              style={{ color: amountPaid > 0 ? "#22c55e" : "#9ca3af" }}
+              title="Set deposit amount"
+            >
+              {amountPaid > 0
+                ? `${(amountPaid / 100).toLocaleString("en-EG")} EGP`
+                : "Unpaid"}
+            </button>
+          </PopoverTrigger>
+          <PopoverContent align="end" className="w-52 p-3">
+            <DepositPopover
+              initial={amountPaid}
+              saving={depositSaving}
+              onSave={handleSaveDeposit}
+            />
+          </PopoverContent>
+        </Popover>
       </div>
 
       {/* Actions */}

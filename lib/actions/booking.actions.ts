@@ -209,6 +209,17 @@ export async function updateBookingStatus(id: string, status: BookingStatus) {
   }
 }
 
+export async function updateBookingAmountPaid(id: string, amountPaidCents: number) {
+  try {
+    await prisma.booking.update({ where: { id }, data: { amountPaidCents } });
+    revalidatePath('/bookings', 'layout');
+    return { success: true };
+  } catch (error) {
+    console.error('Amount paid update error:', error);
+    return { success: false, message: `Failed to update payment. Error: ${error instanceof Error ? error.message : String(error)}` };
+  }
+}
+
 export async function getFutureKitesurfingBookings() {
   try {
     const today = new Date();
