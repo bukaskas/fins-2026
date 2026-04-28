@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { listUsers } from "@/lib/actions/user.actions";
 import Link from "next/link";
+import { Plus } from "lucide-react";
 
 type Props = {
   searchParams: Promise<{ q?: string }>;
@@ -13,7 +14,15 @@ export default async function UsersPage({ searchParams }: Props) {
 
   return (
     <main className="mx-auto max-w-6xl p-6">
-      <h1 className="mb-4 text-2xl font-semibold">Users</h1>
+      <div className="mb-4 flex items-center justify-between">
+        <h1 className="text-2xl font-semibold">Users</h1>
+        <Button asChild>
+          <Link href="/users/new">
+            <Plus className="h-4 w-4 mr-1" />
+            New user
+          </Link>
+        </Button>
+      </div>
 
       <form method="GET" className="mb-4 flex gap-2">
         <input

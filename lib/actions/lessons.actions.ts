@@ -512,6 +512,41 @@ export async function updateLessonBooking(
   }
 }
 
+export async function deleteLessonSession(id: string) {
+  try {
+    await prisma.$transaction([
+      prisma.lessonBooking.deleteMany({ where: { sessionId: id } }),
+      prisma.lessonSession.delete({ where: { id } }),
+    ]);
+    revalidatePath("/bookings/schedule");
+    return { success: true };
+  } catch (error) {
+    console.error("Delete session error:", error);
+    return {
+      success: false,
+      message: `Failed to delete session. Error: ${error instanceof Error ? error.message : String(error)}`,
+    };
+  }
+}
+
+export async function getInstructorSessions(
+  instructorId: string,
+  from: string,
+  to: string
+) {
+  const start = new Date(`${from}T00:00:00.000Z`);
+  const end = new Date(`${to}T23:59:59.999Z`);
+
+  return prisma.lessonSession.findMany({
+    where: {
+      instructorId,
+      startsAt: { gte: start, lte: end },
+    },
+    orderBy: { startsAt: "asc" },
+    include: sessionInclude,
+  });
+}
+
 export async function getAllLessons() {
   return prisma.lessonSession.findMany({
     orderBy: { startsAt: "desc" },

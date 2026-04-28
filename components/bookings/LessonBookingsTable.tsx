@@ -27,6 +27,7 @@ type Instructor = { id: string; name: string | null; email?: string | null };
 
 export type LessonBookingRow = {
   id: string;
+  sessionId: string;
   status: string;
   attended: boolean;
   notes: string | null;
@@ -185,6 +186,10 @@ export function LessonBookingsTable({
                 r.id === editTarget.id ? { ...r, ...updated } : r,
               ),
             );
+          }}
+          onDeleted={(id) => {
+            setRows((prev) => prev.filter((r) => r.id !== id));
+            setEditTarget(null);
           }}
         />
       )}

@@ -32,6 +32,7 @@ export default async function SchedulePage() {
   const allLessonBookings: LessonBookingRow[] = allLessonSessions.flatMap((s) =>
     s.bookings.map((b) => ({
       id: b.id,
+      sessionId: s.id,
       status: b.status,
       attended: b.attended,
       notes: b.notes ?? null,
@@ -63,22 +64,20 @@ export default async function SchedulePage() {
   return (
     <div className="container mx-auto py-6 px-4 space-y-10">
       <div>
-        <div className="flex items-center justify-between mb-4">
-          <h1 className="text-2xl font-bold">Schedule</h1>
-          <div className="flex gap-2">
-            <Link
-              href="/lessons/new"
-              className="rounded border px-3 py-1.5 text-sm hover:bg-muted/40 transition-colors"
-            >
-              + New Lesson
-            </Link>
-            <Link
-              href="/students/new"
-              className="rounded border px-3 py-1.5 text-sm hover:bg-muted/40 transition-colors"
-            >
-              + Add Student
-            </Link>
-          </div>
+        <div className="flex flex-wrap items-center gap-3 mb-4">
+          <h1 className="text-2xl font-bold flex-1">Schedule</h1>
+          <Link
+            href="/lessons/new"
+            className="rounded border px-3 py-1.5 text-sm hover:bg-muted/40 transition-colors whitespace-nowrap"
+          >
+            + New Lesson
+          </Link>
+          <Link
+            href="/students/new"
+            className="rounded border px-3 py-1.5 text-sm hover:bg-muted/40 transition-colors whitespace-nowrap"
+          >
+            + Add Student
+          </Link>
         </div>
         <ScheduleBoard
           instructors={instructors}

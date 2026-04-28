@@ -28,6 +28,8 @@ export async function createBooking(data: BookingFormData) {
     });
 
     const isDayUse = validatedData.service === "day-use";
+    const isPharaoh = validatedData.service === "pharaoh-airstyle";
+    const includeTickets = isDayUse || isPharaoh;
     await sendBookingEmail(
       validatedData.email,
       validatedData.name,
@@ -44,8 +46,8 @@ export async function createBooking(data: BookingFormData) {
       validatedData.date,
       validatedData.service,
       validatedData.numberOfPeople,
-      isDayUse ? (validatedData.numberOfKids ?? 0) : undefined,
-      isDayUse ? (validatedData.totalPriceCents ?? undefined) : undefined,
+      includeTickets ? (validatedData.numberOfKids ?? 0) : undefined,
+      includeTickets ? (validatedData.totalPriceCents ?? undefined) : undefined,
     );
 
     return ({

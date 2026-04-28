@@ -2,7 +2,8 @@
 
 import React, { useState } from "react";
 import { toast } from "sonner";
-import { updateLessonBooking } from "@/lib/actions/lessons.actions";
+import { Trash2 } from "lucide-react";
+import { updateLessonBooking, deleteLessonSession } from "@/lib/actions/lessons.actions";
 import type { LessonBookingRow } from "./LessonBookingsTable";
 import {
   Sheet,
@@ -45,12 +46,14 @@ export function LessonBookingEditSheet({
   open,
   onOpenChange,
   onSaved,
+  onDeleted,
 }: {
   booking: LessonBookingRow;
   instructors: { id: string; name: string | null }[];
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSaved: (updated: Partial<LessonBookingRow>) => void;
+  onDeleted: (id: string) => void;
 }) {
   const initialStartsAt = new Date(booking.session.startsAt);
   const [status, setStatus] = useState(booking.status);
@@ -63,6 +66,8 @@ export function LessonBookingEditSheet({
   const [time, setTime] = useState(format(initialStartsAt, "HH:mm"));
   const [calOpen, setCalOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   async function handleSave() {
     const [h, m] = time.split(":").map(Number);
@@ -103,6 +108,19 @@ export function LessonBookingEditSheet({
       onOpenChange(false);
     } else {
       toast.error(result.message ?? "Failed to update booking");
+    }
+  }
+
+  async function handleDelete() {
+    setDeleting(true);
+    const result = await deleteLessonSession(booking.sessionId);
+    setDeleting(false);
+    if (result.success) {
+      toast.success("Session deleted");
+      onDeleted(booking.id);
+    } else {
+      toast.error(result.message ?? "Failed to delete session");
+      setConfirmDelete(false);
     }
   }
 
@@ -249,23 +267,62 @@ export function LessonBookingEditSheet({
           </div>
         </div>
 
-        <SheetFooter className="mt-auto">
-          <SheetClose asChild>
+        <SheetFooter className="mt-auto flex-col gap-2">
+          <div className="flex gap-2 w-full justify-end">
+            <SheetClose asChild>
+              <Button
+                variant="outline"
+                disabled={saving}
+                className="rounded-full"
+              >
+                Cancel
+              </Button>
+            </SheetClose>
             <Button
-              variant="outline"
+              onClick={handleSave}
               disabled={saving}
               className="rounded-full"
             >
-              Cancel
+              {saving ? "Saving…" : "Save"}
             </Button>
-          </SheetClose>
-          <Button
-            onClick={handleSave}
-            disabled={saving}
-            className="rounded-full"
-          >
-            {saving ? "Saving…" : "Save"}
-          </Button>
+          </div>
+
+          {!confirmDelete ? (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-destructive hover:text-destructive hover:bg-destructive/10 rounded-full w-full"
+              onClick={() => setConfirmDelete(true)}
+              disabled={saving || deleting}
+            >
+              <Trash2 className="h-4 w-4 mr-1.5" />
+              Delete session
+            </Button>
+          ) : (
+            <div className="flex items-center gap-2 w-full">
+              <span className="text-xs text-destructive flex-1">
+                Delete this session and all its bookings?
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                className="rounded-full"
+                onClick={() => setConfirmDelete(false)}
+                disabled={deleting}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                size="sm"
+                className="rounded-full"
+                onClick={handleDelete}
+                disabled={deleting}
+              >
+                {deleting ? "Deleting…" : "Confirm"}
+              </Button>
+            </div>
+          )}
         </SheetFooter>
       </SheetContent>
     </Sheet>

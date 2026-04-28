@@ -47,11 +47,13 @@ import {
   Pencil,
   Plus,
   Save,
+  Trash2,
   Undo2,
 } from "lucide-react";
 import {
   batchUpdateSessionSchedule,
   createLessonSessionQuick,
+  deleteLessonSession,
   getLessonSessionsByDate,
   updateLessonSession,
 } from "@/lib/actions/lessons.actions";
@@ -241,11 +243,13 @@ function DraggableSession({
   isChanged,
   instructors,
   onUpdated,
+  onDeleted,
 }: {
   session: SessionWithBookings;
   isChanged: boolean;
   instructors: Instructor[];
   onUpdated: (updated: SessionWithBookings) => void;
+  onDeleted: (id: string) => void;
 }) {
   const [editOpen, setEditOpen] = useState(false);
   const { attributes, listeners, setNodeRef, transform, isDragging } =
@@ -281,6 +285,10 @@ function DraggableSession({
           onUpdated(updated);
           setEditOpen(false);
         }}
+        onDeleted={(id) => {
+          onDeleted(id);
+          setEditOpen(false);
+        }}
       />
     </div>
   );
@@ -294,12 +302,14 @@ function SessionEditSheet({
   open,
   onOpenChange,
   onSaved,
+  onDeleted,
 }: {
   session: SessionWithBookings;
   instructors: Instructor[];
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSaved: (updated: SessionWithBookings) => void;
+  onDeleted: (id: string) => void;
 }) {
   const startsAtDate = new Date(session.startsAt);
   const durMs = new Date(session.endsAt).getTime() - startsAtDate.getTime();
@@ -318,6 +328,21 @@ function SessionEditSheet({
   const [notes, setNotes] = useState(session.notes ?? "");
   const [calOpen, setCalOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
+  async function handleDelete() {
+    setDeleting(true);
+    const result = await deleteLessonSession(session.id);
+    setDeleting(false);
+    if (result.success) {
+      toast.success("Session deleted");
+      onDeleted(session.id);
+      onOpenChange(false);
+    } else {
+      toast.error(result.message || "Failed to delete session");
+    }
+  }
 
   async function handleSave() {
     const [h, m] = time.split(":").map(Number);
@@ -493,9 +518,47 @@ function SessionEditSheet({
             />
           </div>
 
-          <Button onClick={handleSave} className="w-full" disabled={saving}>
+          <Button onClick={handleSave} className="w-full" disabled={saving || deleting}>
             {saving ? "Saving..." : "Save"}
           </Button>
+
+          <div className="pt-2 border-t">
+            {!confirmDelete ? (
+              <Button
+                variant="destructive"
+                className="w-full"
+                onClick={() => setConfirmDelete(true)}
+                disabled={saving || deleting}
+              >
+                <Trash2 className="size-4 mr-2" />
+                Delete session
+              </Button>
+            ) : (
+              <div className="space-y-2">
+                <p className="text-sm text-center text-muted-foreground">
+                  This will permanently delete the session and all its bookings.
+                </p>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    className="flex-1"
+                    onClick={() => setConfirmDelete(false)}
+                    disabled={deleting}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    className="flex-1"
+                    onClick={handleDelete}
+                    disabled={deleting}
+                  >
+                    {deleting ? "Deleting..." : "Confirm delete"}
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </SheetContent>
     </Sheet>
@@ -939,6 +1002,15 @@ export default function ScheduleBoard({
     });
   }, []);
 
+  const handleSessionDeleted = useCallback((id: string) => {
+    setSessions((prev) => prev.filter((s) => s.id !== id));
+    setOriginalMap((prev) => {
+      const next = new Map(prev);
+      next.delete(id);
+      return next;
+    });
+  }, []);
+
   // filter sessions for selected date
   const dateKey = format(selectedDate, "yyyy-MM-dd");
   const daySessions = useMemo(
@@ -1228,6 +1300,7 @@ export default function ScheduleBoard({
                             isChanged={changedIds.has(session.id)}
                             instructors={instructors}
                             onUpdated={handleSessionUpdated}
+                            onDeleted={handleSessionDeleted}
                           />
                         )}
                       </DroppableCell>

@@ -31,52 +31,50 @@ function WhatsAppIcon({ className }: { className?: string }) {
 }
 
 const STATUS_BORDER: Record<BookingStatus, string> = {
-  PENDING:             "#f59e0b",
-  REQUEST_SENT:        "#38bdf8",
-  UNDER_REVIEW:        "#fb923c",
-  WAITING_PAYMENT:     "#a78bfa",
-  CONFIRMED:           "#22c55e",
-  DECLINED:            "#ef4444",
+  PENDING: "#f59e0b",
+  REQUEST_SENT: "#38bdf8",
+  UNDER_REVIEW: "#fb923c",
+  WAITING_PAYMENT: "#a78bfa",
+  CONFIRMED: "#22c55e",
+  DECLINED: "#ef4444",
   NO_RESPONSE_EXPIRED: "#9ca3af",
-  CANCELED:            "#d1d5db",
+  CANCELED: "#d1d5db",
 };
 
 const STATUS_LABEL: Record<BookingStatus, string> = {
-  PENDING:             "Pending",
-  REQUEST_SENT:        "Request Sent",
-  UNDER_REVIEW:        "Under Review",
-  WAITING_PAYMENT:     "Waiting Payment",
-  CONFIRMED:           "Confirmed",
-  DECLINED:            "Declined",
+  PENDING: "Pending",
+  REQUEST_SENT: "Request Sent",
+  UNDER_REVIEW: "Under Review",
+  WAITING_PAYMENT: "Waiting Payment",
+  CONFIRMED: "Confirmed",
+  DECLINED: "Declined",
   NO_RESPONSE_EXPIRED: "No Response",
-  CANCELED:            "Canceled",
+  CANCELED: "Canceled",
 };
 
 const ALL_STATUSES = Object.values(BookingStatus);
 
 const PAYMENT_LABEL: Record<PaymentStatus, string> = {
-  UNPAID:       "Unpaid",
+  UNPAID: "Unpaid",
   DEPOSIT_PAID: "Deposit",
-  PAID:         "Paid",
-  REFUNDED:     "Refunded",
+  PAID: "Paid",
+  REFUNDED: "Refunded",
 };
 
 const PAYMENT_COLOR: Record<PaymentStatus, string> = {
-  UNPAID:       "#9ca3af",
+  UNPAID: "#9ca3af",
   DEPOSIT_PAID: "#60a5fa",
-  PAID:         "#22c55e",
-  REFUNDED:     "#c084fc",
+  PAID: "#22c55e",
+  REFUNDED: "#c084fc",
 };
 
 function fmtEGP(cents: number): string {
   return `${(cents / 100).toLocaleString("en-EG")} EGP`;
 }
 
-function buildWaLinks(booking: Booking) {
+function buildWaData(booking: Booking) {
   const phone = booking.phone.replace(/\D/g, "");
   const name = booking.name;
-
-  const messageText = `Hello ${name}, this is Fins regarding your booking.`;
 
   const instagramText =
     `Hi ${name}! As part of our booking confirmation, could you please share your Instagram account? ` +
@@ -97,13 +95,12 @@ function buildWaLinks(booking: Booking) {
         `Deposit amount: ${fmtEGP(Math.round(booking.totalPriceCents / 2))}\n\n`
       : "";
 
-  const depositText = `Hi ${name}!\n\n${amountLines}Payment info:\n${paymentInfo}`;
+  const depositText = `${amountLines}Payment info:\n${paymentInfo}`;
 
-  const base = `https://wa.me/${phone}?text=`;
   return {
-    message:   base + encodeURIComponent(messageText),
-    instagram: base + encodeURIComponent(instagramText),
-    deposit:   base + encodeURIComponent(depositText),
+    instagramText,
+    depositText,
+    plainWa: `https://wa.me/${phone}`,
   };
 }
 
@@ -116,7 +113,7 @@ function BookingComponent({ booking }: { booking: Booking }) {
   const month = dateObj.getUTCMonth() + 1;
 
   const borderColor = STATUS_BORDER[status];
-  const waLinks = buildWaLinks(booking);
+  const waData = buildWaData(booking);
 
   async function handleStatusChange(next: BookingStatus) {
     const prev = status;
@@ -246,20 +243,31 @@ function BookingComponent({ booking }: { booking: Booking }) {
               <WhatsAppIcon className="h-3.5 w-3.5" />
             </button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-48">
-            <DropdownMenuItem asChild>
-              <a href={waLinks.message} target="_blank" rel="noopener noreferrer">
-                Message guest
-              </a>
+          <DropdownMenuContent align="end" className="w-52">
+            <DropdownMenuItem
+              onSelect={() => {
+                navigator.clipboard.writeText(waData.instagramText);
+                toast.success("Copied!");
+              }}
+            >
+              Copy Instagram message
             </DropdownMenuItem>
-            <DropdownMenuItem asChild>
-              <a href={waLinks.instagram} target="_blank" rel="noopener noreferrer">
-                Request Instagram
-              </a>
+            <DropdownMenuItem
+              onSelect={() => {
+                navigator.clipboard.writeText(waData.depositText);
+                toast.success("Copied!");
+              }}
+            >
+              Copy Deposit message
             </DropdownMenuItem>
+            <DropdownMenuSeparator />
             <DropdownMenuItem asChild>
-              <a href={waLinks.deposit} target="_blank" rel="noopener noreferrer">
-                Send deposit details
+              <a
+                href={waData.plainWa}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Open WhatsApp
               </a>
             </DropdownMenuItem>
           </DropdownMenuContent>

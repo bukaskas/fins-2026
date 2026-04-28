@@ -26,21 +26,31 @@ export default async function InstructorsPage() {
           <thead className="border-b bg-muted/40">
             <tr>
               <th className="px-3 py-2 text-left">Name</th>
+              <th className="px-3 py-2 text-left">Email</th>
+              <th className="px-3 py-2" />
             </tr>
           </thead>
           <tbody>
             {instructors.length === 0 ? (
               <tr>
-                <td className="px-3 py-6 text-center text-muted-foreground">
+                <td colSpan={3} className="px-3 py-6 text-center text-muted-foreground">
                   No instructors found. Assign the INSTRUCTOR role to a user.
                 </td>
               </tr>
             ) : (
               instructors.map((i) => (
                 <tr key={i.id} className="border-b">
-                  <td className="px-3 py-2">{i.name ?? "—"}</td>
-                  <td className="px-3 py-2">
-                    <Button asChild variant="link">
+                  <td className="px-3 py-2 font-medium">
+                    <Link href={`/instructors/${i.id}`} className="hover:underline">
+                      {i.name ?? "—"}
+                    </Link>
+                  </td>
+                  <td className="px-3 py-2 text-muted-foreground">{i.email}</td>
+                  <td className="px-3 py-2 flex gap-3 justify-end">
+                    <Button asChild variant="link" className="p-0 h-auto text-sm">
+                      <Link href={`/instructors/${i.id}`}>Sessions →</Link>
+                    </Button>
+                    <Button asChild variant="link" className="p-0 h-auto text-sm">
                       <Link href={`/users/edit/${i.id}`} className="text-blue-500 hover:underline">
                         Edit
                       </Link>

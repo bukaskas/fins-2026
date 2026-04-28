@@ -40,7 +40,8 @@ const adminGroups = [
   {
     label: "People",
     links: [
-      { title: "Users", href: "/users" },
+      { title: "Users",        href: "/users" },
+      { title: "Instructors",  href: "/instructors" },
     ],
   },
 ];

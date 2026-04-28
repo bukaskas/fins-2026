@@ -148,9 +148,38 @@ export async function searchUser(query: string) {
 export async function listInstructors() {
   return prisma.user.findMany({
     where: { role: Role.INSTRUCTOR },
-    select: { id: true, name: true },
+    select: { id: true, name: true, email: true },
     orderBy: { name: "asc" },
   });
+}
+
+export async function createUserAsAdmin(data: {
+  name: string | null;
+  email: string;
+  phone: string | null;
+  role: Role;
+  password: string;
+}) {
+  try {
+    const hashedPassword = await bcryptjs.hash(data.password, 10);
+    const user = await prisma.user.create({
+      data: {
+        name: data.name || null,
+        email: data.email,
+        phone: data.phone || null,
+        role: data.role,
+        password: hashedPassword,
+      },
+      select: { id: true },
+    });
+    return { success: true, userId: user.id };
+  } catch (error: any) {
+    if (error.code === "P2002" && error.meta?.target?.includes("email")) {
+      return { success: false, message: "An account with this email already exists." };
+    }
+    console.error("Error creating user:", error);
+    return { success: false, message: "Failed to create user." };
+  }
 }
 
 export async function createStudent(formData: FormData) {
