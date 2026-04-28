@@ -274,7 +274,7 @@ function BookingComponent({ booking }: { booking: Booking }) {
         </DropdownMenu>
 
         <a
-          href={`tel:${phone}`}
+          href={`tel:${booking.phone}`}
           className="flex items-center justify-center w-7 h-7 text-[#3b82f6] hover:bg-blue-50 rounded transition-colors duration-150"
           title="Call"
         >
