@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import type { Booking } from "@prisma/client";
 import { BookingStatus } from "@prisma/client";
-import { Users, Pencil, Phone, ClipboardCopy } from "lucide-react";
+import { Users, Pencil, Phone, ClipboardCopy, Wallet } from "lucide-react";
 import { toast } from "sonner";
 import {
   DropdownMenu,
@@ -143,6 +143,7 @@ function BookingComponent({ booking }: { booking: Booking }) {
   const [isPending, setIsPending] = useState(false);
   const [amountPaid, setAmountPaid] = useState(booking.amountPaidCents);
   const [depositOpen, setDepositOpen] = useState(false);
+  const [mobileDepositOpen, setMobileDepositOpen] = useState(false);
   const [depositSaving, setDepositSaving] = useState(false);
 
   const dateObj = new Date(booking.date);
@@ -179,6 +180,7 @@ function BookingComponent({ booking }: { booking: Booking }) {
     if (result.success) {
       setAmountPaid(cents);
       setDepositOpen(false);
+      setMobileDepositOpen(false);
       toast.success("Deposit saved");
     } else {
       toast.error("Failed to save deposit");
@@ -383,6 +385,26 @@ function BookingComponent({ booking }: { booking: Booking }) {
         >
           <Phone className="h-3.5 w-3.5" />
         </a>
+        {/* Mobile-only deposit button */}
+        <Popover open={mobileDepositOpen} onOpenChange={setMobileDepositOpen}>
+          <PopoverTrigger asChild>
+            <button
+              className="md:hidden flex items-center justify-center w-7 h-7 hover:bg-[#f0ece8] rounded transition-colors duration-150"
+              style={{ color: amountPaid > 0 ? "#22c55e" : "#9ca3af" }}
+              title="Edit deposit"
+            >
+              <Wallet className="h-3.5 w-3.5" />
+            </button>
+          </PopoverTrigger>
+          <PopoverContent align="end" className="w-52 p-3">
+            <DepositPopover
+              initial={amountPaid}
+              saving={depositSaving}
+              onSave={handleSaveDeposit}
+            />
+          </PopoverContent>
+        </Popover>
+
         <Link
           href={`/bookings/${booking.id}/edit`}
           className="flex items-center justify-center w-7 h-7 text-[#8a8480] hover:text-[#1a1614] hover:bg-[#f0ece8] rounded transition-colors duration-150"
