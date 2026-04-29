@@ -3,6 +3,7 @@ import BookingComponent from "@/components/kitesurfing/BookingComponent";
 import { BookingStatus, type Booking } from "@prisma/client";
 import { format } from "date-fns";
 import Link from "next/link";
+import { SearchInput } from "./SearchInput";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -54,9 +55,9 @@ async function BookingsByDatePage({
   searchParams,
 }: {
   params: Promise<{ date: string }>;
-  searchParams: Promise<{ status?: string }>;
+  searchParams: Promise<{ status?: string; q?: string }>;
 }) {
-  const [{ date }, { status = "all" }] = await Promise.all([
+  const [{ date }, { status = "all", q = "" }] = await Promise.all([
     params,
     searchParams,
   ]);
@@ -76,8 +77,18 @@ async function BookingsByDatePage({
     return <div>Error: {filteredResult.message}</div>;
   }
 
-  const bookings = filteredResult.data as Booking[];
   const allBookings = allResult.success ? (allResult.data as Booking[]) : [];
+
+  const query = q.trim().toLowerCase();
+  const rawBookings = filteredResult.data as Booking[];
+  const bookings = query
+    ? rawBookings.filter(
+        (b) =>
+          b.name?.toLowerCase().includes(query) ||
+          b.email?.toLowerCase().includes(query) ||
+          b.phone?.toLowerCase().includes(query),
+      )
+    : rawBookings;
 
   const totalPeople = bookings.reduce((s, b) => s + b.numberOfPeople, 0);
   const allTotalPeople = allBookings.reduce((s, b) => s + b.numberOfPeople, 0);
@@ -92,6 +103,15 @@ async function BookingsByDatePage({
     },
     {} as Record<string, Booking[]>,
   );
+
+  // People count per status filter tab, derived from all bookings
+  const statusPeople = STATUS_FILTERS.map((f) => {
+    const matched =
+      f.statuses.length === 0
+        ? allBookings
+        : allBookings.filter((b) => f.statuses.includes(b.status));
+    return { value: f.value, people: matched.reduce((s, b) => s + b.numberOfPeople, 0) };
+  });
 
   const dayLabel   = format(new Date(date), "EEEE");
   const dateLabel  = format(new Date(date), "MMMM d");
@@ -153,15 +173,23 @@ async function BookingsByDatePage({
           {/* ── Filter tabs ── */}
           <div className="flex gap-0 mt-8 border-b border-[#ece8e3]">
             {STATUS_FILTERS.map((f) => {
+              const href = `${baseHref}?status=${f.value === "all" ? "" : f.value}${q ? `&q=${encodeURIComponent(q)}` : ""}`.replace("status=&", "");
               const isActive = activeFilter.value === f.value;
+              const people = statusPeople.find((s) => s.value === f.value)?.people ?? 0;
               return (
                 <Link
                   key={f.value}
-                  href={f.value === "all" ? baseHref : `${baseHref}?status=${f.value}`}
+                  href={f.value === "all" ? (q ? `${baseHref}?q=${encodeURIComponent(q)}` : baseHref) : href}
                   className="relative pb-3 mr-6 font-[family-name:var(--font-raleway)] text-[0.72rem] tracking-[0.1em] uppercase font-[600] transition-colors duration-150"
                   style={{ color: isActive ? "#1a1614" : "#8a8480" }}
                 >
-                  {f.label}
+                  <span>{f.label}</span>
+                  <span
+                    className="ml-1.5 text-[0.6rem] font-[500] tabular-nums"
+                    style={{ color: isActive ? "#3d3633" : "#b0a89f" }}
+                  >
+                    {people}p
+                  </span>
                   {isActive && (
                     <span className="absolute bottom-0 left-0 right-0 h-[2px] bg-[#1a1614]" />
                   )}
@@ -169,6 +197,9 @@ async function BookingsByDatePage({
               );
             })}
           </div>
+
+          {/* ── Search ── */}
+          <SearchInput defaultValue={q} />
         </div>
       </div>
 
@@ -177,8 +208,8 @@ async function BookingsByDatePage({
         {bookings.length === 0 ? (
           <div className="py-16 text-center">
             <p className="font-[family-name:var(--font-raleway)] text-[0.75rem] tracking-[0.2em] uppercase text-[#b0a89f]">
-              No {activeFilter.value === "all" ? "" : activeFilter.label.toLowerCase() + " "}
-              bookings for this date
+              No{activeFilter.value !== "all" ? ` ${activeFilter.label.toLowerCase()}` : ""} bookings
+              {query ? ` matching "${q}"` : " for this date"}
             </p>
           </div>
         ) : (

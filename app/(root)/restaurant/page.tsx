@@ -15,9 +15,9 @@ const menuHighlights = [
   {
     index: "02",
     category: "Pasta",
-    accent: "Made fresh",
+    accent: "Made with care",
     description:
-      "Traditional pasta dishes crafted with imported Italian ingredients and house-made sauces.",
+      "Traditional pasta dishes prepared with imported Italian ingredients and house-made sauces.",
   },
   {
     index: "03",
