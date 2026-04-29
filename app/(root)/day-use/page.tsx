@@ -275,7 +275,6 @@ function ExperiencePanel({
 const INCLUSIONS = [
   "Beach access with sunbed & umbrella",
   "Swimming pool access",
-  "Free Wi-Fi throughout the club",
   "Locker & changing room",
   "Access to games & sports area",
   "Kitesurfing centre on site",
