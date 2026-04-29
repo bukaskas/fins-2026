@@ -26,7 +26,7 @@ import { BookingFormData, bookingFormSchema } from "@/lib/validators";
 import { PhoneInput } from "../phoneInput";
 import { formatEGP } from "@/lib/pricing";
 
-const PHARAOH_DATE = new Date("2026-05-01");
+const PHARAOH_DATE = new Date("2026-05-15");
 const PHARAOH_ADULT_PRICE_CENTS = 120000; // 1,200 EGP
 const PHARAOH_KIDS_PRICE_CENTS = 60000;   // 600 EGP
 
@@ -145,7 +145,7 @@ function PharaohAirstyleBookingForm() {
           <Image src={airstylePhoto} alt="Pharaoh Airstyle Competition" fill />
         </div>
         <CardHeader>
-          <CardTitle>Pharaoh Airstyle — 1st of May</CardTitle>
+          <CardTitle>Pharaoh Airstyle — 15th of May</CardTitle>
           <CardDescription>
             {step === 1 ? "Select your tickets" : "Your contact details"}
           </CardDescription>

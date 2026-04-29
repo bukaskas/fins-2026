@@ -57,7 +57,7 @@ export function PharaohHero({
             className="text-[0.62rem] tracking-[0.32em] uppercase font-[family-name:var(--font-raleway)] font-medium"
             style={{ color: accent }}
           >
-            Kite Competition · 1st of May
+            Kite Competition · 15th of May
           </span>
         </div>
 

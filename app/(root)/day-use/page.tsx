@@ -227,59 +227,45 @@ function ExperiencePanel({
   tags,
   imageLeft,
 }: ExperiencePanelProps) {
-  const imageBlock = (
-    <div className="relative md:w-1/2 shrink-0 min-h-[340px] md:min-h-[520px]">
-      <Image
-        src={image}
-        alt={imageAlt}
-        fill
-        className="object-cover"
-        sizes="50vw"
-      />
-      <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent" />
-    </div>
-  );
-
-  const textBlock = (
-    <div className="md:w-1/2 bg-neutral-950 flex flex-col justify-center px-8 md:px-14 lg:px-16 py-14 md:py-0">
-      <span className="text-amber-400 text-[0.6rem] tracking-[0.35em] uppercase font-medium mb-4">
-        {eyebrow}
-      </span>
-      <h2 className="text-white text-[clamp(2rem,4vw,3rem)] font-[200] leading-tight mb-2">
-        {title}
-      </h2>
-      <p className="text-amber-300 text-sm font-[600] tracking-[0.08em] uppercase mb-6">
-        {subtitle}
-      </p>
-      <p className="text-white/60 text-sm leading-relaxed mb-8 max-w-md">
-        {body}
-      </p>
-      <div className="flex flex-wrap gap-2">
-        {tags.map((tag) => (
-          <span
-            key={tag}
-            className="px-3 py-1 border border-white/15 text-white/50 text-[0.6rem] tracking-[0.18em] uppercase"
-          >
-            {tag}
-          </span>
-        ))}
-      </div>
-    </div>
-  );
+  const imgOrder = imageLeft ? "" : "order-1 md:order-2";
+  const txtOrder = imageLeft ? "" : "order-2 md:order-1";
 
   return (
     <div className="flex flex-col md:flex-row min-h-[520px]">
-      {imageLeft ? (
-        <>
-          {imageBlock}
-          {textBlock}
-        </>
-      ) : (
-        <>
-          <div className="order-2 md:order-1">{textBlock}</div>
-          <div className="order-1 md:order-2">{imageBlock}</div>
-        </>
-      )}
+      <div className={`relative md:w-1/2 shrink-0 min-h-[340px] md:min-h-[520px] ${imgOrder}`}>
+        <Image
+          src={image}
+          alt={imageAlt}
+          fill
+          className="object-cover"
+          sizes="50vw"
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent" />
+      </div>
+      <div className={`md:w-1/2 bg-neutral-950 flex flex-col justify-center px-8 md:px-14 lg:px-16 py-14 md:py-0 ${txtOrder}`}>
+        <span className="text-amber-400 text-[0.6rem] tracking-[0.35em] uppercase font-medium mb-4">
+          {eyebrow}
+        </span>
+        <h2 className="text-white text-[clamp(2rem,4vw,3rem)] font-[200] leading-tight mb-2">
+          {title}
+        </h2>
+        <p className="text-amber-300 text-sm font-[600] tracking-[0.08em] uppercase mb-6">
+          {subtitle}
+        </p>
+        <p className="text-white/60 text-sm leading-relaxed mb-8 max-w-md">
+          {body}
+        </p>
+        <div className="flex flex-wrap gap-2">
+          {tags.map((tag) => (
+            <span
+              key={tag}
+              className="px-3 py-1 border border-white/15 text-white/50 text-[0.6rem] tracking-[0.18em] uppercase"
+            >
+              {tag}
+            </span>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }
