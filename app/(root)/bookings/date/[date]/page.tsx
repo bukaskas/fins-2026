@@ -90,8 +90,12 @@ async function BookingsByDatePage({
       )
     : rawBookings;
 
-  const totalPeople = bookings.reduce((s, b) => s + b.numberOfPeople, 0);
-  const allTotalPeople = allBookings.reduce((s, b) => s + b.numberOfPeople, 0);
+  const peopleByStatus = {
+    confirmed:      allBookings.filter((b) => b.bookingStatus === BookingStatus.CONFIRMED).reduce((s, b) => s + b.numberOfPeople, 0),
+    requestSent:    allBookings.filter((b) => b.bookingStatus === BookingStatus.REQUEST_SENT).reduce((s, b) => s + b.numberOfPeople, 0),
+    waitingPayment: allBookings.filter((b) => b.bookingStatus === BookingStatus.WAITING_PAYMENT).reduce((s, b) => s + b.numberOfPeople, 0),
+    rest:           allBookings.filter((b) => ![BookingStatus.CONFIRMED, BookingStatus.REQUEST_SENT, BookingStatus.WAITING_PAYMENT].includes(b.bookingStatus)).reduce((s, b) => s + b.numberOfPeople, 0),
+  };
 
   // Group by service
   const grouped = bookings.reduce(
@@ -144,21 +148,13 @@ async function BookingsByDatePage({
 
               {/* Stats row */}
               <div className="flex items-center gap-3 mt-3 flex-wrap">
-                <StatChip value={allBookings.length} label="bookings" />
+                <StatusPeopleChip color="#22c55e" label="Confirmed"        value={peopleByStatus.confirmed} />
                 <span className="text-[#d6d0c8]">·</span>
-                <StatChip value={allTotalPeople} label="people" />
-                {activeFilter.value !== "all" && bookings.length !== allBookings.length && (
-                  <>
-                    <span className="text-[#d6d0c8]">·</span>
-                    <StatChip
-                      value={bookings.length}
-                      label={activeFilter.label.toLowerCase()}
-                      accent
-                    />
-                    <span className="text-[#d6d0c8]">·</span>
-                    <StatChip value={totalPeople} label="showing" accent />
-                  </>
-                )}
+                <StatusPeopleChip color="#38bdf8" label="Request Sent"     value={peopleByStatus.requestSent} />
+                <span className="text-[#d6d0c8]">·</span>
+                <StatusPeopleChip color="#a78bfa" label="Waiting Payment"  value={peopleByStatus.waitingPayment} />
+                <span className="text-[#d6d0c8]">·</span>
+                <StatusPeopleChip color="#9ca3af" label="Other"            value={peopleByStatus.rest} />
               </div>
             </div>
 
@@ -278,24 +274,12 @@ async function BookingsByDatePage({
 
 // ── Small helpers ────────────────────────────────────────────────────────────
 
-function StatChip({
-  value,
-  label,
-  accent = false,
-}: {
-  value: number;
-  label: string;
-  accent?: boolean;
-}) {
+function StatusPeopleChip({ color, label, value }: { color: string; label: string; value: number }) {
   return (
-    <span
-      className="font-[family-name:var(--font-raleway)] text-[0.75rem]"
-      style={{ color: accent ? "#1a1614" : "#8a8480" }}
-    >
-      <span className="font-[700]" style={{ color: accent ? "#1a1614" : "#3d3633" }}>
-        {value}
-      </span>{" "}
-      {label}
+    <span className="flex items-center gap-1.5 font-[family-name:var(--font-raleway)] text-[0.72rem]">
+      <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: color }} />
+      <span className="text-[#8a8480]">{label}</span>
+      <span className="font-[700] tabular-nums" style={{ color: value > 0 ? "#3d3633" : "#b0a89f" }}>{value}</span>
     </span>
   );
 }
