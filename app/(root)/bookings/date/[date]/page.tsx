@@ -109,7 +109,7 @@ async function BookingsByDatePage({
     const matched =
       f.statuses.length === 0
         ? allBookings
-        : allBookings.filter((b) => f.statuses.includes(b.status));
+        : allBookings.filter((b) => f.statuses.includes(b.bookingStatus));
     return { value: f.value, people: matched.reduce((s, b) => s + b.numberOfPeople, 0) };
   });
 

@@ -28,6 +28,7 @@ import {
 } from "@/components/ui/card";
 import { toast } from "sonner";
 import { createBooking } from "@/lib/actions/booking.actions";
+import { getClosedDates } from "@/lib/actions/closedDate.actions";
 import Image from "next/image";
 import { BookingFormData, bookingFormSchema } from "@/lib/validators";
 import { PhoneInput } from "@/app/(root)/kitesurfing/booking/phoneInput";
@@ -114,7 +115,14 @@ function DayUseBookingForm() {
   // Local display strings so users can clear and re-type without the field snapping back
   const [adultsInput, setAdultsInput] = React.useState("1");
   const [kidsInput, setKidsInput] = React.useState("0");
+  const [closedDates, setClosedDates] = React.useState<Date[]>([]);
   const router = useRouter();
+
+  React.useEffect(() => {
+    getClosedDates().then((r) => {
+      if (r.success) setClosedDates(r.data.map((cd) => new Date(cd.date)));
+    });
+  }, []);
 
   const form = useForm({
     defaultValues: {
@@ -261,7 +269,7 @@ function DayUseBookingForm() {
                                 setCalendarOpen(false);
                               }}
                               defaultMonth={field.state.value}
-                              disabled={{ before: new Date() }}
+                              disabled={[{ before: new Date() }, ...closedDates]}
                               required={true}
                             />
                           </PopoverContent>
@@ -548,7 +556,19 @@ function DayUseBookingForm() {
             <Button
               type="button"
               className="rounded-full"
-              onClick={() => setStep((s) => (s + 1) as 1 | 2 | 3)}
+              onClick={() => {
+                if (step === 1) {
+                  const selected = form.getFieldValue("date");
+                  const isClosed = selected && closedDates.some(
+                    (d) => d.toISOString().slice(0, 10) === selected.toISOString().slice(0, 10),
+                  );
+                  if (isClosed) {
+                    toast.error("Sorry, this date is fully booked.");
+                    return;
+                  }
+                }
+                setStep((s) => (s + 1) as 1 | 2 | 3);
+              }}
               disabled={step === 2 && !isMixedGroup}
             >
               Next

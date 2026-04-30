@@ -5,7 +5,13 @@ import { isRedirectError } from "next/dist/client/components/redirect-error";
 import { revalidatePath } from "next/cache";
 import { BookingFormData, bookingFormSchema } from "../validators";
 import { sendBookingEmail, sendStaffNotificationEmail } from "@/emails/index";
-import { BookingStatus } from "@prisma/client";
+import { BookingStatus, Role } from "@prisma/client";
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "@/lib/auth";
+import { addClosedDate } from "./closedDate.actions";
+import { startOfDay } from "date-fns";
+
+const STAFF_ROLES: Role[] = [Role.ADMIN, Role.STAFF, Role.OWNER];
 
 
 
@@ -14,6 +20,18 @@ import { BookingStatus } from "@prisma/client";
 export async function createBooking(data: BookingFormData) {
   try {
     const validatedData = bookingFormSchema.parse(data);
+
+    // Gate: block closed dates for non-staff
+    const session = await getServerSession(authOptions);
+    const userRole = (session?.user as any)?.role as Role | undefined;
+    if (!userRole || !STAFF_ROLES.includes(userRole)) {
+      const normalizedDate = startOfDay(validatedData.date);
+      const closed = await prisma.closedDate.findUnique({ where: { date: normalizedDate } });
+      if (closed) {
+        return { success: false, message: "Sorry, this date is fully booked." };
+      }
+    }
+
     const booking = await prisma.booking.create({
       data: {
         name: validatedData.name,
@@ -200,8 +218,22 @@ export async function getBookingById(id: string) {
 
 export async function updateBookingStatus(id: string, status: BookingStatus) {
   try {
-    await prisma.booking.update({ where: { id }, data: { bookingStatus: status } });
+    const booking = await prisma.booking.update({ where: { id }, data: { bookingStatus: status } });
     revalidatePath('/bookings', 'layout');
+
+    // Auto-close the date if confirmed people reach the 80-person limit
+    if (status === BookingStatus.CONFIRMED) {
+      const dayStart = startOfDay(booking.date);
+      const dayEnd = new Date(dayStart.getTime() + 24 * 60 * 60 * 1000 - 1);
+      const { _sum } = await prisma.booking.aggregate({
+        where: { date: { gte: dayStart, lte: dayEnd }, bookingStatus: BookingStatus.CONFIRMED },
+        _sum: { numberOfPeople: true },
+      });
+      if ((_sum.numberOfPeople ?? 0) >= 80) {
+        await addClosedDate(dayStart, "Auto-closed: 80-person daily capacity reached");
+      }
+    }
+
     return { success: true };
   } catch (error) {
     console.error('Status update error:', error);

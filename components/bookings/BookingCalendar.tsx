@@ -19,7 +19,13 @@ function badgeColor(totalPeople: number) {
   return "text-blue-600 dark:text-blue-400";
 }
 
-export function BookingCalendar({ counts }: { counts: DayCount[] }) {
+export function BookingCalendar({
+  counts,
+  closedDates = [],
+}: {
+  counts: DayCount[];
+  closedDates?: string[]; // YYYY-MM-DD strings
+}) {
   const router = useRouter();
   const [month, setMonth] = React.useState(new Date());
 
@@ -27,6 +33,8 @@ export function BookingCalendar({ counts }: { counts: DayCount[] }) {
     () => new Map(counts.map((c) => [c.date, c])),
     [counts],
   );
+
+  const closedSet = React.useMemo(() => new Set(closedDates), [closedDates]);
 
   const CustomDayButton = React.useMemo(
     () =>
@@ -38,10 +46,15 @@ export function BookingCalendar({ counts }: { counts: DayCount[] }) {
       }: React.ComponentProps<typeof DayButton>) {
         const dateKey = format(day.date, "yyyy-MM-dd");
         const data = countMap.get(dateKey);
+        const isClosed = closedSet.has(dateKey);
         return (
           <CalendarDayButton day={day} modifiers={modifiers} {...props}>
-            {children}
-            {data ? (
+            <span className={cn(isClosed && "line-through opacity-40")}>{children}</span>
+            {isClosed ? (
+              <span className="text-[9px] font-semibold leading-none text-red-500 !opacity-100">
+                closed
+              </span>
+            ) : data ? (
               <span
                 className={cn(
                   "text-[10px] font-semibold leading-none !opacity-100",
@@ -54,7 +67,7 @@ export function BookingCalendar({ counts }: { counts: DayCount[] }) {
           </CalendarDayButton>
         );
       },
-    [countMap],
+    [countMap, closedSet],
   );
 
   return (

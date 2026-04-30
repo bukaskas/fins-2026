@@ -1,7 +1,8 @@
 import { getBookingCountsByDate } from "@/lib/actions/booking.actions";
+import { getClosedDates } from "@/lib/actions/closedDate.actions";
 import { BookingCalendar } from "@/components/bookings/BookingCalendar";
 import { BookingStatus } from "@prisma/client";
-import { format } from "date-fns";
+import { format, addMonths } from "date-fns";
 import Link from "next/link";
 
 export const dynamic = "force-dynamic";
@@ -40,9 +41,12 @@ async function BookingsDashboardPage({
   const activeFilter =
     STATUS_FILTERS.find((f) => f.value === status) ?? STATUS_FILTERS[0];
 
-  const result = await getBookingCountsByDate(
-    activeFilter.statuses.length > 0 ? activeFilter.statuses : undefined,
-  );
+  const [result, closedResult] = await Promise.all([
+    getBookingCountsByDate(
+      activeFilter.statuses.length > 0 ? activeFilter.statuses : undefined,
+    ),
+    getClosedDates(new Date(), addMonths(new Date(), 6)),
+  ]);
 
   const counts = result.success
     ? (result.data as {
@@ -50,6 +54,10 @@ async function BookingsDashboardPage({
         totalPeople: number;
         bookingCount: number;
       }[])
+    : [];
+
+  const closedDateStrings = closedResult.success
+    ? closedResult.data.map((cd) => format(new Date(cd.date), "yyyy-MM-dd"))
     : [];
 
   const now = new Date();
@@ -91,12 +99,20 @@ async function BookingsDashboardPage({
             >
               ← Bookings
             </Link>
-            <Link
-              href="/day-use/booking"
-              className="inline-flex items-center gap-2 bg-[#1a1614] text-white text-[0.72rem] font-[700] tracking-[0.14em] uppercase px-5 py-2.5 font-[family-name:var(--font-raleway)] hover:bg-[#2a2420] transition-colors duration-200"
-            >
-              + New Booking
-            </Link>
+            <div className="flex items-center gap-3">
+              <Link
+                href="/bookings/closed-dates"
+                className="inline-flex items-center gap-1.5 text-[0.65rem] tracking-[0.18em] uppercase font-[family-name:var(--font-raleway)] font-[600] text-[#8a8480] hover:text-[#1a1614] border border-[#ece8e3] px-4 py-2.5 hover:border-[#d6d0c8] transition-colors duration-200"
+              >
+                Closed Dates
+              </Link>
+              <Link
+                href="/day-use/booking"
+                className="inline-flex items-center gap-2 bg-[#1a1614] text-white text-[0.72rem] font-[700] tracking-[0.14em] uppercase px-5 py-2.5 font-[family-name:var(--font-raleway)] hover:bg-[#2a2420] transition-colors duration-200"
+              >
+                + New Booking
+              </Link>
+            </div>
           </div>
 
           {/* Month headline */}
@@ -202,7 +218,7 @@ async function BookingsDashboardPage({
           </div>
 
           <div className="px-4 py-6">
-            <BookingCalendar counts={counts} />
+            <BookingCalendar counts={counts} closedDates={closedDateStrings} />
           </div>
         </div>
 
