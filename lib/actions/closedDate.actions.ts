@@ -1,7 +1,7 @@
 "use server";
 
 import { prisma } from "@/db/prisma";
-import { addMonths, startOfDay } from "date-fns";
+import { addMonths } from "date-fns";
 
 export async function getClosedDates(from?: Date, to?: Date) {
   try {
@@ -22,7 +22,7 @@ export async function getClosedDates(from?: Date, to?: Date) {
 
 export async function addClosedDate(date: Date, reason?: string) {
   try {
-    const normalized = startOfDay(date);
+    const normalized = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
     await prisma.closedDate.upsert({
       where: { date: normalized },
       create: { date: normalized, reason: reason ?? null },
@@ -37,7 +37,7 @@ export async function addClosedDate(date: Date, reason?: string) {
 
 export async function removeClosedDate(date: Date) {
   try {
-    const normalized = startOfDay(date);
+    const normalized = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
     await prisma.closedDate.delete({ where: { date: normalized } });
     return { success: true as const, message: "Date re-opened successfully." };
   } catch (error) {

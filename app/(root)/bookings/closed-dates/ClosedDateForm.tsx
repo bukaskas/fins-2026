@@ -98,7 +98,10 @@ export function ClosedDateForm({ closedDates }: { closedDates: ClosedDate[] }) {
                 mode="single"
                 selected={date}
                 onSelect={(d) => {
-                  setDate(d);
+                  if (d) {
+                    const utc = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+                    setDate(utc);
+                  }
                   setCalOpen(false);
                 }}
                 disabled={{ before: new Date() }}
