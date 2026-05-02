@@ -3,7 +3,7 @@
 import { prisma } from "@/db/prisma";
 import { isRedirectError } from "next/dist/client/components/redirect-error";
 import { revalidatePath } from "next/cache";
-import { BookingFormData, bookingFormSchema } from "../validators";
+import { BookingFormData, bookingFormSchema, UpdateBookingData, updateBookingSchema } from "../validators";
 import { sendBookingEmail, sendStaffNotificationEmail } from "@/emails/index";
 import { BookingStatus, Role } from "@prisma/client";
 import { getServerSession } from "next-auth/next";
@@ -174,9 +174,9 @@ export async function getBookingsByDate(date: string, statuses?: BookingStatus[]
   }
 }
 
-export async function updateBooking(id: string, data: BookingFormData) {
+export async function updateBooking(id: string, data: UpdateBookingData) {
   try {
-    const validatedData = bookingFormSchema.parse(data);
+    const validatedData = updateBookingSchema.parse(data);
     const updatedBooking = await prisma.booking.update({
       where: { id },
       data: {
@@ -186,10 +186,10 @@ export async function updateBooking(id: string, data: BookingFormData) {
         phone: validatedData.phone,
         service: validatedData.service,
         numberOfPeople: validatedData.numberOfPeople,
+        numberOfKids: validatedData.numberOfKids,
+        amountPaidCents: validatedData.amountPaidCents,
         instructor: validatedData.instructor ?? null,
         time: validatedData.time ?? null,
-        bookingStatus: validatedData.bookingStatus,
-        amountPaidCents: validatedData.amountPaidCents,
       },
     });
 

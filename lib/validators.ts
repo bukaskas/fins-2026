@@ -17,6 +17,20 @@ export const bookingFormSchema = z.object({
 });
 export type BookingFormData = z.infer<typeof bookingFormSchema>;
 
+export const updateBookingSchema = z.object({
+  name:             z.string().min(2, "Name must be at least 2 characters long"),
+  date:             z.date(),
+  email:            z.string().email("Invalid email address"),
+  phone:            z.string().min(7, "Phone number must be at least 7 digits long"),
+  service:          z.string().min(1, "Service is required"),
+  numberOfPeople:   z.number().int().min(1, "At least 1 person required"),
+  numberOfKids:     z.number().int().min(0).default(0),
+  amountPaidCents:  z.number().int().min(0).default(0),
+  instructor:       z.string().nullable().default(null),
+  time:             z.string().nullable().default(null),
+});
+export type UpdateBookingData = z.infer<typeof updateBookingSchema>;
+
 export const signUpFormSchema = z.object({
   name: z.string().nullable(),
   phone: z.string().nullable(),
