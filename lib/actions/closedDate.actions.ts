@@ -5,7 +5,8 @@ import { addMonths } from "date-fns";
 
 export async function getClosedDates(from?: Date, to?: Date) {
   try {
-    const start = from ?? startOfDay(new Date());
+    const now = new Date();
+    const start = from ?? new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
     const end = to ?? addMonths(start, 6);
 
     const rows = await prisma.closedDate.findMany({

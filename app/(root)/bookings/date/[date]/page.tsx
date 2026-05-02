@@ -94,7 +94,7 @@ async function BookingsByDatePage({
     confirmed:      allBookings.filter((b) => b.bookingStatus === BookingStatus.CONFIRMED).reduce((s, b) => s + b.numberOfPeople, 0),
     requestSent:    allBookings.filter((b) => b.bookingStatus === BookingStatus.REQUEST_SENT).reduce((s, b) => s + b.numberOfPeople, 0),
     waitingPayment: allBookings.filter((b) => b.bookingStatus === BookingStatus.WAITING_PAYMENT).reduce((s, b) => s + b.numberOfPeople, 0),
-    rest:           allBookings.filter((b) => ![BookingStatus.CONFIRMED, BookingStatus.REQUEST_SENT, BookingStatus.WAITING_PAYMENT].includes(b.bookingStatus)).reduce((s, b) => s + b.numberOfPeople, 0),
+    rest:           allBookings.filter((b) => !([ BookingStatus.CONFIRMED, BookingStatus.REQUEST_SENT, BookingStatus.WAITING_PAYMENT] as BookingStatus[]).includes(b.bookingStatus)).reduce((s, b) => s + b.numberOfPeople, 0),
   };
 
   // Group by service
