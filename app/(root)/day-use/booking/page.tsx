@@ -8,7 +8,7 @@ import {
   FieldLabel,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { format } from "date-fns";
+import { format, startOfToday } from "date-fns";
 import { useForm } from "@tanstack/react-form";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -269,7 +269,7 @@ function DayUseBookingForm() {
                                 setCalendarOpen(false);
                               }}
                               defaultMonth={field.state.value}
-                              disabled={[{ before: new Date() }, ...closedDates]}
+                              disabled={[{ before: startOfToday() }, ...closedDates]}
                               required={true}
                             />
                           </PopoverContent>

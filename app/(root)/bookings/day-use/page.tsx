@@ -35,7 +35,7 @@ async function DayUseBookingsPage() {
           <h1 className="text-3xl font-bold">Day Use Bookings</h1>
         </div>
         <Button asChild className="rounded-full">
-          <Link href="/kitesurfing/booking">Create New Booking</Link>
+          <Link href="/day-use/booking">Create New Booking</Link>
         </Button>
       </div>
 

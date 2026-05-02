@@ -13,6 +13,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { updateBookingStatus, updateBookingAmountPaid } from "@/lib/actions/booking.actions";
 
 function WhatsAppIcon({ className }: { className?: string }) {
@@ -97,9 +104,10 @@ function BookingComponent({ booking }: { booking: Booking }) {
   const [status, setStatus]           = useState<BookingStatus>(booking.bookingStatus);
   const [isPending, setIsPending]     = useState(false);
   const [amountPaid, setAmountPaid]   = useState(booking.amountPaidCents);
-  const [depositSaving, setDepositSaving] = useState(false);
-  const [dropdownOpen, setDropdownOpen]   = useState(false);
-  const [depositVal, setDepositVal]       = useState(amountPaid > 0 ? String(amountPaid / 100) : "");
+  const [depositSaving, setDepositSaving]       = useState(false);
+  const [dropdownOpen, setDropdownOpen]         = useState(false);
+  const [depositDialogOpen, setDepositDialogOpen] = useState(false);
+  const [depositVal, setDepositVal]             = useState(amountPaid > 0 ? String(amountPaid / 100) : "");
 
   const dateObj = new Date(booking.date);
   const day     = dateObj.getUTCDate();
@@ -133,7 +141,7 @@ function BookingComponent({ booking }: { booking: Booking }) {
     setDepositSaving(false);
     if (result.success) {
       setAmountPaid(cents);
-      setDropdownOpen(false);
+      setDepositDialogOpen(false);
       toast.success("Deposit saved");
     } else {
       toast.error("Failed to save deposit");
@@ -153,6 +161,7 @@ function BookingComponent({ booking }: { booking: Booking }) {
   }
 
   return (
+    <>
     <div className="rounded-2xl bg-white overflow-hidden shadow-[0_1px_6px_rgba(26,22,20,0.08)]">
       <div className="flex items-stretch min-h-[76px]">
 
@@ -272,13 +281,7 @@ function BookingComponent({ booking }: { booking: Booking }) {
               </a>
 
               {/* Combined ⋯ dropdown */}
-              <DropdownMenu
-                open={dropdownOpen}
-                onOpenChange={(o) => {
-                  setDropdownOpen(o);
-                  if (o) setDepositVal(amountPaid > 0 ? String(amountPaid / 100) : "");
-                }}
-              >
+              <DropdownMenu open={dropdownOpen} onOpenChange={setDropdownOpen}>
                 <DropdownMenuTrigger asChild>
                   <button
                     className="flex items-center justify-center w-9 h-9 rounded-xl bg-[#f5f2ef] text-[#6b6460] hover:bg-[#ece8e3] active:bg-[#ddd8d2] transition-colors"
@@ -320,33 +323,14 @@ function BookingComponent({ booking }: { booking: Booking }) {
                     Copy booking details
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  {/* Inline deposit editor */}
-                  <div
-                    className="px-2 py-2 space-y-1.5"
-                    onPointerDown={(e) => e.stopPropagation()}
+                  <DropdownMenuItem
+                    onSelect={() => {
+                      setDepositVal(amountPaid > 0 ? String(amountPaid / 100) : "");
+                      setDepositDialogOpen(true);
+                    }}
                   >
-                    <p className="font-[family-name:var(--font-raleway)] text-[0.62rem] tracking-[0.1em] uppercase font-[600] text-[#8a8480]">
-                      Amount paid (EGP)
-                    </p>
-                    <div className="flex gap-1.5">
-                      <input
-                        type="number"
-                        min="0"
-                        step="1"
-                        value={depositVal}
-                        onChange={(e) => setDepositVal(e.target.value)}
-                        placeholder="0"
-                        className="flex-1 border border-[#ece8e3] rounded-lg px-2.5 py-1.5 text-sm focus:outline-none focus:border-[#1a1614]"
-                      />
-                      <button
-                        onClick={handleSaveDeposit}
-                        disabled={depositSaving}
-                        className="bg-[#1a1614] text-white font-[family-name:var(--font-raleway)] text-[0.62rem] tracking-[0.1em] uppercase font-[700] px-3 py-1.5 rounded-lg hover:bg-[#2a2420] transition-colors disabled:opacity-50"
-                      >
-                        {depositSaving ? "…" : "Save"}
-                      </button>
-                    </div>
-                  </div>
+                    Edit amount paid
+                  </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
 
@@ -364,6 +348,59 @@ function BookingComponent({ booking }: { booking: Booking }) {
         </div>
       </div>
     </div>
+
+    {/* ── Deposit dialog ── */}
+    <Dialog open={depositDialogOpen} onOpenChange={setDepositDialogOpen}>
+      <DialogContent
+        showCloseButton={false}
+        className="sm:max-w-xs rounded-2xl bg-white border border-[#ece8e3] shadow-xl p-0"
+      >
+        <DialogHeader className="border-[#ece8e3] px-6 pt-6 pb-4">
+          <DialogTitle className="text-[1.1rem] font-[700] text-[#1a1614] tracking-normal">
+            Amount Paid
+          </DialogTitle>
+          <p className="font-[family-name:var(--font-raleway)] text-[0.8rem] text-[#8a8480] mt-0.5">
+            {booking.name}
+          </p>
+        </DialogHeader>
+
+        <div className="px-6 py-4 space-y-1.5">
+          <label className="font-[family-name:var(--font-raleway)] text-[0.65rem] tracking-[0.12em] uppercase font-[600] text-[#8a8480]">
+            Amount (EGP)
+          </label>
+          <input
+            type="number"
+            min="0"
+            step="1"
+            value={depositVal}
+            onChange={(e) => setDepositVal(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter") handleSaveDeposit(); }}
+            placeholder="0"
+            autoFocus
+            className="w-full border border-[#ece8e3] rounded-xl px-3.5 py-2.5 text-[1rem] text-[#1a1614] font-[family-name:var(--font-roboto)] bg-white focus:outline-none focus:border-[#1a1614] transition-colors"
+          />
+        </div>
+
+        <DialogFooter className="border-[#ece8e3] px-6 pb-6 pt-4 flex-row gap-2 sm:flex-row">
+          <button
+            type="button"
+            onClick={() => setDepositDialogOpen(false)}
+            className="flex-1 border border-[#ece8e3] text-[#8a8480] font-[family-name:var(--font-raleway)] text-[0.72rem] tracking-[0.1em] uppercase font-[600] py-2.5 rounded-xl hover:bg-[#f5f2ef] transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={handleSaveDeposit}
+            disabled={depositSaving}
+            className="flex-1 bg-[#1a1614] text-white font-[family-name:var(--font-raleway)] text-[0.72rem] tracking-[0.1em] uppercase font-[700] py-2.5 rounded-xl hover:bg-[#2a2420] transition-colors disabled:opacity-50"
+          >
+            {depositSaving ? "Saving…" : "Save"}
+          </button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+    </>
   );
 }
 

@@ -35,7 +35,7 @@ async function RestaurantBookingsPage() {
           <h1 className="text-3xl font-bold">Restaurant Bookings</h1>
         </div>
         <Button asChild className="rounded-full">
-          <Link href="/kitesurfing/booking">Create New Booking</Link>
+          <Link href="/day-use/booking">Create New Booking</Link>
         </Button>
       </div>
 
