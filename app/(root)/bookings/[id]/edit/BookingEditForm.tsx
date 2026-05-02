@@ -52,6 +52,7 @@ type Props = {
 function BookingEditForm({ booking, instructors }: Props) {
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [open, setOpen] = React.useState(false);
+  const [peopleInput, setPeopleInput] = React.useState(String(booking.numberOfPeople ?? 1));
   const router = useRouter();
 
   const form = useForm({
@@ -223,11 +224,19 @@ function BookingEditForm({ booking, instructors }: Props) {
                         id={field.name}
                         type="number"
                         inputMode="numeric"
-                        value={field.state.value || ""}
-                        onBlur={field.handleBlur}
-                        onChange={(e) =>
-                          field.handleChange(parseInt(e.target.value, 10))
-                        }
+                        value={peopleInput}
+                        onChange={(e) => {
+                          setPeopleInput(e.target.value);
+                          const n = parseInt(e.target.value, 10);
+                          if (!isNaN(n) && n >= 1) field.handleChange(n);
+                        }}
+                        onBlur={() => {
+                          const n = parseInt(peopleInput, 10);
+                          const valid = isNaN(n) || n < 1 ? 1 : n;
+                          setPeopleInput(String(valid));
+                          field.handleChange(valid);
+                          field.handleBlur();
+                        }}
                         aria-invalid={isInvalid}
                         placeholder="1"
                         min="1"
