@@ -238,7 +238,7 @@ async function BookingsByDatePage({
                           <p className="font-[family-name:var(--font-raleway)] text-[0.62rem] tracking-[0.28em] uppercase font-[500] text-[#8a8480] mb-2 pl-1">
                             {instructor}
                           </p>
-                          <div className="space-y-px">
+                          <div className="space-y-2">
                             {list.map((b) => (
                               <BookingComponent key={b.id} booking={b} />
                             ))}
@@ -257,7 +257,7 @@ async function BookingsByDatePage({
                     count={serviceBookings.length}
                     accent={accent}
                   />
-                  <div className="space-y-px">
+                  <div className="space-y-2">
                     {serviceBookings.map((b) => (
                       <BookingComponent key={b.id} booking={b} />
                     ))}

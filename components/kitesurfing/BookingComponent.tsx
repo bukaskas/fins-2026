@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import type { Booking } from "@prisma/client";
 import { BookingStatus } from "@prisma/client";
-import { Users, Pencil, Phone, ClipboardCopy, Wallet } from "lucide-react";
+import { Users, Pencil, Phone, MoreHorizontal } from "lucide-react";
 import { toast } from "sonner";
 import {
   DropdownMenu,
@@ -13,11 +13,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
 import { updateBookingStatus, updateBookingAmountPaid } from "@/lib/actions/booking.actions";
 
 function WhatsAppIcon({ className }: { className?: string }) {
@@ -36,35 +31,35 @@ function WhatsAppIcon({ className }: { className?: string }) {
 }
 
 const STATUS_BORDER: Record<BookingStatus, string> = {
-  PENDING: "#f59e0b",
-  REQUEST_SENT: "#38bdf8",
-  UNDER_REVIEW: "#fb923c",
-  WAITING_PAYMENT: "#a78bfa",
-  CONFIRMED: "#22c55e",
-  DECLINED: "#ef4444",
+  PENDING:             "#f59e0b",
+  REQUEST_SENT:        "#38bdf8",
+  UNDER_REVIEW:        "#fb923c",
+  WAITING_PAYMENT:     "#a78bfa",
+  CONFIRMED:           "#22c55e",
+  DECLINED:            "#ef4444",
   NO_RESPONSE_EXPIRED: "#9ca3af",
-  CANCELED: "#d1d5db",
+  CANCELED:            "#d1d5db",
 };
 
 const STATUS_LABEL: Record<BookingStatus, string> = {
-  PENDING: "Pending",
-  REQUEST_SENT: "Request Sent",
-  UNDER_REVIEW: "Under Review",
-  WAITING_PAYMENT: "Waiting Payment",
-  CONFIRMED: "Confirmed",
-  DECLINED: "Declined",
+  PENDING:             "Pending",
+  REQUEST_SENT:        "Request Sent",
+  UNDER_REVIEW:        "Under Review",
+  WAITING_PAYMENT:     "Waiting Payment",
+  CONFIRMED:           "Confirmed",
+  DECLINED:            "Declined",
   NO_RESPONSE_EXPIRED: "No Response",
-  CANCELED: "Canceled",
+  CANCELED:            "Canceled",
 };
 
 const ALL_STATUSES = Object.values(BookingStatus);
 
-const SERVICE_BADGE: Record<string, { dot: string; label: string }> = {
-  "kitesurfing-course": { dot: "#38bdf8", label: "Kite" },
-  "day-use":            { dot: "#fbbf24", label: "Day" },
-  "restaurant":         { dot: "#fb923c", label: "Rest" },
+const SERVICE_META: Record<string, { dot: string; label: string }> = {
+  "kitesurfing-course": { dot: "#38bdf8", label: "Kitesurfing" },
+  "day-use":            { dot: "#fbbf24", label: "Day Use" },
+  "restaurant":         { dot: "#fb923c", label: "Restaurant" },
+  "pharaoh-airstyle":   { dot: "#e879f9", label: "Pharaoh" },
 };
-
 
 function fmtEGP(cents: number): string {
   return `${(cents / 100).toLocaleString("en-EG")} EGP`;
@@ -95,63 +90,24 @@ function buildWaData(booking: Booking) {
 
   const depositText = `${amountLines}Payment info:\n${paymentInfo}`;
 
-  return {
-    instagramText,
-    depositText,
-    plainWa: `https://wa.me/${phone}`,
-  };
-}
-
-function DepositPopover({
-  initial,
-  saving,
-  onSave,
-}: {
-  initial: number;
-  saving: boolean;
-  onSave: (egp: string) => void;
-}) {
-  const [val, setVal] = useState(initial > 0 ? String(initial / 100) : "");
-  return (
-    <div className="space-y-2">
-      <p className="text-[0.65rem] tracking-[0.1em] uppercase font-[600] text-[#8a8480] font-[family-name:var(--font-raleway)]">
-        Amount paid (EGP)
-      </p>
-      <input
-        type="number"
-        min="0"
-        step="1"
-        value={val}
-        onChange={(e) => setVal(e.target.value)}
-        placeholder="0"
-        autoFocus
-        className="w-full border border-[#ece8e3] rounded px-2.5 py-1.5 text-sm focus:outline-none focus:border-[#1a1614]"
-      />
-      <button
-        onClick={() => onSave(val)}
-        disabled={saving}
-        className="w-full bg-[#1a1614] text-white text-[0.65rem] tracking-[0.1em] uppercase font-[700] font-[family-name:var(--font-raleway)] py-1.5 rounded hover:bg-[#2a2420] transition-colors disabled:opacity-50"
-      >
-        {saving ? "Saving…" : "Save"}
-      </button>
-    </div>
-  );
+  return { instagramText, depositText, plainWa: `https://wa.me/${phone}` };
 }
 
 function BookingComponent({ booking }: { booking: Booking }) {
-  const [status, setStatus] = useState<BookingStatus>(booking.bookingStatus);
-  const [isPending, setIsPending] = useState(false);
-  const [amountPaid, setAmountPaid] = useState(booking.amountPaidCents);
-  const [depositOpen, setDepositOpen] = useState(false);
-  const [mobileDepositOpen, setMobileDepositOpen] = useState(false);
+  const [status, setStatus]           = useState<BookingStatus>(booking.bookingStatus);
+  const [isPending, setIsPending]     = useState(false);
+  const [amountPaid, setAmountPaid]   = useState(booking.amountPaidCents);
   const [depositSaving, setDepositSaving] = useState(false);
+  const [dropdownOpen, setDropdownOpen]   = useState(false);
+  const [depositVal, setDepositVal]       = useState(amountPaid > 0 ? String(amountPaid / 100) : "");
 
   const dateObj = new Date(booking.date);
-  const day = dateObj.getUTCDate();
-  const month = dateObj.getUTCMonth() + 1;
+  const day     = dateObj.getUTCDate();
+  const month   = dateObj.getUTCMonth() + 1;
 
-  const borderColor = STATUS_BORDER[status];
-  const waData = buildWaData(booking);
+  const accentColor = STATUS_BORDER[status];
+  const waData      = buildWaData(booking);
+  const serviceMeta = SERVICE_META[booking.service ?? ""];
 
   function copyDetails() {
     const lines = [
@@ -163,24 +119,21 @@ function BookingComponent({ booking }: { booking: Booking }) {
       `Phone: ${booking.phone}`,
       `Email: ${booking.email}`,
       `Status: ${STATUS_LABEL[status]}`,
-      amountPaid > 0
-        ? `Paid: ${amountPaid / 100} EGP`
-        : `Paid: 0 EGP`,
+      amountPaid > 0 ? `Paid: ${amountPaid / 100} EGP` : `Paid: 0 EGP`,
       booking.instructor ? `Instructor: ${booking.instructor}` : null,
     ].filter(Boolean);
     navigator.clipboard.writeText(lines.join("\n"));
     toast.success("Booking details copied!");
   }
 
-  async function handleSaveDeposit(egpValue: string) {
-    const cents = Math.round(parseFloat(egpValue || "0") * 100);
+  async function handleSaveDeposit() {
+    const cents = Math.round(parseFloat(depositVal || "0") * 100);
     setDepositSaving(true);
     const result = await updateBookingAmountPaid(booking.id, cents);
     setDepositSaving(false);
     if (result.success) {
       setAmountPaid(cents);
-      setDepositOpen(false);
-      setMobileDepositOpen(false);
+      setDropdownOpen(false);
       toast.success("Deposit saved");
     } else {
       toast.error("Failed to save deposit");
@@ -200,218 +153,215 @@ function BookingComponent({ booking }: { booking: Booking }) {
   }
 
   return (
-    <div
-      className="group flex items-stretch bg-white border border-[#ece8e3] hover:border-[#d6d0c8] hover:bg-[#faf9f7] transition-all duration-150"
-      style={{ borderLeft: `3px solid ${borderColor}` }}
-    >
-      {/* Time column — also holds the mobile status trigger */}
-      <div className="flex flex-col items-center justify-center w-16 shrink-0 border-r border-[#ece8e3] px-2 gap-1.5">
-        <span className="font-[family-name:var(--font-roboto)] text-[0.65rem] text-[#8a8480] tabular-nums">
-          {booking.time ?? "—"}
-        </span>
-        {/* Mobile-only status dot — opens the same dropdown */}
-        <div className="md:hidden">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button
-                disabled={isPending}
-                className="w-3 h-3 rounded-full transition-opacity hover:opacity-70 disabled:opacity-40"
-                style={{ background: borderColor }}
-                title={STATUS_LABEL[status]}
-              />
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="w-44">
-              {ALL_STATUSES.map((s) => (
-                <DropdownMenuItem
-                  key={s}
-                  onSelect={() => handleStatusChange(s)}
-                  className="flex items-center gap-2"
+    <div className="rounded-2xl bg-white overflow-hidden shadow-[0_1px_6px_rgba(26,22,20,0.08)]">
+      <div className="flex items-stretch min-h-[76px]">
+
+        {/* ── Status strip ── */}
+        <div className="w-[3px] shrink-0" style={{ background: accentColor }} />
+
+        {/* ── Content ── */}
+        <div className="flex-1 flex items-center gap-4 px-4 py-3.5 min-w-0">
+
+          {/* Left: info */}
+          <div className="flex-1 min-w-0 space-y-1.5">
+            {/* Name row */}
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="font-[family-name:var(--font-raleway)] font-[700] text-[0.92rem] text-[#1a1614] leading-snug truncate">
+                {booking.name}
+              </span>
+              <span className="inline-flex items-center gap-0.5 text-[#a09890] shrink-0">
+                <Users className="h-3 w-3" />
+                <span className="font-[family-name:var(--font-raleway)] text-[0.72rem] font-[500] tabular-nums">
+                  {booking.numberOfPeople}
+                </span>
+              </span>
+            </div>
+
+            {/* Meta row: service · time · date */}
+            <div className="flex items-center gap-1.5 flex-wrap">
+              {serviceMeta && (
+                <>
+                  <span
+                    className="font-[family-name:var(--font-raleway)] text-[0.6rem] tracking-[0.12em] uppercase font-[700]"
+                    style={{ color: serviceMeta.dot }}
+                  >
+                    {serviceMeta.label}
+                  </span>
+                  <span className="text-[#d6d0c8] text-[0.6rem]">·</span>
+                </>
+              )}
+              {booking.time && (
+                <>
+                  <span className="font-[family-name:var(--font-roboto)] text-[0.72rem] text-[#8a8480] tabular-nums">
+                    {booking.time}
+                  </span>
+                  <span className="text-[#d6d0c8] text-[0.6rem]">·</span>
+                </>
+              )}
+              <span className="font-[family-name:var(--font-roboto)] text-[0.72rem] text-[#a09890] tabular-nums">
+                {day}/{month}
+              </span>
+              {booking.instructor && (
+                <>
+                  <span className="text-[#d6d0c8] text-[0.6rem]">·</span>
+                  <span className="font-[family-name:var(--font-raleway)] text-[0.67rem] text-[#8a8480] truncate max-w-[100px]">
+                    {booking.instructor}
+                  </span>
+                </>
+              )}
+            </div>
+          </div>
+
+          {/* Right: status + amount + actions */}
+          <div className="flex flex-col items-end gap-2.5 shrink-0">
+
+            {/* Status pill — dropdown trigger */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  disabled={isPending}
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border transition-opacity disabled:opacity-40 hover:opacity-75"
+                  style={{ borderColor: `${accentColor}40`, background: `${accentColor}12` }}
                 >
                   <span
                     className="w-1.5 h-1.5 rounded-full shrink-0"
-                    style={{ background: STATUS_BORDER[s] }}
+                    style={{ background: accentColor }}
                   />
-                  <span className="text-[0.72rem]">{STATUS_LABEL[s]}</span>
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-      </div>
+                  <span
+                    className="font-[family-name:var(--font-raleway)] text-[0.6rem] tracking-[0.1em] uppercase font-[700]"
+                    style={{ color: accentColor }}
+                  >
+                    {STATUS_LABEL[status]}
+                  </span>
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-44">
+                {ALL_STATUSES.map((s) => (
+                  <DropdownMenuItem
+                    key={s}
+                    onSelect={() => handleStatusChange(s)}
+                    className="flex items-center gap-2"
+                  >
+                    <span
+                      className="w-1.5 h-1.5 rounded-full shrink-0"
+                      style={{ background: STATUS_BORDER[s] }}
+                    />
+                    <span className="text-[0.72rem]">{STATUS_LABEL[s]}</span>
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
 
-      {/* Date */}
-      <div className="hidden sm:flex items-center justify-center w-12 shrink-0 border-r border-[#ece8e3] px-2">
-        <span className="font-[family-name:var(--font-raleway)] text-[0.65rem] font-[600] text-[#8a8480] tabular-nums">
-          {day}/{month}
-        </span>
-      </div>
-
-      {/* Name + people */}
-      <div className="flex-1 flex items-center gap-3 px-4 py-3 min-w-0">
-        {(() => {
-          const badge = SERVICE_BADGE[booking.service ?? ""];
-          return badge ? (
-            <span className="hidden md:flex items-center gap-1 shrink-0">
-              <span className="w-1.5 h-1.5 rounded-full" style={{ background: badge.dot }} />
-              <span className="font-[family-name:var(--font-raleway)] text-[0.58rem] tracking-[0.1em] uppercase font-[600]" style={{ color: badge.dot }}>
-                {badge.label}
-              </span>
-            </span>
-          ) : null;
-        })()}
-        <span className="font-[family-name:var(--font-raleway)] font-[500] text-[0.88rem] text-[#1a1614] truncate">
-          {booking.name}
-        </span>
-        <span className="flex items-center gap-1 text-[#8a8480] shrink-0">
-          <Users className="h-3 w-3" />
-          <span className="font-[family-name:var(--font-raleway)] text-[0.72rem]">
-            {booking.numberOfPeople}
-          </span>
-        </span>
-      </div>
-
-      {/* Status + payment */}
-      <div className="hidden md:flex items-center gap-3 px-4 border-l border-[#ece8e3]">
-        {/* Inline status dropdown */}
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <button
-              disabled={isPending}
-              className="flex items-center gap-1.5 hover:opacity-70 transition-opacity duration-150 disabled:opacity-40"
-              title="Change status"
-            >
+            {/* Amount + action buttons row */}
+            <div className="flex items-center gap-1.5">
+              {/* Amount paid chip */}
               <span
-                className="w-1.5 h-1.5 rounded-full shrink-0"
-                style={{ background: borderColor }}
-              />
-              <span className="font-[family-name:var(--font-raleway)] text-[0.65rem] tracking-[0.08em] uppercase font-[500] text-[#5a5450]">
-                {STATUS_LABEL[status]}
+                className="font-[family-name:var(--font-raleway)] text-[0.65rem] font-[600] tabular-nums mr-1"
+                style={{ color: amountPaid > 0 ? "#22c55e" : "#c0b8b0" }}
+              >
+                {amountPaid > 0 ? `${(amountPaid / 100).toLocaleString("en-EG")} EGP` : "Unpaid"}
               </span>
-            </button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="start" className="w-44">
-            {ALL_STATUSES.map((s) => (
-              <DropdownMenuItem
-                key={s}
-                onSelect={() => handleStatusChange(s)}
-                className="flex items-center gap-2"
-              >
-                <span
-                  className="w-1.5 h-1.5 rounded-full shrink-0"
-                  style={{ background: STATUS_BORDER[s] }}
-                />
-                <span className="text-[0.72rem]">{STATUS_LABEL[s]}</span>
-              </DropdownMenuItem>
-            ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
 
-        <span className="text-[#d6d0c8]">·</span>
-        <Popover open={depositOpen} onOpenChange={setDepositOpen}>
-          <PopoverTrigger asChild>
-            <button
-              className="font-[family-name:var(--font-raleway)] text-[0.65rem] tracking-[0.08em] uppercase font-[500] hover:opacity-70 transition-opacity duration-150"
-              style={{ color: amountPaid > 0 ? "#22c55e" : "#9ca3af" }}
-              title="Set deposit amount"
-            >
-              {amountPaid > 0
-                ? `${(amountPaid / 100).toLocaleString("en-EG")} EGP`
-                : "Unpaid"}
-            </button>
-          </PopoverTrigger>
-          <PopoverContent align="end" className="w-52 p-3">
-            <DepositPopover
-              initial={amountPaid}
-              saving={depositSaving}
-              onSave={handleSaveDeposit}
-            />
-          </PopoverContent>
-        </Popover>
-      </div>
-
-      {/* Actions */}
-      <div className="flex items-center gap-1 px-3 border-l border-[#ece8e3]">
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <button
-              className="flex items-center justify-center w-7 h-7 text-[#22c55e] hover:bg-green-50 rounded transition-colors duration-150"
-              title="WhatsApp actions"
-            >
-              <WhatsAppIcon className="h-3.5 w-3.5" />
-            </button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-52">
-            <DropdownMenuItem
-              onSelect={() => {
-                navigator.clipboard.writeText(waData.instagramText);
-                toast.success("Copied!");
-              }}
-            >
-              Copy Instagram message
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              onSelect={() => {
-                navigator.clipboard.writeText(waData.depositText);
-                toast.success("Copied!");
-              }}
-            >
-              Copy Deposit message
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem asChild>
+              {/* Phone */}
               <a
-                href={waData.plainWa}
-                target="_blank"
-                rel="noopener noreferrer"
+                href={`tel:${booking.phone}`}
+                className="flex items-center justify-center w-9 h-9 rounded-xl bg-[#eff6ff] text-[#3b82f6] hover:bg-[#dbeafe] active:bg-[#bfdbfe] transition-colors"
+                title="Call"
               >
-                Open WhatsApp
+                <Phone className="h-[18px] w-[18px]" />
               </a>
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
 
-        <button
-          onClick={copyDetails}
-          className="flex items-center justify-center w-7 h-7 text-[#8a8480] hover:text-[#1a1614] hover:bg-[#f0ece8] rounded transition-colors duration-150"
-          title="Copy booking details"
-        >
-          <ClipboardCopy className="h-3.5 w-3.5" />
-        </button>
+              {/* Combined ⋯ dropdown */}
+              <DropdownMenu
+                open={dropdownOpen}
+                onOpenChange={(o) => {
+                  setDropdownOpen(o);
+                  if (o) setDepositVal(amountPaid > 0 ? String(amountPaid / 100) : "");
+                }}
+              >
+                <DropdownMenuTrigger asChild>
+                  <button
+                    className="flex items-center justify-center w-9 h-9 rounded-xl bg-[#f5f2ef] text-[#6b6460] hover:bg-[#ece8e3] active:bg-[#ddd8d2] transition-colors"
+                    title="More actions"
+                  >
+                    <MoreHorizontal className="h-[18px] w-[18px]" />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuItem asChild>
+                    <a
+                      href={waData.plainWa}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-2"
+                    >
+                      <WhatsAppIcon className="h-3.5 w-3.5 text-[#22c55e]" />
+                      Open WhatsApp
+                    </a>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onSelect={() => {
+                      navigator.clipboard.writeText(waData.instagramText);
+                      toast.success("Copied!");
+                    }}
+                  >
+                    Copy Instagram message
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onSelect={() => {
+                      navigator.clipboard.writeText(waData.depositText);
+                      toast.success("Copied!");
+                    }}
+                  >
+                    Copy Deposit message
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onSelect={copyDetails}>
+                    Copy booking details
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  {/* Inline deposit editor */}
+                  <div
+                    className="px-2 py-2 space-y-1.5"
+                    onPointerDown={(e) => e.stopPropagation()}
+                  >
+                    <p className="font-[family-name:var(--font-raleway)] text-[0.62rem] tracking-[0.1em] uppercase font-[600] text-[#8a8480]">
+                      Amount paid (EGP)
+                    </p>
+                    <div className="flex gap-1.5">
+                      <input
+                        type="number"
+                        min="0"
+                        step="1"
+                        value={depositVal}
+                        onChange={(e) => setDepositVal(e.target.value)}
+                        placeholder="0"
+                        className="flex-1 border border-[#ece8e3] rounded-lg px-2.5 py-1.5 text-sm focus:outline-none focus:border-[#1a1614]"
+                      />
+                      <button
+                        onClick={handleSaveDeposit}
+                        disabled={depositSaving}
+                        className="bg-[#1a1614] text-white font-[family-name:var(--font-raleway)] text-[0.62rem] tracking-[0.1em] uppercase font-[700] px-3 py-1.5 rounded-lg hover:bg-[#2a2420] transition-colors disabled:opacity-50"
+                      >
+                        {depositSaving ? "…" : "Save"}
+                      </button>
+                    </div>
+                  </div>
+                </DropdownMenuContent>
+              </DropdownMenu>
 
-        <a
-          href={`tel:${booking.phone}`}
-          className="flex items-center justify-center w-7 h-7 text-[#3b82f6] hover:bg-blue-50 rounded transition-colors duration-150"
-          title="Call"
-        >
-          <Phone className="h-3.5 w-3.5" />
-        </a>
-        {/* Mobile-only deposit button */}
-        <Popover open={mobileDepositOpen} onOpenChange={setMobileDepositOpen}>
-          <PopoverTrigger asChild>
-            <button
-              className="md:hidden flex items-center justify-center w-7 h-7 hover:bg-[#f0ece8] rounded transition-colors duration-150"
-              style={{ color: amountPaid > 0 ? "#22c55e" : "#9ca3af" }}
-              title="Edit deposit"
-            >
-              <Wallet className="h-3.5 w-3.5" />
-            </button>
-          </PopoverTrigger>
-          <PopoverContent align="end" className="w-52 p-3">
-            <DepositPopover
-              initial={amountPaid}
-              saving={depositSaving}
-              onSave={handleSaveDeposit}
-            />
-          </PopoverContent>
-        </Popover>
+              {/* Edit booking */}
+              <Link
+                href={`/bookings/${booking.id}/edit`}
+                className="flex items-center justify-center w-9 h-9 rounded-xl bg-[#f5f2ef] text-[#6b6460] hover:bg-[#ece8e3] active:bg-[#ddd8d2] transition-colors"
+                title="Edit booking"
+              >
+                <Pencil className="h-[18px] w-[18px]" />
+              </Link>
+            </div>
 
-        <Link
-          href={`/bookings/${booking.id}/edit`}
-          className="flex items-center justify-center w-7 h-7 text-[#8a8480] hover:text-[#1a1614] hover:bg-[#f0ece8] rounded transition-colors duration-150"
-          title="Edit booking"
-        >
-          <Pencil className="h-3.5 w-3.5" />
-        </Link>
+          </div>
+        </div>
       </div>
     </div>
   );
