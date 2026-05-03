@@ -200,6 +200,23 @@ export async function createStudent(formData: FormData) {
   redirect(`/lessons/new?guestId=${user.id}`);
 }
 
+export async function createGuest(data: { name: string; email: string; phone: string | null }) {
+  try {
+    const hashedPassword = await bcryptjs.hash(crypto.randomUUID(), 10);
+    const user = await prisma.user.create({
+      data: { name: data.name, email: data.email, phone: data.phone || null, password: hashedPassword },
+      select: { id: true, name: true, email: true },
+    });
+    return { success: true as const, user };
+  } catch (error: any) {
+    if (error.code === "P2002") {
+      return { success: false as const, message: "A guest with this email already exists." };
+    }
+    console.error("Error creating guest:", error);
+    return { success: false as const, message: "Failed to create guest." };
+  }
+}
+
 export async function listUsers(query?: string) {
   const q = (query ?? "").trim();
   const qUpper = q.toUpperCase();

@@ -470,6 +470,8 @@ export async function updateLessonBooking(
     instructorId: string | null;
     startsAt: Date;
     endsAt: Date;
+    lessonType?: LessonType;
+    capacity?: number;
   }
 ) {
   try {
@@ -497,6 +499,8 @@ export async function updateLessonBooking(
           instructorId: data.instructorId,
           startsAt: data.startsAt,
           endsAt: data.endsAt,
+          ...(data.lessonType !== undefined && { lessonType: data.lessonType }),
+          ...(data.capacity !== undefined && { capacity: data.capacity }),
         },
       }),
     ]);

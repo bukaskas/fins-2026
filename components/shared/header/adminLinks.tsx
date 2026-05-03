@@ -13,12 +13,20 @@ import Link from "next/link";
 
 const adminGroups = [
   {
-    label: "Bookings",
+    label: "Day Use",
     links: [
       { title: "All Bookings", href: "/bookings" },
       { title: "Dashboard",    href: "/bookings/dashboard" },
-      { title: "Schedule",     href: "/bookings/schedule" },
-      { title: "Guide",        href: "/bookings/guide" },
+    ],
+  },
+  {
+    label: "Kitesurfing",
+    links: [
+      { title: "+ Kite Service", href: "/register" },
+      { title: "Lessons",        href: "/bookings/schedule" },
+      { title: "Rentals",        href: "/rentals" },
+      { title: "Inventory",      href: "/inventory" },
+      { title: "Rental Guide",   href: "/rentals/guide" },
     ],
   },
   {
@@ -29,19 +37,10 @@ const adminGroups = [
     ],
   },
   {
-    label: "Operations",
-    links: [
-      { title: "Add Services", href: "/register" },
-      { title: "Rentals",      href: "/rentals" },
-      { title: "Rental Guide", href: "/rentals/guide" },
-      { title: "Inventory",    href: "/inventory" },
-    ],
-  },
-  {
     label: "People",
     links: [
-      { title: "Users",        href: "/users" },
-      { title: "Instructors",  href: "/instructors" },
+      { title: "Users",       href: "/users" },
+      { title: "Instructors", href: "/instructors" },
     ],
   },
 ];
@@ -52,6 +51,7 @@ export function AdminLinks() {
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button
+          suppressHydrationWarning
           variant="outline"
           className="h-8 rounded-none border-gray-300/70 text-gray-700 hover:bg-gray-100/80 text-[0.68rem] tracking-[0.15em] uppercase font-[300] font-[family-name:var(--font-raleway)] px-4"
         >

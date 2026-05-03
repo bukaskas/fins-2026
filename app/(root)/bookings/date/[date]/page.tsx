@@ -14,7 +14,7 @@ const STATUS_FILTERS: {
   statuses: BookingStatus[];
 }[] = [
   { label: "All",               value: "all",       statuses: [] },
-  { label: "Confirmed",         value: "confirmed", statuses: [BookingStatus.CONFIRMED] },
+  { label: "Confirmed",         value: "confirmed", statuses: [BookingStatus.CONFIRMED, BookingStatus.ARRIVED] },
   {
     label: "Pending",
     value: "pending",
@@ -91,7 +91,7 @@ async function BookingsByDatePage({
     : rawBookings;
 
   const peopleByStatus = {
-    confirmed:      allBookings.filter((b) => b.bookingStatus === BookingStatus.CONFIRMED).reduce((s, b) => s + b.numberOfPeople, 0),
+    confirmed:      allBookings.filter((b) => b.bookingStatus === BookingStatus.CONFIRMED || b.bookingStatus === BookingStatus.ARRIVED).reduce((s, b) => s + b.numberOfPeople, 0),
     requestSent:    allBookings.filter((b) => b.bookingStatus === BookingStatus.REQUEST_SENT).reduce((s, b) => s + b.numberOfPeople, 0),
     waitingPayment: allBookings.filter((b) => b.bookingStatus === BookingStatus.WAITING_PAYMENT).reduce((s, b) => s + b.numberOfPeople, 0),
     rest:           allBookings.filter((b) => !([ BookingStatus.CONFIRMED, BookingStatus.REQUEST_SENT, BookingStatus.WAITING_PAYMENT] as BookingStatus[]).includes(b.bookingStatus)).reduce((s, b) => s + b.numberOfPeople, 0),
