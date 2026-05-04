@@ -44,6 +44,7 @@ const StaffNotificationEmail = ({
       )
     : encodeURIComponent(`Hi ${customerName}, this is Fins regarding your booking.`);
   const waLink = `https://wa.me/${waPhone}?text=${waMessage}`;
+  const bookingsLink = `https://www.finskitesurfing.com/bookings?q=${customerPhone.replace(/\D/g, "")}`;
 
   return (
     <Html>
@@ -79,6 +80,14 @@ const StaffNotificationEmail = ({
                 className="py-2.5 px-5 bg-green-500 rounded-md text-black text-sm font-semibold no-underline text-center"
               >
                 Reply on WhatsApp
+              </Button>
+            </Section>
+            <Section className="text-center mt-3">
+              <Button
+                href={bookingsLink}
+                className="py-2.5 px-5 bg-orange-500 rounded-md text-white text-sm font-semibold no-underline text-center"
+              >
+                View All Bookings
               </Button>
             </Section>
           </Container>

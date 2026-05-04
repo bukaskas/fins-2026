@@ -120,6 +120,7 @@ function BookingComponent({ booking }: { booking: Booking }) {
   const serviceMeta = SERVICE_META[booking.service ?? ""];
 
   function copyDetails() {
+    const phone = booking.phone.replace(/\D/g, "");
     const lines = [
       `Name: ${booking.name}`,
       `Date: ${day}/${month}`,
@@ -131,6 +132,7 @@ function BookingComponent({ booking }: { booking: Booking }) {
       `Status: ${STATUS_LABEL[status]}`,
       amountPaid > 0 ? `Paid: ${amountPaid / 100} EGP` : `Paid: 0 EGP`,
       booking.instructor ? `Instructor: ${booking.instructor}` : null,
+      `https://www.finskitesurfing.com/bookings?q=${phone}`,
     ].filter(Boolean);
     navigator.clipboard.writeText(lines.join("\n"));
     toast.success("Booking details copied!");
