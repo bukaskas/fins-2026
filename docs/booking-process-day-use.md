@@ -50,17 +50,19 @@ After submitting, the guest is redirected to `/day-use/booking/success` which sh
 
 ---
 
-## Step 3 — Guest Receives Confirmation Email
+## Step 3 — Guest Receives Request Acknowledgement Email
 
 The guest receives an automated email immediately after submitting:
 
 > **Subject:** Welcome to Fins kitesurfing center!
 >
-> **Heading:** Your beach day is booked!
+> **Heading:** We've received your day-use request! 🌊
 >
-> **Body:** We can't wait to host you on [Date]. Get ready to relax and enjoy the beach, sun, and sea at Fins. If you have any questions or special requests, feel free to reach out.
+> **Body:** Thanks for reaching out! We've received your request for [Date]. Our team will review your profile and be in touch shortly to confirm your spot.
 >
 > **CTA button:** Contact us on WhatsApp → `wa.me/201080500099`
+
+> **Important:** This email intentionally does **not** say the booking is confirmed. Guests are pending staff screening before confirmation. The email body, the `DayUseDetails` disclaimer, and the success page all align on "request received, pending review."
 
 > **Note:** This email is sent from `info@finskitesurfing.com`. The WhatsApp number must be staffed during advertised hours.
 
@@ -105,9 +107,9 @@ Navigate to **Admin → Bookings** (`/bookings`) and update the booking status:
 
 ### Sample WhatsApp messages
 
-**Requesting social account:**
+**Requesting social account (pre-filled via staff notification email button):**
 
-> Hi [Guest Name], thank you for your day use booking request at Fins Beach Club! Could you please share your Instagram or Facebook profile so we can complete your reservation? Looking forward to welcoming you!
+> Hi! We've received your day-use request at Fins 🌊 As a small community space, we like to get to know our guests before confirming. Could you share your Instagram or a quick screenshot of your profile? Once we've had a look, we'll send over your confirmation. Thanks! 🤍
 
 **Booking confirmed:**
 

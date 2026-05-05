@@ -40,7 +40,7 @@ const StaffNotificationEmail = ({
   const waPhone = customerPhone.replace(/[^\d+]/g, "");
   const waMessage = isDayUse
     ? encodeURIComponent(
-        `Hi ${customerName}, thank you for booking your day use at Fins! 🌊\nWe'd love to get to know you a little before your visit. Could you share your Instagram or social media account? If it's private, a screenshot works just fine. See you soon! 🤍`
+        `Hi! We've received your day-use request at Fins 🌊 As a small community space, we like to get to know our guests before confirming. Could you share your Instagram or a quick screenshot of your profile? Once we've had a look, we'll send over your confirmation. Thanks! 🤍`
       )
     : encodeURIComponent(`Hi ${customerName}, this is Fins regarding your booking.`);
   const waLink = `https://wa.me/${waPhone}?text=${waMessage}`;

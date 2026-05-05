@@ -31,8 +31,8 @@ const serviceContent: Record<
     cta: "Contact us on WhatsApp",
   },
   "day-use": {
-    heading: "Your beach day is booked! 🌊",
-    body: "We can't wait to host you on {date}.",
+    heading: "We've received your day-use request! 🌊",
+    body: "Thanks for reaching out! We've received your request for {date}. Our team will review your profile and be in touch shortly to confirm your spot.",
     cta: "Contact us on WhatsApp",
   },
   restaurant: {
