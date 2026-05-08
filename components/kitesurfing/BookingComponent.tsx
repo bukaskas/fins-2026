@@ -79,8 +79,8 @@ function buildWaData(booking: Booking) {
   const name = booking.name;
 
   const instagramText =
-    `Hi ${name}! As part of our booking confirmation, could you please share your Instagram account? ` +
-    `This helps us keep our Fins community the way we love it 🤍 If your account is private, a screenshot works just fine!`;
+    `Hi ${name}! As part of our booking confirmation, could you please share the Instagram accounts of everyone in your group? ` +
+    `This helps us keep our Fins community the way we love it 🤍 If any profiles are private, a screenshot works just fine!`;
 
   const paymentInfo =
     `💳 *To confirm your reservation:*\n` +

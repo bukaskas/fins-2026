@@ -351,3 +351,35 @@ export async function getFutureBookingPeopleTotalsByDate() {
   }
 }
 
+export async function createDayUseBookingAdmin(data: {
+  name: string;
+  email: string;
+  phone: string;
+  date: Date;
+  numberOfPeople: number;
+  numberOfKids: number;
+  bookingStatus: BookingStatus;
+  amountPaidCents: number;
+}) {
+  try {
+    const booking = await prisma.booking.create({
+      data: {
+        name: data.name,
+        email: data.email,
+        phone: data.phone,
+        date: data.date,
+        service: "day-use",
+        numberOfPeople: data.numberOfPeople,
+        numberOfKids: data.numberOfKids,
+        bookingStatus: data.bookingStatus,
+        amountPaidCents: data.amountPaidCents,
+      },
+    });
+    revalidatePath("/bookings");
+    revalidatePath("/bookings/day-use");
+    return { success: true, bookingId: booking.id };
+  } catch (error) {
+    return { success: false, message: `Failed to create booking: ${error instanceof Error ? error.message : String(error)}` };
+  }
+}
+

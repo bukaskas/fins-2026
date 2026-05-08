@@ -153,7 +153,7 @@ export async function getLessonFormUsers() {
       orderBy: { createdAt: "desc" },
     }),
     prisma.user.findMany({
-      where: { role: "INSTRUCTOR" },
+      where: { OR: [{ role: "INSTRUCTOR" }, { isInstructor: true }] },
       select: { id: true, name: true, email: true },
       orderBy: { createdAt: "desc" },
     }),
@@ -568,4 +568,16 @@ export async function getAllLessons() {
       },
     },
   });
+}
+
+export async function updateLessonBookingStatus(
+  id: string,
+  status: LessonBookingStatus,
+) {
+  try {
+    await prisma.lessonBooking.update({ where: { id }, data: { status } });
+    return { success: true };
+  } catch {
+    return { success: false };
+  }
 }

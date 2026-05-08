@@ -138,6 +138,8 @@ function slotSpan(s: SessionWithBookings): number {
 
 // ---------- sub-components ----------
 
+const ROW_HEIGHT_REM = 3.75; // matches h-15 (Tailwind v4)
+
 function DroppableCell({
   id,
   children,
@@ -154,9 +156,12 @@ function DroppableCell({
     <td
       ref={setNodeRef}
       rowSpan={rowSpan}
+      // Explicit height so children's h-full resolves correctly.
+      // In CSS table layout height% on a child only works when the parent
+      // has an explicit height declaration, not just a computed one.
+      style={{ height: `${rowSpan * ROW_HEIGHT_REM}rem` }}
       className={cn(
         "border p-1 min-w-35 align-top transition-colors",
-        rowSpan === 1 && "h-15",
         isOver && !isOccupied && "bg-primary/10",
         isOver && isOccupied && "bg-destructive/10",
       )}

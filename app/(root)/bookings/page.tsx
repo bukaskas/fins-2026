@@ -140,7 +140,7 @@ async function BookingsPage({
           Bookings
         </h1>
         <Button asChild className="rounded-full">
-          <Link href="/day-use/booking">+ New Booking</Link>
+          <Link href="/bookings/day-use/new">+ New Day Use</Link>
         </Button>
       </div>
 

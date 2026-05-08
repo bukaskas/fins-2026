@@ -148,7 +148,8 @@ model User {
   createdAt     DateTime  @default(now()) @db.Timestamp(6)
   updatedAt     DateTime  @default(now()) @updatedAt
 
-  role     Role      @default(KITER)
+  role         Role    @default(KITER)
+  isInstructor Boolean @default(false)
   accounts Account[]
   sessions Session[]
   members  Member[]

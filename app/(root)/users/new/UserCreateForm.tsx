@@ -34,6 +34,7 @@ const schema = z.object({
   email: z.string().email("Invalid email address"),
   phone: z.string().trim(),
   role: z.nativeEnum(Role),
+  isInstructor: z.boolean().default(false),
   password: z.string().min(8, "Password must be at least 8 characters"),
 });
 
@@ -48,6 +49,7 @@ export default function UserCreateForm() {
       email: "",
       phone: "",
       role: Role.KITER as Role,
+      isInstructor: false,
       password: "",
     },
     validators: {
@@ -65,6 +67,7 @@ export default function UserCreateForm() {
           email: value.email,
           phone: value.phone || null,
           role: value.role,
+          isInstructor: value.isInstructor,
           password: value.password,
         });
         if (!res.success) {
@@ -171,6 +174,28 @@ export default function UserCreateForm() {
                   </SelectContent>
                 </Select>
                 <FieldError errors={field.state.meta.errors} />
+              </Field>
+            )}
+          </form.Field>
+
+          <form.Field name="isInstructor">
+            {(field) => (
+              <Field>
+                <label className="flex items-center gap-2.5 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={field.state.value}
+                    onChange={(e) => field.handleChange(e.target.checked)}
+                    disabled={isSubmitting}
+                    className="h-4 w-4 rounded border-gray-300 accent-primary cursor-pointer"
+                  />
+                  <span className="text-sm font-medium leading-none">
+                    Also an instructor
+                  </span>
+                </label>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Appears in instructor dropdowns regardless of primary role
+                </p>
               </Field>
             )}
           </form.Field>

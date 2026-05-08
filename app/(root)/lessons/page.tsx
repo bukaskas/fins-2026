@@ -18,8 +18,9 @@ export default async function LessonsPage() {
     notes: s.notes,
     instructor: s.instructor,
     bookings: s.bookings.map((b) => ({
+      id: b.id,
       status: b.status,
-      guest: { name: b.guest.name, email: b.guest.email },
+      guest: { id: b.guest.id, name: b.guest.name, email: b.guest.email, phone: b.guest.phone },
     })),
   }));
 

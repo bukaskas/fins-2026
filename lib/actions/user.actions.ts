@@ -77,6 +77,7 @@ export async function getUserById(id: string) {
         email: true,
         phone: true,
         role: true,
+        isInstructor: true,
       },
     });
     return user;
@@ -100,6 +101,7 @@ export async function updateUser(id: string, data: UserEditFormData) {
         phone: data.phone || null,
         email: data.email,
         role: data.role,
+        isInstructor: data.isInstructor,
         ...passwordData,
       },
       select: { id: true },
@@ -147,7 +149,7 @@ export async function searchUser(query: string) {
 
 export async function listInstructors() {
   return prisma.user.findMany({
-    where: { role: Role.INSTRUCTOR },
+    where: { OR: [{ role: Role.INSTRUCTOR }, { isInstructor: true }] },
     select: { id: true, name: true, email: true },
     orderBy: { name: "asc" },
   });
@@ -159,6 +161,7 @@ export async function createUserAsAdmin(data: {
   phone: string | null;
   role: Role;
   password: string;
+  isInstructor?: boolean;
 }) {
   try {
     const hashedPassword = await bcryptjs.hash(data.password, 10);
@@ -168,6 +171,7 @@ export async function createUserAsAdmin(data: {
         email: data.email,
         phone: data.phone || null,
         role: data.role,
+        isInstructor: data.isInstructor ?? false,
         password: hashedPassword,
       },
       select: { id: true },

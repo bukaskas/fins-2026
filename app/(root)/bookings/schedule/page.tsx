@@ -9,10 +9,8 @@ import type { SessionWithBookings } from "@/components/bookings/ScheduleBoard";
 import BookingComponent from "@/components/kitesurfing/BookingComponent";
 import { format } from "date-fns";
 import type { Booking } from "@prisma/client";
-import {
-  LessonBookingsTable,
-  type LessonBookingRow,
-} from "@/components/bookings/LessonBookingsTable";
+import { LessonsTable } from "@/components/lessons/LessonsTable";
+import type { SessionRow } from "@/components/lessons/LessonSessionEditSheet";
 import Link from "next/link";
 
 export const dynamic = "force-dynamic";
@@ -29,23 +27,20 @@ export default async function SchedulePage() {
       getAllLessons(),
     ]);
 
-  const allLessonBookings: LessonBookingRow[] = allLessonSessions.flatMap((s) =>
-    s.bookings.map((b) => ({
+  const lessonRows: SessionRow[] = allLessonSessions.map((s) => ({
+    id: s.id,
+    startsAt: s.startsAt.toISOString(),
+    endsAt: s.endsAt.toISOString(),
+    lessonType: s.lessonType,
+    capacity: s.capacity,
+    notes: s.notes,
+    instructor: s.instructor,
+    bookings: s.bookings.map((b) => ({
       id: b.id,
-      sessionId: s.id,
       status: b.status,
-      attended: b.attended,
-      notes: b.notes ?? null,
-      guest: b.guest,
-      session: {
-        startsAt: s.startsAt.toISOString(),
-        endsAt: s.endsAt.toISOString(),
-        lessonType: s.lessonType,
-        capacity: s.capacity,
-        instructor: s.instructor,
-      },
+      guest: { id: b.guest.id, name: b.guest.name, email: b.guest.email, phone: b.guest.phone },
     })),
-  );
+  }));
 
   const futureBookings = (
     futureResult.success ? futureResult.data : []
@@ -125,17 +120,8 @@ export default async function SchedulePage() {
       </div>
 
       <div>
-        <h2 className="text-xl font-semibold mb-4">
-          Lesson Bookings
-          <span className="ml-2 text-sm font-normal text-muted-foreground">
-            ({allLessonBookings.length} total)
-          </span>
-        </h2>
-
-        <LessonBookingsTable
-          bookings={allLessonBookings}
-          instructors={instructors}
-        />
+        <h2 className="text-xl font-semibold mb-4">Lesson Bookings</h2>
+        <LessonsTable lessons={lessonRows} instructors={instructors} />
       </div>
     </div>
   );

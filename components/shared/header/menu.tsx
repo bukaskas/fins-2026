@@ -40,6 +40,7 @@ async function Menu() {
   const session = await getServerSession(authOptions);
   const role = (session?.user as any)?.role;
   const isAdmin = role === "ADMIN";
+  const isInstructor = role === "INSTRUCTOR" || (session?.user as any)?.isInstructor === true;
 
   return (
     <div className="flex md:justify-center z-10 w-full">
@@ -75,6 +76,14 @@ async function Menu() {
 
         {/* Admin + Auth — pushed right */}
         <div className="absolute right-5 flex items-center gap-3">
+          {isInstructor && !isAdmin && (
+            <Link
+              href="/my-schedule"
+              className="text-[0.72rem] font-[300] tracking-[0.18em] uppercase font-[family-name:var(--font-raleway)] text-gray-800 hover:text-gray-950 transition-colors"
+            >
+              My Schedule
+            </Link>
+          )}
           {isAdmin && <AdminLinks />}
           <UserAuthButton session={session} />
         </div>
@@ -113,25 +122,42 @@ async function Menu() {
               </SheetClose>
             </div>
 
-            {/* Main nav links */}
-            <div className="flex flex-col px-4 py-4 gap-0.5">
-              {links.map((link) => (
-                <SheetClose asChild key={link.href}>
-                  <Link
-                    href={link.href}
-                    className="flex items-center px-3 py-3 text-lg font-[300] tracking-[0.1em] text-white/80 hover:text-white hover:bg-white/5 rounded-sm transition-colors font-[family-name:var(--font-raleway)]"
-                  >
-                    {link.title}
-                  </Link>
-                </SheetClose>
-              ))}
+            {/* Scrollable content area */}
+            <div className="flex-1 overflow-y-auto">
+              {/* Main nav links */}
+              <div className="flex flex-col px-4 py-4 gap-0.5">
+                {links.map((link) => (
+                  <SheetClose asChild key={link.href}>
+                    <Link
+                      href={link.href}
+                      className="flex items-center px-3 py-3 text-lg font-[300] tracking-[0.1em] text-white/80 hover:text-white hover:bg-white/5 rounded-sm transition-colors font-[family-name:var(--font-raleway)]"
+                    >
+                      {link.title}
+                    </Link>
+                  </SheetClose>
+                ))}
+              </div>
+
+              {/* Instructor schedule link (mobile) */}
+              {isInstructor && !isAdmin && (
+                <div className="px-4 pb-2">
+                  <SheetClose asChild>
+                    <Link
+                      href="/my-schedule"
+                      className="flex items-center px-3 py-3 text-lg font-[300] tracking-[0.1em] text-white/80 hover:text-white hover:bg-white/5 rounded-sm transition-colors font-[family-name:var(--font-raleway)]"
+                    >
+                      My Schedule
+                    </Link>
+                  </SheetClose>
+                </div>
+              )}
+
+              {/* Admin links (mobile) */}
+              {isAdmin && <AdminLinksMobile />}
             </div>
 
-            {/* Admin links (mobile) */}
-            {isAdmin && <AdminLinksMobile />}
-
             {/* Auth at the bottom */}
-            <div className="mt-auto border-t border-white/8 px-4 py-5">
+            <div className="border-t border-white/8 px-4 py-5">
               <UserAuthButton
                 session={session}
                 className="w-full justify-start text-base font-[300] tracking-wide text-white/70 hover:text-white hover:bg-white/5 h-11 px-3"

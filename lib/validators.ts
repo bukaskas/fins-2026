@@ -56,6 +56,7 @@ export const userEditFormSchema = z.object({
   phone: z.string().trim().nullable(),
   email: z.string().email("Invalid email address"),
   role: z.nativeEnum(Role),
+  isInstructor: z.boolean().default(false),
   // optional on edit; only validate if provided
   password: z
     .string()

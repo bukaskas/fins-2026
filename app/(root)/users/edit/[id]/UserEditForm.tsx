@@ -38,6 +38,7 @@ type Props = {
     email: string;
     phone: string | null;
     role: Role;
+    isInstructor: boolean;
   };
 };
 
@@ -53,6 +54,7 @@ export default function UserEditFormClient({ user }: Props) {
       email: user.email || "",
       password: "",
       role: user.role || Role.KITER,
+      isInstructor: user.isInstructor,
     },
     validators: {
       onSubmit: ({ value }) => {
@@ -70,8 +72,7 @@ export default function UserEditFormClient({ user }: Props) {
           return;
         }
         toast("User updated");
-        router.push("/");
-        router.replace("/users");
+        router.back();
       } finally {
         setIsSubmitting(false);
       }
@@ -177,6 +178,28 @@ export default function UserEditFormClient({ user }: Props) {
                     </SelectContent>
                   </Select>
                   <FieldError errors={field.state.meta.errors} />
+                </Field>
+              )}
+            </form.Field>
+
+            <form.Field name="isInstructor">
+              {(field) => (
+                <Field>
+                  <label className="flex items-center gap-2.5 cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={field.state.value}
+                      onChange={(e) => field.handleChange(e.target.checked)}
+                      disabled={isSubmitting}
+                      className="h-4 w-4 rounded border-gray-300 accent-primary cursor-pointer"
+                    />
+                    <span className="text-sm font-medium leading-none">
+                      Also an instructor
+                    </span>
+                  </label>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Appears in instructor dropdowns regardless of primary role
+                  </p>
                 </Field>
               )}
             </form.Field>

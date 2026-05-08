@@ -58,7 +58,7 @@ export type SessionRow = {
   capacity: number;
   notes: string | null;
   instructor: { id: string; name: string | null; email?: string | null } | null;
-  bookings: { status: string; guest: { name: string | null; email: string } }[];
+  bookings: { id: string; status: string; guest: { id: string; name: string | null; email: string; phone: string | null } }[];
 };
 
 export function LessonSessionEditSheet({

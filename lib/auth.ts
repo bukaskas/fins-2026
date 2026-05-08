@@ -40,6 +40,7 @@ export const authOptions: AuthOptions = {
           name: user.name ?? undefined,
           image: user.image ?? undefined,
           role: user.role,
+          isInstructor: user.isInstructor,
         };
       },
     }),
@@ -52,6 +53,7 @@ export const authOptions: AuthOptions = {
       if (user) {
         token.id = (user as any).id;
         token.role = (user as any).role;
+        token.isInstructor = (user as any).isInstructor ?? false;
       }
       return token;
     },
@@ -59,6 +61,7 @@ export const authOptions: AuthOptions = {
       if (session.user) {
         (session.user as any).id = token.id;
         (session.user as any).role = token.role;
+        (session.user as any).isInstructor = token.isInstructor ?? false;
       }
       return session;
     },
