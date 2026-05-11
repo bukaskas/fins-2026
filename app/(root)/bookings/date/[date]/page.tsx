@@ -1,5 +1,5 @@
 import { getBookingsByDate, type BookingWithAgent } from "@/lib/actions/booking.actions";
-import { listUsers } from "@/lib/actions/user.actions";
+import { listAgents } from "@/lib/actions/user.actions";
 import BookingComponent from "@/components/kitesurfing/BookingComponent";
 import { BookingStatus } from "@prisma/client";
 import { format } from "date-fns";
@@ -73,7 +73,7 @@ async function BookingsByDatePage({
       activeFilter.statuses.length > 0 ? activeFilter.statuses : undefined,
     ),
     getBookingsByDate(date),
-    listUsers(),
+    listAgents(),
   ]);
 
   if (!filteredResult.success) {

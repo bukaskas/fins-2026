@@ -1,5 +1,5 @@
 import { getBookingsByService, type BookingWithAgent } from "@/lib/actions/booking.actions";
-import { listUsers } from "@/lib/actions/user.actions";
+import { listAgents } from "@/lib/actions/user.actions";
 import BookingComponent from "@/components/kitesurfing/BookingComponent";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
@@ -10,7 +10,7 @@ export const revalidate = 0;
 async function RestaurantBookingsPage() {
   const [result, allUsers] = await Promise.all([
     getBookingsByService("restaurant"),
-    listUsers(),
+    listAgents(),
   ]);
 
   if (!result.success) {

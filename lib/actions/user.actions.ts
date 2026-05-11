@@ -155,6 +155,14 @@ export async function listInstructors() {
   });
 }
 
+export async function listAgents() {
+  return prisma.user.findMany({
+    where: { role: { in: [Role.ADMIN, Role.STAFF] } },
+    select: { id: true, name: true, email: true },
+    orderBy: { name: "asc" },
+  });
+}
+
 export async function createUserAsAdmin(data: {
   name: string | null;
   email: string;

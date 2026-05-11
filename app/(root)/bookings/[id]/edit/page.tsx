@@ -1,6 +1,6 @@
 import BookingEditForm from "./BookingEditForm";
 import { getBookingById, type BookingWithAgent } from "@/lib/actions/booking.actions";
-import { listInstructors, listUsers } from "@/lib/actions/user.actions";
+import { listInstructors, listAgents } from "@/lib/actions/user.actions";
 
 async function BookingEditPage({
   params,
@@ -15,7 +15,7 @@ async function BookingEditPage({
   const [booking, instructors, allUsers] = await Promise.all([
     getBookingById(bookingId),
     listInstructors(),
-    listUsers(),
+    listAgents(),
   ]);
 
   return <BookingEditForm booking={booking as BookingWithAgent} instructors={instructors} allUsers={allUsers} />;

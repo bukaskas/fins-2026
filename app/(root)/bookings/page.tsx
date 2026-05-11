@@ -1,5 +1,5 @@
 import { getAllBookings, type BookingWithAgent } from "@/lib/actions/booking.actions";
-import { listUsers } from "@/lib/actions/user.actions";
+import { listAgents } from "@/lib/actions/user.actions";
 import BookingComponent from "@/components/kitesurfing/BookingComponent";
 import { BookingsFilters } from "@/components/bookings/BookingsFilters";
 import { Button } from "@/components/ui/button";
@@ -36,7 +36,7 @@ async function BookingsPage({
 
   const [bookingsResult, allUsers] = await Promise.all([
     getAllBookings(),
-    listUsers(),
+    listAgents(),
   ]);
   if (!bookingsResult.success) {
     return <div>Error: {bookingsResult.message}</div>;

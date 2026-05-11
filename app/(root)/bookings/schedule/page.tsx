@@ -3,7 +3,7 @@ import {
   getLessonSessionsByDate,
   getAllLessons,
 } from "@/lib/actions/lessons.actions";
-import { listInstructors, listUsers } from "@/lib/actions/user.actions";
+import { listInstructors, listAgents } from "@/lib/actions/user.actions";
 import ScheduleBoard from "@/components/bookings/ScheduleBoard";
 import type { SessionWithBookings } from "@/components/bookings/ScheduleBoard";
 import BookingComponent from "@/components/kitesurfing/BookingComponent";
@@ -24,7 +24,7 @@ export default async function SchedulePage() {
       listInstructors(),
       getFutureKitesurfingBookings(),
       getAllLessons(),
-      listUsers(),
+      listAgents(),
     ]);
 
   const lessonRows: SessionRow[] = allLessonSessions.map((s) => ({

@@ -281,10 +281,22 @@ function BookingComponent({ booking, allUsers }: { booking: BookingWithAgent; al
               </DropdownMenuContent>
             </DropdownMenu>
 
-            {/* Agent chip */}
+            {/* Agent pill */}
             {agent && (
-              <span className="font-[family-name:var(--font-raleway)] text-[0.6rem] font-[500] text-[#b0a89f] text-right leading-tight truncate max-w-[100px]">
-                {agent.name ?? agent.email.split("@")[0]}
+              <span
+                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border"
+                style={{ borderColor: "#6366f140", background: "#6366f112" }}
+              >
+                <span
+                  className="w-1.5 h-1.5 rounded-full shrink-0"
+                  style={{ background: "#6366f1" }}
+                />
+                <span
+                  className="font-[family-name:var(--font-raleway)] text-[0.6rem] tracking-[0.1em] uppercase font-[700] truncate max-w-[90px]"
+                  style={{ color: "#6366f1" }}
+                >
+                  {agent.name ?? agent.email.split("@")[0]}
+                </span>
               </span>
             )}
 

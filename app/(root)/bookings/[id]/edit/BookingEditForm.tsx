@@ -49,7 +49,7 @@ type Props = {
 
 function BookingEditForm({ booking, instructors, allUsers }: Props) {
   const [isSubmitting, setIsSubmitting] = React.useState(false);
-  const [selectedAgentId, setSelectedAgentId] = React.useState<string>(booking.agentId ?? "");
+  const [selectedAgentId, setSelectedAgentId] = React.useState<string>(booking.agentId ?? "none");
   const [open, setOpen] = React.useState(false);
   const [peopleInput, setPeopleInput] = React.useState(String(booking.numberOfPeople ?? 1));
   const [kidsInput, setKidsInput] = React.useState(String(booking.numberOfKids ?? 0));
@@ -83,7 +83,7 @@ function BookingEditForm({ booking, instructors, allUsers }: Props) {
       }
       setIsSubmitting(true);
       try {
-        const agentId = selectedAgentId || null;
+        const agentId = selectedAgentId === "none" ? null : selectedAgentId;
         const [result] = await Promise.all([
           updateBooking(booking.id, {
             ...value,
@@ -430,7 +430,7 @@ function BookingEditForm({ booking, instructors, allUsers }: Props) {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectGroup>
-                      <SelectItem value="">Unassigned</SelectItem>
+                      <SelectItem value="none">Unassigned</SelectItem>
                       {allUsers.map((u) => (
                         <SelectItem key={u.id} value={u.id}>
                           {u.name ?? u.email}
