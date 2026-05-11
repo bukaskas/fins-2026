@@ -164,7 +164,14 @@ export default function DayUseAdminForm() {
             <Calendar
               mode="single"
               selected={date ?? undefined}
-              onSelect={(d) => { setDate(d ?? null); setCalOpen(false); }}
+              onSelect={(d) => {
+                if (d) {
+                  setDate(new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate())));
+                } else {
+                  setDate(null);
+                }
+                setCalOpen(false);
+              }}
               initialFocus
             />
           </PopoverContent>
