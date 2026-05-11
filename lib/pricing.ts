@@ -1,9 +1,8 @@
 import pricingConfig from "@/lib/config/pricing.json";
 
-const ADULT_PRICE_CENTS = 120000; // 1,200 EGP
-const KIDS_PRICE_CENTS = 60000;   // 600 EGP
-const HOLIDAY_MULTIPLIER = 1.25;  // +25%
-const DISCOUNT_MULTIPLIER = 0.75; // -25%
+const ADULT_PRICE_CENTS = 120000;      // 1,200 EGP
+const HOLIDAY_SURCHARGE_CENTS = 40000; // +400 EGP flat on holiday
+const DISCOUNT_MULTIPLIER = 0.75;      // -25%
 
 export type RateType = "standard" | "holiday" | "discounted";
 
@@ -39,15 +38,18 @@ export function calculateDayUsePrice(
   kids: number
 ): PriceBreakdown {
   const rateType = getDateRate(date);
-  const multiplier =
-    rateType === "holiday"
-      ? HOLIDAY_MULTIPLIER
-      : rateType === "discounted"
-      ? DISCOUNT_MULTIPLIER
-      : 1;
 
-  const adultUnitCents = Math.round(ADULT_PRICE_CENTS * multiplier);
-  const kidsUnitCents = Math.round(KIDS_PRICE_CENTS * multiplier);
+  let adultUnitCents: number;
+  let kidsUnitCents: number;
+
+  if (rateType === "holiday") {
+    adultUnitCents = ADULT_PRICE_CENTS + HOLIDAY_SURCHARGE_CENTS;
+  } else if (rateType === "discounted") {
+    adultUnitCents = Math.round(ADULT_PRICE_CENTS * DISCOUNT_MULTIPLIER);
+  } else {
+    adultUnitCents = ADULT_PRICE_CENTS;
+  }
+  kidsUnitCents = Math.round(adultUnitCents * 0.5);
   const adultTotalCents = adultUnitCents * adults;
   const kidsTotalCents = kidsUnitCents * kids;
 
