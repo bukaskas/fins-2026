@@ -43,8 +43,8 @@ export default function DayUseAdminForm() {
   const [email, setEmail]         = useState("");
   const [phone, setPhone]         = useState("");
   const [date, setDate]           = useState<Date | null>(null);
-  const [adults, setAdults]       = useState(1);
-  const [kids, setKids]           = useState(0);
+  const [adultsStr, setAdultsStr] = useState("1");
+  const [kidsStr, setKidsStr]     = useState("0");
   const [status, setStatus]       = useState<BookingStatus>(BookingStatus.PENDING);
   const [amountEgp, setAmountEgp] = useState("");
 
@@ -60,8 +60,8 @@ export default function DayUseAdminForm() {
       email: email.trim(),
       phone: phone.trim(),
       date,
-      numberOfPeople: adults,
-      numberOfKids: kids,
+      numberOfPeople: Math.max(1, parseInt(adultsStr) || 1),
+      numberOfKids: Math.max(0, parseInt(kidsStr) || 0),
       bookingStatus: status,
       amountPaidCents: Math.round(parseFloat(amountEgp || "0") * 100),
     });
@@ -178,8 +178,9 @@ export default function DayUseAdminForm() {
           <input
             type="number"
             min={1}
-            value={adults}
-            onChange={(e) => setAdults(Math.max(1, parseInt(e.target.value) || 1))}
+            value={adultsStr}
+            onChange={(e) => setAdultsStr(e.target.value)}
+            onBlur={() => setAdultsStr(String(Math.max(1, parseInt(adultsStr) || 1)))}
             disabled={saving}
             className={inputStyle}
             style={{ fontFamily: "var(--font-raleway)" }}
@@ -190,8 +191,9 @@ export default function DayUseAdminForm() {
           <input
             type="number"
             min={0}
-            value={kids}
-            onChange={(e) => setKids(Math.max(0, parseInt(e.target.value) || 0))}
+            value={kidsStr}
+            onChange={(e) => setKidsStr(e.target.value)}
+            onBlur={() => setKidsStr(String(Math.max(0, parseInt(kidsStr) || 0)))}
             disabled={saving}
             className={inputStyle}
             style={{ fontFamily: "var(--font-raleway)" }}
