@@ -85,8 +85,12 @@ export default async function BookingGuidePage() {
         <div className="space-y-2">
           <h3 className="text-xl font-medium">Day Use — Email Sent to Guest</h3>
           <p className="text-sm text-muted-foreground">
-            For Day Use bookings, the following information is included in or
-            alongside the confirmation email:
+            For Day Use bookings, this email is a{" "}
+            <strong>request acknowledgement only</strong> — it must{" "}
+            <strong>not</strong> imply the booking is confirmed. The guest is
+            pending staff screening. The email, the disclaimer block below, and
+            the success page must all align on "request received, pending
+            review."
           </p>
           <div className="rounded-lg border bg-muted/40 p-5 space-y-4 text-sm">
             <p className="font-semibold text-base">🌊 Fins Beach – Day Use</p>
@@ -235,10 +239,11 @@ export default async function BookingGuidePage() {
               Requesting social account
             </p>
             <p className="text-sm">
-              Hi [Guest Name], thank you for your booking request at Fins Beach
-              Club! Could you please share your Instagram or Facebook profile so
-              we can complete your reservation? Looking forward to welcoming
-              you!
+              Hi! We&apos;ve received your day-use request at Fins 🌊 As a
+              small community space, we like to get to know our guests before
+              confirming. Could you share your Instagram or a quick screenshot
+              of your profile? Once we&apos;ve had a look, we&apos;ll send over
+              your confirmation. Thanks! 🤍
             </p>
           </div>
 

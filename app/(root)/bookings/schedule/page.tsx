@@ -1,14 +1,13 @@
-import { getFutureKitesurfingBookings } from "@/lib/actions/booking.actions";
+import { getFutureKitesurfingBookings, type BookingWithAgent } from "@/lib/actions/booking.actions";
 import {
   getLessonSessionsByDate,
   getAllLessons,
 } from "@/lib/actions/lessons.actions";
-import { listInstructors } from "@/lib/actions/user.actions";
+import { listInstructors, listUsers } from "@/lib/actions/user.actions";
 import ScheduleBoard from "@/components/bookings/ScheduleBoard";
 import type { SessionWithBookings } from "@/components/bookings/ScheduleBoard";
 import BookingComponent from "@/components/kitesurfing/BookingComponent";
 import { format } from "date-fns";
-import type { Booking } from "@prisma/client";
 import { LessonsTable } from "@/components/lessons/LessonsTable";
 import type { SessionRow } from "@/components/lessons/LessonSessionEditSheet";
 import Link from "next/link";
@@ -19,12 +18,13 @@ export const revalidate = 0;
 export default async function SchedulePage() {
   const today = format(new Date(), "yyyy-MM-dd");
 
-  const [sessions, instructors, futureResult, allLessonSessions] =
+  const [sessions, instructors, futureResult, allLessonSessions, allUsers] =
     await Promise.all([
       getLessonSessionsByDate(today),
       listInstructors(),
       getFutureKitesurfingBookings(),
       getAllLessons(),
+      listUsers(),
     ]);
 
   const lessonRows: SessionRow[] = allLessonSessions.map((s) => ({
@@ -44,10 +44,10 @@ export default async function SchedulePage() {
 
   const futureBookings = (
     futureResult.success ? futureResult.data : []
-  ) as Booking[];
+  ) as BookingWithAgent[];
 
   // group by date label
-  const grouped = futureBookings.reduce<Record<string, Booking[]>>((acc, b) => {
+  const grouped = futureBookings.reduce<Record<string, BookingWithAgent[]>>((acc, b) => {
     const key = format(new Date(b.date), "yyyy-MM-dd");
     if (!acc[key]) acc[key] = [];
     acc[key].push(b);
@@ -110,7 +110,7 @@ export default async function SchedulePage() {
                 </h3>
                 <div className="space-y-2">
                   {grouped[dateKey].map((b) => (
-                    <BookingComponent key={b.id} booking={b} />
+                    <BookingComponent key={b.id} booking={b} allUsers={allUsers} />
                   ))}
                 </div>
               </div>

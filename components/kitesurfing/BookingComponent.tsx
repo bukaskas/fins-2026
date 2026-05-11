@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import type { Booking } from "@prisma/client";
 import { BookingStatus } from "@prisma/client";
 import { Users, Pencil, Phone, MoreHorizontal } from "lucide-react";
 import { toast } from "sonner";
@@ -11,8 +10,12 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import type { BookingWithAgent } from "@/lib/actions/booking.actions";
 import {
   Dialog,
   DialogContent,
@@ -20,7 +23,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { updateBookingStatus, updateBookingAmountPaid } from "@/lib/actions/booking.actions";
+import { updateBookingStatus, updateBookingAmountPaid, assignBookingAgent } from "@/lib/actions/booking.actions";
 
 function WhatsAppIcon({ className }: { className?: string }) {
   return (
@@ -74,7 +77,9 @@ function fmtEGP(cents: number): string {
   return `${(cents / 100).toLocaleString("en-EG")} EGP`;
 }
 
-function buildWaData(booking: Booking) {
+type UserStub = { id: string; name: string | null; email: string };
+
+function buildWaData(booking: BookingWithAgent) {
   const phone = booking.phone.replace(/\D/g, "");
   const name = booking.name;
 
@@ -102,10 +107,11 @@ function buildWaData(booking: Booking) {
   return { instagramText, depositText, plainWa: `https://wa.me/${phone}` };
 }
 
-function BookingComponent({ booking }: { booking: Booking }) {
+function BookingComponent({ booking, allUsers }: { booking: BookingWithAgent; allUsers: UserStub[] }) {
   const [status, setStatus]           = useState<BookingStatus>(booking.bookingStatus);
   const [isPending, setIsPending]     = useState(false);
   const [amountPaid, setAmountPaid]   = useState(booking.amountPaidCents);
+  const [agent, setAgent]             = useState<UserStub | null>(booking.agent);
   const [depositSaving, setDepositSaving]       = useState(false);
   const [dropdownOpen, setDropdownOpen]         = useState(false);
   const [depositDialogOpen, setDepositDialogOpen] = useState(false);
@@ -161,6 +167,16 @@ function BookingComponent({ booking }: { booking: Booking }) {
     if (!result.success) {
       setStatus(prev);
       toast.error("Failed to update status");
+    }
+  }
+
+  async function handleAssignAgent(user: UserStub | null) {
+    const prev = agent;
+    setAgent(user);
+    const result = await assignBookingAgent(booking.id, user?.id ?? null);
+    if (!result.success) {
+      setAgent(prev);
+      toast.error("Failed to assign agent");
     }
   }
 
@@ -265,6 +281,13 @@ function BookingComponent({ booking }: { booking: Booking }) {
               </DropdownMenuContent>
             </DropdownMenu>
 
+            {/* Agent chip */}
+            {agent && (
+              <span className="font-[family-name:var(--font-raleway)] text-[0.6rem] font-[500] text-[#b0a89f] text-right leading-tight truncate max-w-[100px]">
+                {agent.name ?? agent.email.split("@")[0]}
+              </span>
+            )}
+
             {/* Amount + action buttons row */}
             <div className="flex items-center gap-1.5">
               {/* Amount paid chip */}
@@ -335,6 +358,34 @@ function BookingComponent({ booking }: { booking: Booking }) {
                   >
                     Edit amount paid
                   </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuSub>
+                    <DropdownMenuSubTrigger>
+                      <span className="text-[0.72rem]">
+                        {agent ? `Agent: ${agent.name ?? agent.email.split("@")[0]}` : "Assign agent"}
+                      </span>
+                    </DropdownMenuSubTrigger>
+                    <DropdownMenuSubContent className="max-h-60 overflow-y-auto w-48">
+                      {agent && (
+                        <>
+                          <DropdownMenuItem onSelect={() => handleAssignAgent(null)}>
+                            <span className="text-[0.72rem] text-destructive">Remove agent</span>
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                        </>
+                      )}
+                      {allUsers.map((u) => (
+                        <DropdownMenuItem key={u.id} onSelect={() => handleAssignAgent(u)}>
+                          <span className="flex flex-col gap-0.5">
+                            <span className="text-[0.72rem]">{u.name ?? u.email}</span>
+                            {u.name && (
+                              <span className="text-[0.6rem] text-muted-foreground">{u.email}</span>
+                            )}
+                          </span>
+                        </DropdownMenuItem>
+                      ))}
+                    </DropdownMenuSubContent>
+                  </DropdownMenuSub>
                 </DropdownMenuContent>
               </DropdownMenu>
 

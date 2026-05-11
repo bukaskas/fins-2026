@@ -5,7 +5,11 @@ import { isRedirectError } from "next/dist/client/components/redirect-error";
 import { revalidatePath } from "next/cache";
 import { BookingFormData, bookingFormSchema, UpdateBookingData, updateBookingSchema } from "../validators";
 import { sendBookingEmail, sendStaffNotificationEmail } from "@/emails/index";
-import { BookingStatus, Role } from "@prisma/client";
+import { Booking, BookingStatus, Role } from "@prisma/client";
+
+export type BookingWithAgent = Booking & {
+  agent: { id: string; name: string | null; email: string } | null;
+};
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { addClosedDate } from "./closedDate.actions";
@@ -88,7 +92,9 @@ export async function createBooking(data: BookingFormData) {
 
 export async function getAllBookings() {
   try {
-    const bookings = await prisma.booking.findMany({})
+    const bookings = await prisma.booking.findMany({
+      include: { agent: { select: { id: true, name: true, email: true } } },
+    });
     return { success: true, data: bookings };
   } catch (error) {
     console.error('Error fetching bookings:', error);
@@ -101,6 +107,7 @@ export async function getBookingsByService(service: string) {
     const bookings = await prisma.booking.findMany({
       where: { service },
       orderBy: [{ date: 'asc' }],
+      include: { agent: { select: { id: true, name: true, email: true } } },
     });
     return { success: true, data: bookings };
   } catch (error) {
@@ -165,6 +172,7 @@ export async function getBookingsByDate(date: string, statuses?: BookingStatus[]
         ...(statuses && statuses.length > 0 ? { bookingStatus: { in: statuses } } : {}),
       },
       orderBy: [{ time: 'asc' }, { createdAt: 'asc' }],
+      include: { agent: { select: { id: true, name: true, email: true } } },
     });
 
     return { success: true, data: bookings };
@@ -208,7 +216,10 @@ export async function updateBooking(id: string, data: UpdateBookingData) {
 
 export async function getBookingById(id: string) {
   try {
-    const booking = await prisma.booking.findUnique({ where: { id } });
+    const booking = await prisma.booking.findUnique({
+      where: { id },
+      include: { agent: { select: { id: true, name: true, email: true } } },
+    });
     return booking;
   } catch (e) {
     console.error("Error fetching booking by id", e);
@@ -218,7 +229,16 @@ export async function getBookingById(id: string) {
 
 export async function updateBookingStatus(id: string, status: BookingStatus) {
   try {
-    const booking = await prisma.booking.update({ where: { id }, data: { bookingStatus: status } });
+    const session = await getServerSession(authOptions);
+    const userId = (session?.user as any)?.id as string | undefined;
+
+    const booking = await prisma.booking.update({
+      where: { id },
+      data: {
+        bookingStatus: status,
+        ...(userId ? { agentId: userId } : {}),
+      },
+    });
     revalidatePath('/bookings', 'layout');
 
     // Auto-close the date if confirmed people reach the 80-person limit
@@ -263,6 +283,7 @@ export async function getFutureKitesurfingBookings() {
         date: { gte: today },
       },
       orderBy: [{ date: 'asc' }, { time: 'asc' }],
+      include: { agent: { select: { id: true, name: true, email: true } } },
     });
 
     return { success: true, data: bookings };
@@ -280,6 +301,7 @@ export async function getBookingsByDateRange(from: string, to: string) {
     const bookings = await prisma.booking.findMany({
       where: { date: { gte: start, lte: end } },
       orderBy: [{ date: 'asc' }, { time: 'asc' }],
+      include: { agent: { select: { id: true, name: true, email: true } } },
     });
 
     return { success: true, data: bookings };
@@ -348,6 +370,20 @@ export async function getFutureBookingPeopleTotalsByDate() {
   } catch (error) {
     console.error('Error fetching future booking totals:', error);
     return { success: false, message: `Failed to fetch booking totals. Error: ${error instanceof Error ? error.message : String(error)}` };
+  }
+}
+
+export async function assignBookingAgent(bookingId: string, agentId: string | null) {
+  try {
+    await prisma.booking.update({
+      where: { id: bookingId },
+      data: { agentId },
+    });
+    revalidatePath('/bookings', 'layout');
+    return { success: true };
+  } catch (error) {
+    console.error('Agent assignment error:', error);
+    return { success: false, message: `Failed to assign agent. Error: ${error instanceof Error ? error.message : String(error)}` };
   }
 }
 

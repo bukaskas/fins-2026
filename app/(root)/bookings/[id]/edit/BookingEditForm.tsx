@@ -2,12 +2,11 @@
 
 import React from "react";
 import { useRouter } from "next/navigation";
-import type { Booking } from "@prisma/client";
 import { useForm } from "@tanstack/react-form";
 import { toast } from "sonner";
 import Image from "next/image";
 import { UpdateBookingData, updateBookingSchema } from "@/lib/validators";
-import { updateBooking, deleteBooking } from "@/lib/actions/booking.actions";
+import { updateBooking, deleteBooking, assignBookingAgent, type BookingWithAgent } from "@/lib/actions/booking.actions";
 import kitePhoto from "@/public/images/kitesurfing/kite_booking_form_descktop.webp";
 import {
   Card,
@@ -43,12 +42,14 @@ function isKitesurfingService(service: string | null | undefined) {
 }
 
 type Props = {
-  booking: Booking;
+  booking: BookingWithAgent;
   instructors: { id: string; name: string | null }[];
+  allUsers: { id: string; name: string | null; email: string }[];
 };
 
-function BookingEditForm({ booking, instructors }: Props) {
+function BookingEditForm({ booking, instructors, allUsers }: Props) {
   const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const [selectedAgentId, setSelectedAgentId] = React.useState<string>(booking.agentId ?? "");
   const [open, setOpen] = React.useState(false);
   const [peopleInput, setPeopleInput] = React.useState(String(booking.numberOfPeople ?? 1));
   const [kidsInput, setKidsInput] = React.useState(String(booking.numberOfKids ?? 0));
@@ -82,11 +83,15 @@ function BookingEditForm({ booking, instructors }: Props) {
       }
       setIsSubmitting(true);
       try {
-        const result = await updateBooking(booking.id, {
-          ...value,
-          instructor: isKitesurfingService(value.service) ? (value.instructor ?? null) : null,
-          time: value.time ?? null,
-        });
+        const agentId = selectedAgentId || null;
+        const [result] = await Promise.all([
+          updateBooking(booking.id, {
+            ...value,
+            instructor: isKitesurfingService(value.service) ? (value.instructor ?? null) : null,
+            time: value.time ?? null,
+          }),
+          assignBookingAgent(booking.id, agentId),
+        ]);
         if (result?.success && result.bookingId && result.date) {
           toast.success("Booking updated");
           router.back();
@@ -413,6 +418,28 @@ function BookingEditForm({ booking, instructors }: Props) {
                   ) : null;
                 }}
               />
+              <Field>
+                <FieldLabel>Agent</FieldLabel>
+                <Select
+                  value={selectedAgentId}
+                  onValueChange={setSelectedAgentId}
+                  disabled={isSubmitting}
+                >
+                  <SelectTrigger className="w-full rounded-full">
+                    <SelectValue placeholder="Unassigned" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectGroup>
+                      <SelectItem value="">Unassigned</SelectItem>
+                      {allUsers.map((u) => (
+                        <SelectItem key={u.id} value={u.id}>
+                          {u.name ?? u.email}
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
+                  </SelectContent>
+                </Select>
+              </Field>
             </FieldGroup>
           </form>
         </CardContent>

@@ -1,8 +1,8 @@
-import { getAllBookings } from "@/lib/actions/booking.actions";
+import { getAllBookings, type BookingWithAgent } from "@/lib/actions/booking.actions";
+import { listUsers } from "@/lib/actions/user.actions";
 import BookingComponent from "@/components/kitesurfing/BookingComponent";
 import { BookingsFilters } from "@/components/bookings/BookingsFilters";
 import { Button } from "@/components/ui/button";
-import type { Booking } from "@prisma/client";
 import { BookingStatus } from "@prisma/client";
 import { format, addDays } from "date-fns";
 import Link from "next/link";
@@ -34,12 +34,15 @@ async function BookingsPage({
   const { status, q, service, range = "upcoming", group = "date" } =
     await searchParams;
 
-  const bookingsResult = await getAllBookings();
+  const [bookingsResult, allUsers] = await Promise.all([
+    getAllBookings(),
+    listUsers(),
+  ]);
   if (!bookingsResult.success) {
     return <div>Error: {bookingsResult.message}</div>;
   }
 
-  const allBookings = bookingsResult.data as Booking[];
+  const allBookings = bookingsResult.data as BookingWithAgent[];
 
   // ── Stats (computed from ALL bookings, before filters) ──────────────────
   const todayStr    = dateKey(new Date());
@@ -99,8 +102,8 @@ async function BookingsPage({
   });
 
   // ── Group ───────────────────────────────────────────────────────────────
-  type DateGroup   = Record<string, Booking[]>;
-  type ServiceGroup = Record<string, Record<string, Booking[]>>;
+  type DateGroup   = Record<string, BookingWithAgent[]>;
+  type ServiceGroup = Record<string, Record<string, BookingWithAgent[]>>;
 
   let byDate: DateGroup = {};
   let byService: ServiceGroup = {};
@@ -203,7 +206,7 @@ async function BookingsPage({
                   {instructor}
                 </h4>
                 <div className="space-y-1.5">
-                  {rows.map((b) => <BookingComponent key={b.id} booking={b} />)}
+                  {rows.map((b) => <BookingComponent key={b.id} booking={b} allUsers={allUsers} />)}
                 </div>
               </div>
             ))}
@@ -235,7 +238,7 @@ async function BookingsPage({
                 </Link>
               </div>
               <div className="space-y-1.5">
-                {rows.map((b) => <BookingComponent key={b.id} booking={b} />)}
+                {rows.map((b) => <BookingComponent key={b.id} booking={b} allUsers={allUsers} />)}
               </div>
             </div>
           );

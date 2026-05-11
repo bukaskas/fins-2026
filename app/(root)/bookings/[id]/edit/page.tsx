@@ -1,7 +1,6 @@
 import BookingEditForm from "./BookingEditForm";
-import { getBookingById } from "@/lib/actions/booking.actions";
-import { listInstructors } from "@/lib/actions/user.actions";
-import { Booking } from "@prisma/client";
+import { getBookingById, type BookingWithAgent } from "@/lib/actions/booking.actions";
+import { listInstructors, listUsers } from "@/lib/actions/user.actions";
 
 async function BookingEditPage({
   params,
@@ -13,12 +12,13 @@ async function BookingEditPage({
   if (!bookingId || typeof bookingId !== "string") {
     return <div>Invalid booking ID.</div>;
   }
-  const [booking, instructors] = await Promise.all([
+  const [booking, instructors, allUsers] = await Promise.all([
     getBookingById(bookingId),
     listInstructors(),
+    listUsers(),
   ]);
 
-  return <BookingEditForm booking={booking as Booking} instructors={instructors} />;
+  return <BookingEditForm booking={booking as BookingWithAgent} instructors={instructors} allUsers={allUsers} />;
 }
 
 export default BookingEditPage;

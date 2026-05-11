@@ -1,20 +1,23 @@
-import { getBookingsByService } from "@/lib/actions/booking.actions";
+import { getBookingsByService, type BookingWithAgent } from "@/lib/actions/booking.actions";
+import { listUsers } from "@/lib/actions/user.actions";
 import BookingComponent from "@/components/kitesurfing/BookingComponent";
 import { Button } from "@/components/ui/button";
-import type { Booking } from "@prisma/client";
 import Link from "next/link";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 async function RestaurantBookingsPage() {
-  const result = await getBookingsByService("restaurant");
+  const [result, allUsers] = await Promise.all([
+    getBookingsByService("restaurant"),
+    listUsers(),
+  ]);
 
   if (!result.success) {
     return <div>Error: {result.message}</div>;
   }
 
-  const bookings = result.data as Booking[];
+  const bookings = result.data as BookingWithAgent[];
 
   const sorted = [...bookings].sort((a, b) => {
     const diff = new Date(a.date).getTime() - new Date(b.date).getTime();
@@ -44,7 +47,7 @@ async function RestaurantBookingsPage() {
       ) : (
         <div className="space-y-2">
           {sorted.map((booking) => (
-            <BookingComponent key={booking.id} booking={booking} />
+            <BookingComponent key={booking.id} booking={booking} allUsers={allUsers} />
           ))}
         </div>
       )}

@@ -1,9 +1,11 @@
-import { getBookingsByDate } from "@/lib/actions/booking.actions";
+import { getBookingsByDate, type BookingWithAgent } from "@/lib/actions/booking.actions";
+import { listUsers } from "@/lib/actions/user.actions";
 import BookingComponent from "@/components/kitesurfing/BookingComponent";
-import { BookingStatus, type Booking } from "@prisma/client";
+import { BookingStatus } from "@prisma/client";
 import { format } from "date-fns";
 import Link from "next/link";
 import { SearchInput } from "./SearchInput";
+import { CopySummaryButton } from "./CopySummaryButton";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -65,22 +67,23 @@ async function BookingsByDatePage({
   const activeFilter =
     STATUS_FILTERS.find((f) => f.value === status) ?? STATUS_FILTERS[0];
 
-  const [filteredResult, allResult] = await Promise.all([
+  const [filteredResult, allResult, allUsers] = await Promise.all([
     getBookingsByDate(
       date,
       activeFilter.statuses.length > 0 ? activeFilter.statuses : undefined,
     ),
     getBookingsByDate(date),
+    listUsers(),
   ]);
 
   if (!filteredResult.success) {
     return <div>Error: {filteredResult.message}</div>;
   }
 
-  const allBookings = allResult.success ? (allResult.data as Booking[]) : [];
+  const allBookings = allResult.success ? (allResult.data as BookingWithAgent[]) : [];
 
   const query = q.trim().toLowerCase();
-  const rawBookings = filteredResult.data as Booking[];
+  const rawBookings = filteredResult.data as BookingWithAgent[];
   const bookings = query
     ? rawBookings.filter(
         (b) =>
@@ -89,6 +92,19 @@ async function BookingsByDatePage({
           b.phone?.toLowerCase().includes(query),
       )
     : rawBookings;
+
+  const confirmedBookings = allBookings.filter(
+    (b) => b.bookingStatus === BookingStatus.CONFIRMED || b.bookingStatus === BookingStatus.ARRIVED,
+  );
+  const confirmedAdults  = confirmedBookings.reduce((s, b) => s + b.numberOfPeople, 0);
+  const confirmedKids    = confirmedBookings.reduce((s, b) => s + (b.numberOfKids ?? 0), 0);
+  const confirmedDepositEGP = confirmedBookings.reduce((s, b) => s + b.amountPaidCents, 0) / 100;
+  const summaryText = [
+    `Confirmed bookings – ${format(new Date(date), "d MMMM yyyy")}`,
+    `Adults: ${confirmedAdults}`,
+    `Kids: ${confirmedKids}`,
+    `Total deposit paid: ${confirmedDepositEGP.toLocaleString("en-EG")} EGP`,
+  ].join("\n");
 
   const peopleByStatus = {
     confirmed:      allBookings.filter((b) => b.bookingStatus === BookingStatus.CONFIRMED || b.bookingStatus === BookingStatus.ARRIVED).reduce((s, b) => s + b.numberOfPeople, 0),
@@ -105,7 +121,7 @@ async function BookingsByDatePage({
       acc[service].push(booking);
       return acc;
     },
-    {} as Record<string, Booking[]>,
+    {} as Record<string, BookingWithAgent[]>,
   );
 
   // People count per status filter tab, derived from all bookings
@@ -158,12 +174,15 @@ async function BookingsByDatePage({
               </div>
             </div>
 
-            <Link
-              href="/day-use/booking"
-              className="inline-flex items-center gap-2 bg-[#1a1614] text-white text-[0.72rem] font-[700] tracking-[0.14em] uppercase px-5 py-2.5 font-[family-name:var(--font-raleway)] hover:bg-[#2a2420] transition-colors duration-200 shrink-0"
-            >
-              + New Booking
-            </Link>
+            <div className="flex items-center gap-2 shrink-0">
+              <CopySummaryButton text={summaryText} />
+              <Link
+                href="/day-use/booking"
+                className="inline-flex items-center gap-2 bg-[#1a1614] text-white text-[0.72rem] font-[700] tracking-[0.14em] uppercase px-5 py-2.5 font-[family-name:var(--font-raleway)] hover:bg-[#2a2420] transition-colors duration-200"
+              >
+                + New Booking
+              </Link>
+            </div>
           </div>
 
           {/* ── Filter tabs ── */}
@@ -222,7 +241,7 @@ async function BookingsByDatePage({
                     acc[instructor].push(b);
                     return acc;
                   },
-                  {} as Record<string, Booking[]>,
+                  {} as Record<string, BookingWithAgent[]>,
                 );
 
                 return (
@@ -240,7 +259,7 @@ async function BookingsByDatePage({
                           </p>
                           <div className="space-y-2">
                             {list.map((b) => (
-                              <BookingComponent key={b.id} booking={b} />
+                              <BookingComponent key={b.id} booking={b} allUsers={allUsers} />
                             ))}
                           </div>
                         </div>
@@ -259,7 +278,7 @@ async function BookingsByDatePage({
                   />
                   <div className="space-y-2">
                     {serviceBookings.map((b) => (
-                      <BookingComponent key={b.id} booking={b} />
+                      <BookingComponent key={b.id} booking={b} allUsers={allUsers} />
                     ))}
                   </div>
                 </section>

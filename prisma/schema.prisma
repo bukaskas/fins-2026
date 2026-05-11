@@ -117,6 +117,8 @@ model Booking {
   time            String?
   bookingStatus   BookingStatus @default(PENDING)
   amountPaidCents Int           @default(0)
+  agentId         String?       @db.Uuid
+  agent           User?         @relation("BookingAgent", fields: [agentId], references: [id], onDelete: SetNull)
 }
 
 model ClosedDate {
@@ -164,6 +166,7 @@ model User {
   wallets                    UserWallet[]
   walletLedgerOwned          WalletLedger[]      @relation("WalletOwner")
   walletLedgerActor          WalletLedger[]      @relation("WalletActor")
+  assignedBookings           Booking[]           @relation("BookingAgent")
 }
 
 model Account {

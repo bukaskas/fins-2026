@@ -1,20 +1,23 @@
-import { getBookingsByService } from "@/lib/actions/booking.actions";
+import { getBookingsByService, type BookingWithAgent } from "@/lib/actions/booking.actions";
+import { listUsers } from "@/lib/actions/user.actions";
 import BookingComponent from "@/components/kitesurfing/BookingComponent";
 import { Button } from "@/components/ui/button";
-import type { Booking } from "@prisma/client";
 import Link from "next/link";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 async function KitesurfingBookingsPage() {
-  const result = await getBookingsByService("kitesurfing-course");
+  const [result, allUsers] = await Promise.all([
+    getBookingsByService("kitesurfing-course"),
+    listUsers(),
+  ]);
 
   if (!result.success) {
     return <div>Error: {result.message}</div>;
   }
 
-  const bookings = result.data as Booking[];
+  const bookings = result.data as BookingWithAgent[];
 
   const groupedByInstructor = bookings.reduce(
     (acc, booking) => {
@@ -23,7 +26,7 @@ async function KitesurfingBookingsPage() {
       acc[instructor].push(booking);
       return acc;
     },
-    {} as Record<string, Booking[]>,
+    {} as Record<string, BookingWithAgent[]>,
   );
 
   return (
@@ -58,7 +61,7 @@ async function KitesurfingBookingsPage() {
               <h3 className="text-xl font-semibold mb-3">{instructor}</h3>
               <div className="space-y-2">
                 {sorted.map((booking) => (
-                  <BookingComponent key={booking.id} booking={booking} />
+                  <BookingComponent key={booking.id} booking={booking} allUsers={allUsers} />
                 ))}
               </div>
             </div>
