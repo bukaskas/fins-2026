@@ -177,7 +177,7 @@ async function BookingsByDatePage({
             <div className="flex items-center gap-2 shrink-0">
               <CopySummaryButton text={summaryText} />
               <Link
-                href="/day-use/booking"
+                href="/bookings/day-use/new"
                 className="inline-flex items-center gap-2 bg-[#1a1614] text-white text-[0.72rem] font-[700] tracking-[0.14em] uppercase px-5 py-2.5 font-[family-name:var(--font-raleway)] hover:bg-[#2a2420] transition-colors duration-200"
               >
                 + New Booking
