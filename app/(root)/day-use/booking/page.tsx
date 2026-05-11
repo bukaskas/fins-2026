@@ -35,35 +35,47 @@ import { PhoneInput } from "@/app/(root)/kitesurfing/booking/phoneInput";
 import {
   calculateDayUsePrice,
   formatEGP,
-  getDateRate,
-  RateType,
 } from "@/lib/pricing";
 import { Checkbox } from "@/components/ui/checkbox";
 
-const RATE_LABELS: Record<RateType, { label: string; className: string }> = {
-  standard: {
-    label: "Standard rate",
-    className: "bg-blue-100 text-blue-800",
-  },
-  holiday: {
-    label: "Holiday rate (+25%)",
-    className: "bg-amber-100 text-amber-800",
-  },
-  discounted: {
-    label: "Discounted rate (−25%)",
-    className: "bg-green-100 text-green-800",
-  },
+const RATE_META = {
+  standard:   { label: "Standard",   dot: "#3b82f6", bg: "#eff6ff", color: "#1d4ed8" },
+  holiday:    { label: "Holiday",    dot: "#f59e0b", bg: "#fffbeb", color: "#b45309" },
+  discounted: { label: "Discounted", dot: "#22c55e", bg: "#f0fdf4", color: "#15803d" },
 };
 
-function RateBadge({ date }: { date: Date }) {
-  const rate = getDateRate(date);
-  const { label, className } = RATE_LABELS[rate];
+function RateDisplay({ date }: { date: Date }) {
+  const breakdown = calculateDayUsePrice(date, 1, 1);
+  const meta = RATE_META[breakdown.rateType];
   return (
-    <span
-      className={`inline-block mt-2 px-3 py-1 rounded-full text-xs font-medium ${className}`}
-    >
-      {label}
-    </span>
+    <div className="mt-3 rounded-xl border border-[#ece8e3] overflow-hidden">
+      <div className="flex items-center gap-2 px-4 py-2.5" style={{ background: meta.bg }}>
+        <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: meta.dot }} />
+        <span
+          className="font-[family-name:var(--font-raleway)] text-[0.63rem] tracking-[0.16em] uppercase font-[700]"
+          style={{ color: meta.color }}
+        >
+          {meta.label} rate
+        </span>
+      </div>
+      <div className="divide-y divide-[#f5f2ef] bg-white">
+        <div className="flex items-center justify-between px-4 py-2.5">
+          <span className="text-[0.82rem] text-[#6b6460]">Adult</span>
+          <span className="font-[family-name:var(--font-raleway)] text-[0.85rem] font-[700] text-[#1a1614] tabular-nums">
+            {formatEGP(breakdown.adultUnitCents)}
+          </span>
+        </div>
+        <div className="flex items-center justify-between px-4 py-2.5">
+          <span className="text-[0.82rem] text-[#6b6460]">
+            Kids{" "}
+            <span className="text-[0.72rem] text-[#a09890]">(5–8 yrs)</span>
+          </span>
+          <span className="font-[family-name:var(--font-raleway)] text-[0.85rem] font-[700] text-[#1a1614] tabular-nums">
+            {formatEGP(breakdown.kidsUnitCents)}
+          </span>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -275,7 +287,7 @@ function DayUseBookingForm() {
                           </PopoverContent>
                         </Popover>
                         {field.state.value && (
-                          <RateBadge date={field.state.value} />
+                          <RateDisplay date={field.state.value} />
                         )}
                         {isInvalid && (
                           <FieldError errors={field.state.meta.errors} />
