@@ -30,7 +30,10 @@ export type BookingFormData = z.infer<typeof bookingFormSchema>;
 export const updateBookingSchema = z.object({
   name:             z.string().min(2, "Name must be at least 2 characters long"),
   date:             z.date(),
-  email:            z.string().email("Invalid email address"),
+  email:            z.preprocess(
+    (v) => (v === "" || v == null) ? null : v,
+    z.string().email("Invalid email address").nullable()
+  ),
   phone:            z.string().min(7, "Phone number must be at least 7 digits long"),
   service:          z.string().min(1, "Service is required"),
   numberOfPeople:   z.number().int().min(1, "At least 1 person required"),

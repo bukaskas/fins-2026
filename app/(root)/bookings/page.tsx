@@ -74,7 +74,7 @@ async function BookingsPage({
       (b) =>
         b.name.toLowerCase().includes(lower) ||
         b.phone.includes(q) ||
-        b.email.toLowerCase().includes(lower),
+        (b.email ?? "").toLowerCase().includes(lower),
     );
   }
 

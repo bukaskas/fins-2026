@@ -129,7 +129,7 @@ function BookingEditForm({ booking, instructors, allUsers }: Props) {
               <form.Field
                 name="name"
                 children={(field) => {
-                  const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid;
+                  const isInvalid = field.state.meta.errors.length > 0;
                   return (
                     <Field data-invalid={isInvalid}>
                       <FieldLabel htmlFor={field.name}>Full Name</FieldLabel>
@@ -153,14 +153,14 @@ function BookingEditForm({ booking, instructors, allUsers }: Props) {
               <form.Field
                 name="email"
                 children={(field) => {
-                  const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid;
+                  const isInvalid = field.state.meta.errors.length > 0;
                   return (
                     <Field data-invalid={isInvalid}>
                       <FieldLabel htmlFor={field.name}>Email</FieldLabel>
                       <Input
                         id={field.name}
                         type="email"
-                        value={field.state.value}
+                        value={field.state.value ?? ""}
                         onBlur={field.handleBlur}
                         onChange={(e) => field.handleChange(e.target.value)}
                         aria-invalid={isInvalid}
@@ -176,7 +176,7 @@ function BookingEditForm({ booking, instructors, allUsers }: Props) {
               <form.Field
                 name="phone"
                 children={(field) => {
-                  const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid;
+                  const isInvalid = field.state.meta.errors.length > 0;
                   return (
                     <Field data-invalid={isInvalid}>
                       <FieldLabel htmlFor={field.name}>Phone</FieldLabel>
@@ -199,7 +199,7 @@ function BookingEditForm({ booking, instructors, allUsers }: Props) {
               <form.Field
                 name="numberOfPeople"
                 children={(field) => {
-                  const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid;
+                  const isInvalid = field.state.meta.errors.length > 0;
                   return (
                     <Field data-invalid={isInvalid}>
                       <FieldLabel htmlFor={field.name}>Adults</FieldLabel>
@@ -234,7 +234,7 @@ function BookingEditForm({ booking, instructors, allUsers }: Props) {
               <form.Field
                 name="numberOfKids"
                 children={(field) => {
-                  const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid;
+                  const isInvalid = field.state.meta.errors.length > 0;
                   return (
                     <Field data-invalid={isInvalid}>
                       <FieldLabel htmlFor={field.name}>Kids (ages 5–8)</FieldLabel>
@@ -269,7 +269,7 @@ function BookingEditForm({ booking, instructors, allUsers }: Props) {
               <form.Field
                 name="amountPaidCents"
                 children={(field) => {
-                  const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid;
+                  const isInvalid = field.state.meta.errors.length > 0;
                   return (
                     <Field data-invalid={isInvalid}>
                       <FieldLabel htmlFor={field.name}>Amount Paid (EGP)</FieldLabel>
@@ -304,7 +304,7 @@ function BookingEditForm({ booking, instructors, allUsers }: Props) {
               <form.Field
                 name="date"
                 children={(field) => {
-                  const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid;
+                  const isInvalid = field.state.meta.errors.length > 0;
                   return (
                     <Field data-invalid={isInvalid}>
                       <FieldLabel htmlFor={field.name}>Date</FieldLabel>
@@ -346,7 +346,7 @@ function BookingEditForm({ booking, instructors, allUsers }: Props) {
               <form.Field
                 name="service"
                 children={(field) => {
-                  const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid;
+                  const isInvalid = field.state.meta.errors.length > 0;
                   return (
                     <Field data-invalid={isInvalid}>
                       <FieldLabel htmlFor={field.name}>Service</FieldLabel>
@@ -371,7 +371,7 @@ function BookingEditForm({ booking, instructors, allUsers }: Props) {
               <form.Field
                 name="time"
                 children={(field) => {
-                  const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid;
+                  const isInvalid = field.state.meta.errors.length > 0;
                   return (
                     <Field data-invalid={isInvalid}>
                       <FieldLabel htmlFor={field.name}>Arrival Time</FieldLabel>
@@ -395,7 +395,7 @@ function BookingEditForm({ booking, instructors, allUsers }: Props) {
               <form.Field
                 name="instructor"
                 children={(field) => {
-                  const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid;
+                  const isInvalid = field.state.meta.errors.length > 0;
                   return isKitesurfingService(form.getFieldValue("service")) ? (
                     <Field data-invalid={isInvalid}>
                       <FieldLabel htmlFor={field.name}>Instructor</FieldLabel>

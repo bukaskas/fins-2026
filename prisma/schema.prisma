@@ -106,7 +106,7 @@ model Booking {
   id              String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   name            String
   date            DateTime
-  email           String
+  email           String?
   phone           String
   service         String
   numberOfPeople  Int           @default(1)
