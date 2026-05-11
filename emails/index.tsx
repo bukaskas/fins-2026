@@ -33,6 +33,7 @@ export async function sendBookingEmail(
       <BookingEmail
         username={name}
         date={date.toDateString()}
+        bookingDateISO={date.toISOString()}
         bookingType={bookingType}
         numberOfPeople={numberOfPeople}
         numberOfKids={numberOfKids}

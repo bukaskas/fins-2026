@@ -11,10 +11,12 @@ import {
   Tailwind,
   Text,
 } from "@react-email/components";
+import { calculateDayUsePrice } from "@/lib/pricing";
 
 interface BookingEmailProps {
   username?: string;
   date?: string;
+  bookingDateISO?: string;
   bookingType?: string;
   numberOfPeople?: number;
   numberOfKids?: number;
@@ -53,19 +55,23 @@ interface DayUseDetailsProps {
   numberOfPeople?: number;
   numberOfKids?: number;
   totalPriceCents?: number;
+  bookingDateISO?: string;
 }
 
-const DayUseDetails = ({ numberOfPeople, numberOfKids, totalPriceCents }: DayUseDetailsProps) => {
+const DayUseDetails = ({ numberOfPeople, numberOfKids, totalPriceCents, bookingDateISO }: DayUseDetailsProps) => {
   const hasBreakdown =
     totalPriceCents != null &&
     numberOfPeople != null &&
     numberOfPeople > 0;
 
-  const adultPrice = 120000;
-  const kidsPrice = 60000;
   const adults = numberOfPeople ?? 0;
   const kids = numberOfKids ?? 0;
   const total = totalPriceCents ?? 0;
+
+  const bookingDate = bookingDateISO ? new Date(bookingDateISO) : new Date();
+  const breakdown = calculateDayUsePrice(bookingDate, adults, kids);
+  const adultPrice = breakdown.adultUnitCents;
+  const kidsPrice  = breakdown.kidsUnitCents;
 
   const fmt = (cents: number) => `${(cents / 100).toLocaleString("en-EG")} EGP`;
 
@@ -123,7 +129,7 @@ const DayUseDetails = ({ numberOfPeople, numberOfKids, totalPriceCents }: DayUse
   );
 };
 
-const BookingEmail = ({ username, date, bookingType, numberOfPeople, numberOfKids, totalPriceCents }: BookingEmailProps) => {
+const BookingEmail = ({ username, date, bookingDateISO, bookingType, numberOfPeople, numberOfKids, totalPriceCents }: BookingEmailProps) => {
   const content =
     (bookingType ? serviceContent[bookingType] : null) ?? defaultContent;
   const body = content.body.replace("{date}", date ?? "your scheduled date");
@@ -146,6 +152,7 @@ const BookingEmail = ({ username, date, bookingType, numberOfPeople, numberOfKid
                 numberOfPeople={numberOfPeople}
                 numberOfKids={numberOfKids}
                 totalPriceCents={totalPriceCents}
+                bookingDateISO={bookingDateISO}
               />
             )}
             <Section className="text-center mt-[32px] mb-[32px]">
