@@ -10,23 +10,18 @@ import {
 import { Input } from "@/components/ui/input";
 import { useForm } from "@tanstack/react-form";
 import { Button } from "@/components/ui/button";
-import airstylePhoto from "@/public/images/kitesurfing/airstyle-form.webp";
 import {
   Card,
   CardContent,
-  CardDescription,
   CardFooter,
-  CardHeader,
-  CardTitle,
 } from "@/components/ui/card";
 import { toast } from "sonner";
 import { createBooking } from "@/lib/actions/booking.actions";
-import Image from "next/image";
 import { BookingFormData, bookingFormSchema } from "@/lib/validators";
 import { PhoneInput } from "../phoneInput";
 import { formatEGP } from "@/lib/pricing";
 
-const PHARAOH_DATE = new Date("2026-05-15");
+const PHARAOH_DATE = new Date("2026-12-31"); // TBC — postponed due to weather
 const PHARAOH_ADULT_PRICE_CENTS = 120000; // 1,200 EGP
 const PHARAOH_KIDS_PRICE_CENTS = 60000;   // 600 EGP
 
@@ -36,6 +31,21 @@ const EVENT_HIGHLIGHTS = [
   "🧘 Yoga Activities",
   "🎈 Kids Activities",
 ];
+
+function PostponedBanner() {
+  return (
+    <div className="mx-4 mt-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 flex gap-3 items-start">
+      <span className="text-amber-500 text-lg mt-0.5">☁️</span>
+      <div>
+        <p className="text-sm font-semibold text-amber-800">Event Postponed</p>
+        <p className="text-xs text-amber-700 mt-0.5">
+          Due to unfavourable weather conditions, the Pharaoh Airstyle event has been
+          postponed. A new date will be announced soon.
+        </p>
+      </div>
+    </div>
+  );
+}
 
 function PriceBreakdown({ adults, kids }: { adults: number; kids: number }) {
   const adultTotal = adults * PHARAOH_ADULT_PRICE_CENTS;
@@ -125,42 +135,90 @@ function PharaohAirstyleBookingForm() {
     },
   });
 
-  const StepIndicator = () => (
-    <div className="flex items-center justify-center gap-2 mb-2">
-      {([1, 2] as const).map((s) => (
-        <div
-          key={s}
-          className={`h-2 w-8 rounded-full transition-colors ${
-            s <= step ? "bg-primary" : "bg-muted"
-          }`}
-        />
-      ))}
-    </div>
-  );
-
   return (
     <div className="flex justify-center m-2">
       <Card className="w-full max-w-lg rounded-4xl overflow-hidden pt-0">
-        <div className="relative w-full h-150">
-          <Image src={airstylePhoto} alt="Pharaoh Airstyle Competition" fill />
-        </div>
-        <CardHeader>
-          <CardTitle>Pharaoh Airstyle — 15th of May</CardTitle>
-          <CardDescription>
-            {step === 1 ? "Select your tickets" : "Your contact details"}
-          </CardDescription>
-          <div className="flex flex-wrap gap-2 mt-2">
-            {EVENT_HIGHLIGHTS.map((h) => (
-              <span
-                key={h}
-                className="inline-block px-3 py-1 rounded-full text-xs font-medium bg-primary/10 text-primary"
-              >
-                {h}
-              </span>
+
+        {/* ── Pharaoh Header ───────────────────────────────────── */}
+        <div className="relative bg-[#0A1628] px-8 pt-10 pb-8 overflow-hidden">
+          {/* depth circles */}
+          <div className="absolute -top-16 -right-16 w-52 h-52 rounded-full bg-[#1E3A5F] opacity-30 pointer-events-none" />
+          <div className="absolute -bottom-10 -left-10 w-36 h-36 rounded-full bg-[#0D1F3C] opacity-50 pointer-events-none" />
+
+          {/* label row */}
+          <div className="relative flex items-center gap-3 mb-7">
+            <div className="w-5 h-px bg-[#7ECEC4] opacity-70" />
+            <p
+              className="text-[10px] tracking-[0.28em] uppercase text-[#7ECEC4] opacity-80"
+              style={{ fontFamily: '"DM Sans", system-ui, sans-serif', fontWeight: 300 }}
+            >
+              Kite Beach · Event Registration
+            </p>
+          </div>
+
+          {/* title */}
+          <div className="relative mb-7">
+            <h1
+              className="text-[52px] leading-[0.88] text-white"
+              style={{
+                fontFamily: '"Cormorant Garamond", "Palatino Linotype", Georgia, serif',
+                fontWeight: 300,
+                letterSpacing: "-0.02em",
+              }}
+            >
+              Pharaoh
+            </h1>
+            <h1
+              className="text-[52px] leading-[0.88] text-[#B8CDD8]"
+              style={{
+                fontFamily: '"Cormorant Garamond", "Palatino Linotype", Georgia, serif',
+                fontWeight: 300,
+                fontStyle: "italic",
+                letterSpacing: "-0.02em",
+              }}
+            >
+              Airstyle
+            </h1>
+          </div>
+
+          {/* sea-foam divider */}
+          <div className="relative w-10 h-px bg-[#7ECEC4] opacity-50 mb-4" />
+
+          {/* step context */}
+          <p
+            className="relative text-[13px] text-[#8FA3BC]"
+            style={{ fontFamily: '"DM Sans", system-ui, sans-serif', fontWeight: 300 }}
+          >
+            {step === 1 ? "Select your tickets" : "Enter your details"}
+          </p>
+
+          {/* step pill track */}
+          <div className="relative flex items-center gap-1.5 mt-5">
+            {([1, 2] as const).map((s) => (
+              <div
+                key={s}
+                className={`h-0.75 rounded-full transition-all duration-500 ${
+                  s <= step ? "bg-[#7ECEC4] w-8" : "bg-[#1E3A5F] w-2"
+                }`}
+              />
             ))}
           </div>
-          <StepIndicator />
-        </CardHeader>
+        </div>
+        {/* ─────────────────────────────────────────────────────── */}
+
+        <PostponedBanner />
+
+        {/* event chips */}
+        <div className="flex flex-wrap gap-2 px-6 pt-4">
+          {EVENT_HIGHLIGHTS.map((h) => (
+            <span
+              key={h}
+              className="inline-block px-3 py-1 rounded-full text-xs font-medium bg-primary/10 text-primary"
+            >
+              {h}
+            </span>
+          ))}
+        </div>
 
         <CardContent>
           <form

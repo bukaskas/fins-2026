@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
+import CreateSessionSheet from "./CreateSessionSheet";
 import { format, addMonths, subMonths, startOfMonth, endOfMonth } from "date-fns";
 import { prisma } from "@/db/prisma";
 import { getInstructorSessions } from "@/lib/actions/lessons.actions";
@@ -112,6 +113,9 @@ export default async function InstructorDetailPage({ params, searchParams }: Pro
         >
           Next →
         </Link>
+        <div className="ml-auto">
+          <CreateSessionSheet instructorId={instructor.id} instructorName={instructor.name} />
+        </div>
       </div>
 
       {/* Sessions table */}
