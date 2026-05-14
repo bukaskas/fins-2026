@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 type Student = {
   id: string;
@@ -12,9 +12,11 @@ type Student = {
 export default function StudentSearchField({
   students,
   initialStudentId,
+  onSelect,
 }: {
   students: Student[];
   initialStudentId?: string;
+  onSelect?: (studentId: string) => void;
 }) {
   const initial = students.find((s) => s.id === initialStudentId) ?? null;
   const [query, setQuery] = useState(
@@ -23,6 +25,12 @@ export default function StudentSearchField({
   const [selectedId, setSelectedId] = useState(initial?.id ?? "");
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  // Fire onSelect once for any initial selection so parent can fetch balance.
+  useEffect(() => {
+    if (initial && onSelect) onSelect(initial.id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -38,6 +46,7 @@ export default function StudentSearchField({
     setSelectedId(u.id);
     setQuery(`${u.name || "Unnamed"} · ${u.email}${u.phone ? ` · ${u.phone}` : ""}`);
     setOpen(false);
+    onSelect?.(u.id);
   }
 
   return (
@@ -61,7 +70,10 @@ export default function StudentSearchField({
         value={query}
         onChange={(e) => {
           setQuery(e.target.value);
-          setSelectedId("");
+          if (selectedId) {
+            setSelectedId("");
+            onSelect?.("");
+          }
           setOpen(true);
         }}
         onFocus={() => setOpen(true)}

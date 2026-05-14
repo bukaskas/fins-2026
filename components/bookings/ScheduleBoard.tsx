@@ -59,6 +59,7 @@ import {
 } from "@/lib/actions/lessons.actions";
 import { LessonType } from "@prisma/client";
 import { searchUser } from "@/lib/actions/user.actions";
+import { LESSON_TYPE_SKU } from "@/lib/lesson-products";
 import { toast } from "sonner";
 
 // ---------- types ----------
@@ -87,6 +88,13 @@ export type SessionWithBookings = {
   notes: string | null;
   instructor: { id: string; name: string | null; email: string } | null;
   bookings: SessionBooking[];
+};
+
+export type ServiceProduct = {
+  id: string;
+  sku: string;
+  name: string;
+  priceCents: number;
 };
 
 type Instructor = { id: string; name: string | null };
@@ -645,12 +653,28 @@ const LESSON_TYPES: { value: string; label: string }[] = [
 function CreateSessionSheet({
   defaultDate,
   instructors,
+  serviceProducts,
   onCreated,
 }: {
   defaultDate: Date;
   instructors: Instructor[];
+  serviceProducts: ServiceProduct[];
   onCreated: (session: SessionWithBookings) => void;
 }) {
+  const productBySku = useMemo(() => {
+    const m = new Map<string, ServiceProduct>();
+    serviceProducts.forEach((p) => m.set(p.sku, p));
+    return m;
+  }, [serviceProducts]);
+
+  const defaultProductIdFor = useCallback(
+    (lt: string) => {
+      const sku = LESSON_TYPE_SKU[lt as LessonType];
+      return sku ? (productBySku.get(sku)?.id ?? "") : "";
+    },
+    [productBySku],
+  );
+
   const [open, setOpen] = useState(false);
   const [calOpen, setCalOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -659,8 +683,14 @@ function CreateSessionSheet({
   const [durationHours, setDurationHours] = useState("1");
   const [durationMinutes, setDurationMinutes] = useState("0");
   const [lessonType, setLessonType] = useState("PRIVATE");
+  const [productId, setProductId] = useState<string>(() => defaultProductIdFor("PRIVATE"));
   const [instructorId, setInstructorId] = useState("");
   const [notes, setNotes] = useState("");
+
+  const handleLessonTypeChange = (value: string) => {
+    setLessonType(value);
+    setProductId(defaultProductIdFor(value));
+  };
 
   // student search
   const [studentQuery, setStudentQuery] = useState("");
@@ -716,6 +746,13 @@ function CreateSessionSheet({
     const startsAt = replaceTime(date, time);
     const endsAt = new Date(startsAt.getTime() + totalMinutes * 60 * 1000);
 
+    if (selectedStudent && !productId) {
+      toast.error(
+        "No product available for this lesson type — add it in /products or pick one manually.",
+      );
+      return;
+    }
+
     setSubmitting(true);
     try {
       const result = await createLessonSessionQuick({
@@ -725,6 +762,7 @@ function CreateSessionSheet({
         instructorId: instructorId || null,
         notes: notes || null,
         guestId: selectedStudent?.id ?? null,
+        productId: selectedStudent ? (productId || null) : null,
       });
 
       if (result.success && result.data) {
@@ -736,6 +774,7 @@ function CreateSessionSheet({
         setDurationHours("1");
         setDurationMinutes("0");
         setLessonType("PRIVATE");
+        setProductId(defaultProductIdFor("PRIVATE"));
         setInstructorId("");
         setNotes("");
         setStudentQuery("");
@@ -909,7 +948,7 @@ function CreateSessionSheet({
             <Label>Lesson Type</Label>
             <Select
               value={lessonType}
-              onValueChange={setLessonType}
+              onValueChange={handleLessonTypeChange}
               disabled={submitting}
             >
               <SelectTrigger className="w-full">
@@ -926,6 +965,37 @@ function CreateSessionSheet({
               </SelectContent>
             </Select>
           </div>
+
+          {/* Product (charge guest) */}
+          {selectedStudent && (
+            <div className="space-y-1">
+              <Label>Product (charge)</Label>
+              <Select
+                value={productId}
+                onValueChange={setProductId}
+                disabled={submitting}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select a product" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectGroup>
+                    {serviceProducts.map((p) => (
+                      <SelectItem key={p.id} value={p.id}>
+                        {p.name} — {(p.priceCents / 100).toLocaleString()} EGP
+                      </SelectItem>
+                    ))}
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
+              {!productId && (
+                <p className="text-xs text-amber-600">
+                  No matching product for this lesson type. Add it in{" "}
+                  <code>/products</code> or pick one manually.
+                </p>
+              )}
+            </div>
+          )}
 
           {/* Notes */}
           <div className="space-y-1">
@@ -953,10 +1023,12 @@ export default function ScheduleBoard({
   instructors,
   initialSessions,
   initialDate,
+  serviceProducts,
 }: {
   instructors: Instructor[];
   initialSessions: SessionWithBookings[];
   initialDate: string; // YYYY-MM-DD
+  serviceProducts: ServiceProduct[];
 }) {
   const [selectedDate, setSelectedDate] = useState<Date>(
     new Date(initialDate + "T00:00:00"),
@@ -1228,6 +1300,7 @@ export default function ScheduleBoard({
         <CreateSessionSheet
           defaultDate={selectedDate}
           instructors={instructors}
+          serviceProducts={serviceProducts}
           onCreated={handleSessionCreated}
         />
 

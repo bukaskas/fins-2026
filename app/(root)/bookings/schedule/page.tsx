@@ -4,8 +4,9 @@ import {
   getAllLessons,
 } from "@/lib/actions/lessons.actions";
 import { listInstructors, listAgents } from "@/lib/actions/user.actions";
+import { getAllProducts } from "@/lib/actions/product.actions";
 import ScheduleBoard from "@/components/bookings/ScheduleBoard";
-import type { SessionWithBookings } from "@/components/bookings/ScheduleBoard";
+import type { SessionWithBookings, ServiceProduct } from "@/components/bookings/ScheduleBoard";
 import BookingComponent from "@/components/kitesurfing/BookingComponent";
 import { format } from "date-fns";
 import { LessonsTable } from "@/components/lessons/LessonsTable";
@@ -18,14 +19,22 @@ export const revalidate = 0;
 export default async function SchedulePage() {
   const today = format(new Date(), "yyyy-MM-dd");
 
-  const [sessions, instructors, futureResult, allLessonSessions, allUsers] =
+  const [sessions, instructors, futureResult, allLessonSessions, allUsers, productsRaw] =
     await Promise.all([
       getLessonSessionsByDate(today),
       listInstructors(),
       getFutureKitesurfingBookings(),
       getAllLessons(),
       listAgents(),
+      getAllProducts({ type: "SERVICE", isActive: true }),
     ]);
+
+  const serviceProducts: ServiceProduct[] = productsRaw.map((p) => ({
+    id: p.id,
+    sku: p.sku,
+    name: p.name,
+    priceCents: p.priceCents,
+  }));
 
   const lessonRows: SessionRow[] = allLessonSessions.map((s) => ({
     id: s.id,
@@ -78,6 +87,7 @@ export default async function SchedulePage() {
           instructors={instructors}
           initialSessions={sessions as SessionWithBookings[]}
           initialDate={today}
+          serviceProducts={serviceProducts}
         />
       </div>
 
@@ -121,7 +131,11 @@ export default async function SchedulePage() {
 
       <div>
         <h2 className="text-xl font-semibold mb-4">Lesson Bookings</h2>
-        <LessonsTable lessons={lessonRows} instructors={instructors} />
+        <LessonsTable
+          lessons={lessonRows}
+          instructors={instructors}
+          serviceProducts={serviceProducts}
+        />
       </div>
     </div>
   );

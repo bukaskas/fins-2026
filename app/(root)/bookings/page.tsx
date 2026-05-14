@@ -152,6 +152,7 @@ async function BookingsPage({
         {[
           { label: "Dashboard",   href: "/bookings/dashboard",  variant: "secondary" },
           { label: "Kitesurfing", href: "/bookings/kitesurfing", variant: "outline" },
+          { label: "Lessons",     href: "/lessons",              variant: "outline" },
           { label: "Day Use",     href: "/bookings/day-use",     variant: "outline" },
           { label: "Restaurant",  href: "/bookings/restaurant",  variant: "outline" },
           { label: "Schedule",    href: "/bookings/schedule",    variant: "outline" },

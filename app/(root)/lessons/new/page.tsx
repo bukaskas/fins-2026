@@ -1,19 +1,10 @@
-import { LessonType } from "@prisma/client";
 import {
-  createLessonSessionFromForm,
+  getActiveLessonBundleProducts,
   getLessonFormUsers,
+  getUserLessonHoursBalance,
 } from "@/lib/actions/lessons.actions";
-import StudentSearchField from "@/components/lessons/StudentSearchField";
+import NewLessonForm from "@/components/lessons/NewLessonForm";
 import Link from "next/link";
-
-const LESSON_TYPE_LABELS: Record<string, string> = {
-  PRIVATE:       "Private",
-  GROUP:         "Group",
-  EXTRA_PRIVATE: "Extra Private",
-  EXTRA_GROUP:   "Extra Group",
-  FOIL:          "Foil",
-  KIDS:          "Kids",
-};
 
 type Props = {
   searchParams: Promise<{ guestId?: string }>;
@@ -21,7 +12,11 @@ type Props = {
 
 export default async function NewLessonPage({ searchParams }: Props) {
   const { guestId } = await searchParams;
-  const { students, instructors } = await getLessonFormUsers();
+  const [{ students, instructors }, bundleProducts, initialBalance] = await Promise.all([
+    getLessonFormUsers(),
+    getActiveLessonBundleProducts(),
+    guestId ? getUserLessonHoursBalance(guestId) : Promise.resolve(null),
+  ]);
 
   return (
     <div className="min-h-screen" style={{ background: "linear-gradient(160deg, #f0f9ff 0%, #faf7f2 50%, #f0fdf4 100%)" }}>
@@ -75,137 +70,13 @@ export default async function NewLessonPage({ searchParams }: Props) {
         </div>
 
         {/* Form card */}
-        <form
-          action={createLessonSessionFromForm}
-          className="rounded-3xl overflow-hidden"
-          style={{
-            background: "rgba(255,255,255,0.85)",
-            backdropFilter: "blur(12px)",
-            boxShadow: "0 4px 24px rgba(14, 165, 233, 0.08), 0 1px 4px rgba(0,0,0,0.06)",
-            border: "1px solid rgba(186, 230, 253, 0.5)",
-          }}
-        >
-          <div className="px-7 pt-7 pb-6 space-y-5">
-
-            {/* Student */}
-            <StudentSearchField students={students} initialStudentId={guestId} />
-
-            {/* Instructor */}
-            <FieldBlock label="Instructor">
-              <select
-                name="instructorId"
-                required
-                className="w-full bg-transparent text-[0.92rem] font-[300] focus:outline-none appearance-none cursor-pointer"
-                style={{ color: "#0c2340", fontFamily: "var(--font-raleway)" }}
-              >
-                <option value="" disabled>Select instructor</option>
-                {instructors.map((u) => (
-                  <option key={u.id} value={u.id}>
-                    {u.name || u.email}
-                  </option>
-                ))}
-              </select>
-            </FieldBlock>
-
-            {/* Lesson type */}
-            <FieldBlock label="Lesson type">
-              <select
-                name="lessonType"
-                defaultValue={LessonType.PRIVATE}
-                className="w-full bg-transparent text-[0.92rem] font-[300] focus:outline-none appearance-none cursor-pointer"
-                style={{ color: "#0c2340", fontFamily: "var(--font-raleway)" }}
-              >
-                {Object.values(LessonType).map((t) => (
-                  <option key={t} value={t}>
-                    {LESSON_TYPE_LABELS[t] ?? t}
-                  </option>
-                ))}
-              </select>
-            </FieldBlock>
-
-            {/* Start date/time */}
-            <FieldBlock label="Starts at">
-              <input
-                type="datetime-local"
-                name="startsAt"
-                required
-                className="w-full bg-transparent text-[0.92rem] font-[300] focus:outline-none"
-                style={{ color: "#0c2340", fontFamily: "var(--font-raleway)" }}
-              />
-            </FieldBlock>
-
-            {/* Duration */}
-            <div>
-              <p
-                className="text-[0.55rem] tracking-[0.24em] uppercase font-[700] mb-2.5"
-                style={{ color: "#94a3b8", fontFamily: "var(--font-raleway)" }}
-              >
-                Duration
-              </p>
-              <div className="grid grid-cols-2 gap-3">
-                <FieldBlock label="Hours" compact>
-                  <input
-                    type="number"
-                    name="durationHours"
-                    min={0}
-                    step={1}
-                    defaultValue={1}
-                    required
-                    className="w-full bg-transparent text-[0.92rem] font-[300] focus:outline-none"
-                    style={{ color: "#0c2340", fontFamily: "var(--font-raleway)" }}
-                  />
-                </FieldBlock>
-                <FieldBlock label="Minutes" compact>
-                  <select
-                    name="durationMinutesPart"
-                    defaultValue="0"
-                    className="w-full bg-transparent text-[0.92rem] font-[300] focus:outline-none appearance-none cursor-pointer"
-                    style={{ color: "#0c2340", fontFamily: "var(--font-raleway)" }}
-                  >
-                    <option value="0">00</option>
-                    <option value="15">15</option>
-                    <option value="30">30</option>
-                    <option value="45">45</option>
-                  </select>
-                </FieldBlock>
-              </div>
-            </div>
-
-            {/* Notes */}
-            <FieldBlock label="Notes (optional)">
-              <textarea
-                name="notes"
-                rows={3}
-                placeholder="Any special requirements…"
-                className="w-full bg-transparent text-[0.92rem] font-[300] focus:outline-none resize-none placeholder:text-[#cbd5e1]"
-                style={{ color: "#0c2340", fontFamily: "var(--font-raleway)" }}
-              />
-            </FieldBlock>
-
-          </div>
-
-          {/* Footer */}
-          <div
-            className="px-7 py-5"
-            style={{
-              borderTop: "1px solid rgba(186, 230, 253, 0.4)",
-              background: "linear-gradient(to bottom, transparent, rgba(240,249,255,0.3))",
-            }}
-          >
-            <button
-              type="submit"
-              className="w-full py-3.5 rounded-2xl text-[0.78rem] font-[700] tracking-[0.16em] uppercase transition-all duration-200 hover:shadow-md active:scale-[0.99]"
-              style={{
-                background: "linear-gradient(135deg, #38bdf8 0%, #0ea5e9 100%)",
-                color: "#fff",
-                fontFamily: "var(--font-raleway)",
-                boxShadow: "0 2px 12px rgba(14, 165, 233, 0.3)",
-              }}
-            >
-              Create Lesson
-            </button>
-          </div>
-        </form>
+        <NewLessonForm
+          students={students}
+          instructors={instructors}
+          bundleProducts={bundleProducts}
+          initialStudentId={guestId}
+          initialBalance={initialBalance}
+        />
 
         {/* Decorative dots */}
         <div className="flex items-center justify-center gap-1.5 mt-8 opacity-30">
@@ -222,34 +93,6 @@ export default async function NewLessonPage({ searchParams }: Props) {
           ))}
         </div>
       </div>
-    </div>
-  );
-}
-
-function FieldBlock({
-  label,
-  children,
-  compact,
-}: {
-  label: string;
-  children: React.ReactNode;
-  compact?: boolean;
-}) {
-  return (
-    <div
-      className="rounded-2xl px-4 py-3 transition-shadow focus-within:shadow-sm"
-      style={{
-        background: "#f8fbff",
-        border: "1px solid rgba(186, 230, 253, 0.6)",
-      }}
-    >
-      <p
-        className={`${compact ? "text-[0.5rem]" : "text-[0.55rem]"} tracking-[0.22em] uppercase font-[700] mb-1.5`}
-        style={{ color: "#94a3b8", fontFamily: "var(--font-raleway)" }}
-      >
-        {label}
-      </p>
-      {children}
     </div>
   );
 }

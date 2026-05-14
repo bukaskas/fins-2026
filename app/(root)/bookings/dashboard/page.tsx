@@ -233,6 +233,7 @@ async function BookingsDashboardPage({
               href: "/bookings/kitesurfing",
               accent: "#38bdf8",
             },
+            { label: "Lessons", href: "/lessons", accent: "#34d399" },
             { label: "Day Use", href: "/bookings/day-use", accent: "#fbbf24" },
             {
               label: "Restaurant",

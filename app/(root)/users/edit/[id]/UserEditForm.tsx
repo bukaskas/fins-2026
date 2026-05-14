@@ -12,6 +12,7 @@ import { userEditFormSchema } from "@/lib/validators";
 import { Field, FieldError, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { PhoneInput } from "@/app/(root)/kitesurfing/booking/phoneInput";
+import { RateEditor } from "@/components/commission/RateEditor";
 import {
   Card,
   CardContent,
@@ -31,6 +32,15 @@ import {
 } from "@/components/ui/select";
 import kitePhoto from "@/public/images/kitesurfing/kite_booking_form_descktop.webp";
 
+type Rates = {
+  privateRateCents: number;
+  semiPrivateRateCents: number;
+  extraPrivateRateCents: number;
+  extraSemiPrivateRateCents: number;
+  foilRateCents: number;
+  kidsRateCents: number;
+};
+
 type Props = {
   user: {
     id: string;
@@ -39,7 +49,17 @@ type Props = {
     phone: string | null;
     role: Role;
     isInstructor: boolean;
+    instructorProfile?: Rates | null;
   };
+};
+
+const ZERO_RATES: Rates = {
+  privateRateCents: 0,
+  semiPrivateRateCents: 0,
+  extraPrivateRateCents: 0,
+  extraSemiPrivateRateCents: 0,
+  foilRateCents: 0,
+  kidsRateCents: 0,
 };
 
 export default function UserEditFormClient({ user }: Props) {
@@ -55,6 +75,7 @@ export default function UserEditFormClient({ user }: Props) {
       password: "",
       role: user.role || Role.KITER,
       isInstructor: user.isInstructor,
+      rates: user.instructorProfile ?? ZERO_RATES,
     },
     validators: {
       onSubmit: ({ value }) => {
@@ -203,6 +224,22 @@ export default function UserEditFormClient({ user }: Props) {
                 </Field>
               )}
             </form.Field>
+
+            <form.Subscribe selector={(s) => s.values.isInstructor}>
+              {(isInstructor) =>
+                isInstructor ? (
+                  <form.Field name="rates">
+                    {(field) => (
+                      <RateEditor
+                        value={field.state.value}
+                        onChange={field.handleChange}
+                        disabled={isSubmitting}
+                      />
+                    )}
+                  </form.Field>
+                ) : null
+              }
+            </form.Subscribe>
           </form>
         </CardContent>
 

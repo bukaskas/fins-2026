@@ -25,6 +25,20 @@ enum LessonBookingStatus {
   CANCELED
 }
 
+enum CommissionType {
+  PRIVATE
+  SEMI_PRIVATE
+  EXTRA_PRIVATE
+  EXTRA_SEMI_PRIVATE
+  FOIL
+  KIDS
+}
+
+enum CommissionStatus {
+  PENDING
+  PAID
+}
+
 enum BeachUseType {
   REGULAR
   LOCAL
@@ -150,13 +164,13 @@ model User {
   createdAt     DateTime  @default(now()) @db.Timestamp(6)
   updatedAt     DateTime  @default(now()) @updatedAt
 
-  role         Role    @default(KITER)
-  isInstructor Boolean @default(false)
-  accounts Account[]
-  sessions Session[]
-  members  Member[]
-  orders   Order[]
-  payments Payment[]
+  role         Role      @default(KITER)
+  isInstructor Boolean   @default(false)
+  accounts     Account[]
+  sessions     Session[]
+  members      Member[]
+  orders       Order[]
+  payments     Payment[]
 
   lessonSessionsAsInstructor LessonSession[]     @relation("LessonInstructor")
   lessonBookings             LessonBooking[]
@@ -167,6 +181,9 @@ model User {
   walletLedgerOwned          WalletLedger[]      @relation("WalletOwner")
   walletLedgerActor          WalletLedger[]      @relation("WalletActor")
   assignedBookings           Booking[]           @relation("BookingAgent")
+
+  instructorProfile       InstructorProfile?
+  commissionsAsInstructor InstructorCommission[] @relation("CommissionInstructor")
 }
 
 model Account {
@@ -304,6 +321,7 @@ model Payment {
 
   allocations   PaymentAllocation[]
   walletEntries WalletLedger[]
+  commissions   InstructorCommission[]
 }
 
 model PaymentAllocation {
@@ -379,8 +397,9 @@ model LessonSession {
   createdAt    DateTime   @default(now()) @db.Timestamp(6)
   updatedAt    DateTime   @default(now()) @updatedAt
 
-  instructor User?           @relation("LessonInstructor", fields: [instructorId], references: [id], onDelete: SetNull)
+  instructor User?                 @relation("LessonInstructor", fields: [instructorId], references: [id], onDelete: SetNull)
   bookings   LessonBooking[]
+  commission InstructorCommission?
 
   @@index([startsAt])
   @@index([instructorId, startsAt])
@@ -493,4 +512,42 @@ model InventoryMovement {
 
   @@index([inventoryItemId, createdAt])
   @@index([type, createdAt])
+}
+
+model InstructorProfile {
+  id                        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId                    String   @unique @db.Uuid
+  user                      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  privateRateCents          Int      @default(0)
+  semiPrivateRateCents      Int      @default(0)
+  extraPrivateRateCents     Int      @default(0)
+  extraSemiPrivateRateCents Int      @default(0)
+  foilRateCents             Int      @default(0)
+  kidsRateCents             Int      @default(0)
+  createdAt                 DateTime @default(now()) @db.Timestamp(6)
+  updatedAt                 DateTime @default(now()) @updatedAt
+}
+
+model InstructorCommission {
+  id                    String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  sessionId             String           @unique @db.Uuid
+  instructorId          String           @db.Uuid
+  commissionType        CommissionType
+  durationMinutes       Int
+  rateAtCreationCents   Int
+  calculatedAmountCents Int
+  overrideAmountCents   Int?
+  finalAmountCents      Int
+  status                CommissionStatus @default(PENDING)
+  paymentId             String?          @db.Uuid
+  paidAt                DateTime?        @db.Timestamp(6)
+  createdAt             DateTime         @default(now()) @db.Timestamp(6)
+  updatedAt             DateTime         @default(now()) @updatedAt
+
+  session    LessonSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  instructor User          @relation("CommissionInstructor", fields: [instructorId], references: [id], onDelete: Restrict)
+  payment    Payment?      @relation(fields: [paymentId], references: [id], onDelete: SetNull)
+
+  @@index([instructorId, status])
+  @@index([paymentId])
 }

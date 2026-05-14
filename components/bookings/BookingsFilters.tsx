@@ -47,7 +47,7 @@ export function BookingsFilters({ total }: { total: number }) {
     const params = new URLSearchParams(searchParams.toString());
     for (const [key, val] of Object.entries(updates)) {
       const defaults: Record<string, string> = { range: "upcoming", group: "date" };
-      if (val && val !== "all" && val !== (defaults[key] ?? "")) {
+      if (val && val !== (defaults[key] ?? "all")) {
         params.set(key, val);
       } else {
         params.delete(key);

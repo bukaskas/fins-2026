@@ -78,6 +78,16 @@ export async function getUserById(id: string) {
         phone: true,
         role: true,
         isInstructor: true,
+        instructorProfile: {
+          select: {
+            privateRateCents: true,
+            semiPrivateRateCents: true,
+            extraPrivateRateCents: true,
+            extraSemiPrivateRateCents: true,
+            foilRateCents: true,
+            kidsRateCents: true,
+          },
+        },
       },
     });
     return user;
@@ -94,17 +104,37 @@ export async function updateUser(id: string, data: UserEditFormData) {
         ? { password: await bcryptjs.hash(data.password, 10) }
         : {};
 
-    const updated = await prisma.user.update({
-      where: { id },
-      data: {
-        name: data.name || null,
-        phone: data.phone || null,
-        email: data.email,
-        role: data.role,
-        isInstructor: data.isInstructor,
-        ...passwordData,
-      },
-      select: { id: true },
+    const updated = await prisma.$transaction(async (tx) => {
+      const u = await tx.user.update({
+        where: { id },
+        data: {
+          name: data.name || null,
+          phone: data.phone || null,
+          email: data.email,
+          role: data.role,
+          isInstructor: data.isInstructor,
+          ...passwordData,
+        },
+        select: { id: true },
+      });
+
+      if (data.isInstructor) {
+        const rates = data.rates ?? {
+          privateRateCents: 0,
+          semiPrivateRateCents: 0,
+          extraPrivateRateCents: 0,
+          extraSemiPrivateRateCents: 0,
+          foilRateCents: 0,
+          kidsRateCents: 0,
+        };
+        await tx.instructorProfile.upsert({
+          where: { userId: id },
+          create: { userId: id, ...rates },
+          update: rates,
+        });
+      }
+
+      return u;
     });
 
     return { success: true, message: "User updated successfully.", userId: updated.id };
@@ -173,16 +203,22 @@ export async function createUserAsAdmin(data: {
 }) {
   try {
     const hashedPassword = await bcryptjs.hash(data.password, 10);
-    const user = await prisma.user.create({
-      data: {
-        name: data.name || null,
-        email: data.email,
-        phone: data.phone || null,
-        role: data.role,
-        isInstructor: data.isInstructor ?? false,
-        password: hashedPassword,
-      },
-      select: { id: true },
+    const user = await prisma.$transaction(async (tx) => {
+      const u = await tx.user.create({
+        data: {
+          name: data.name || null,
+          email: data.email,
+          phone: data.phone || null,
+          role: data.role,
+          isInstructor: data.isInstructor ?? false,
+          password: hashedPassword,
+        },
+        select: { id: true },
+      });
+      if (data.isInstructor) {
+        await tx.instructorProfile.create({ data: { userId: u.id } });
+      }
+      return u;
     });
     return { success: true, userId: user.id };
   } catch (error: any) {

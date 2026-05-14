@@ -7,7 +7,7 @@ import {
   WalletType,
   WalletUnit,
 } from "@prisma/client";
-import { LessonType, LessonBookingStatus } from "@prisma/client";
+import { LessonType, LessonBookingStatus, OrderStatus, ProductType } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import bcryptjs from "bcryptjs";
@@ -15,7 +15,50 @@ import { sendBookingEmail } from "@/emails";
 import {
   KitesurfingBookingFormData,
   kitesurfingBookingFormSchema,
+  newLessonFormSchema,
 } from "@/lib/validators";
+import { ensureCommissionForSession } from "@/lib/actions/commission.actions";
+import { getDefaultProductForLessonType } from "@/lib/lesson-products";
+
+type TxClient = Prisma.TransactionClient;
+
+async function chargeGuestForSession(
+  tx: TxClient,
+  args: {
+    guestId: string;
+    lessonType: LessonType;
+    productId: string | null;
+  },
+) {
+  const product = args.productId
+    ? await tx.product.findUnique({ where: { id: args.productId } })
+    : await getDefaultProductForLessonType(tx, args.lessonType);
+
+  if (!product) {
+    throw new Error("Selected product not found.");
+  }
+  if (!product.isActive) {
+    throw new Error(`Product "${product.sku}" is inactive — pick another or activate it in /products.`);
+  }
+
+  return tx.order.create({
+    data: {
+      userId: args.guestId,
+      status: "OPEN",
+      totalCents: product.priceCents,
+      lines: {
+        create: [
+          {
+            productId: product.id,
+            qty: 1,
+            unitPriceCents: product.priceCents,
+            lineTotalCents: product.priceCents,
+          },
+        ],
+      },
+    },
+  });
+}
 
 type DecimalLike = Prisma.Decimal | number | string;
 
@@ -162,42 +205,164 @@ export async function getLessonFormUsers() {
   return { students, instructors };
 }
 
+export async function getUserLessonHoursBalance(userId: string): Promise<number> {
+  if (!userId) return 0;
+  const wallet = await prisma.userWallet.findUnique({
+    where: { userId_type: { userId, type: WalletType.LESSON_HOURS } },
+    select: { balance: true },
+  });
+  return wallet ? Number(wallet.balance) : 0;
+}
+
+export async function getActiveLessonBundleProducts() {
+  const products = await prisma.product.findMany({
+    where: {
+      type: ProductType.BUNDLE_CREDIT,
+      walletType: WalletType.LESSON_HOURS,
+      isActive: true,
+    },
+    select: {
+      id: true,
+      name: true,
+      sku: true,
+      priceCents: true,
+      creditUnits: true,
+    },
+    orderBy: { creditUnits: "asc" },
+  });
+  return products
+    .filter((p) => p.creditUnits != null && p.creditUnits > 0)
+    .map((p) => ({
+      id: p.id,
+      name: p.name,
+      sku: p.sku,
+      priceCents: p.priceCents,
+      creditUnits: p.creditUnits as number,
+    }));
+}
+
 export async function createLessonSessionFromForm(formData: FormData) {
-  const studentId = String(formData.get("studentId") ?? "").trim();
-  const instructorId = String(formData.get("instructorId") ?? "").trim();
-  const startsAtRaw = String(formData.get("startsAt") ?? "").trim();
-  const durationHours = Number(formData.get("durationHours") ?? 0);
-  const durationMinutesPart = Number(formData.get("durationMinutesPart") ?? 0);
-  const durationMinutes = durationHours * 60 + durationMinutesPart;
-  const lessonTypeRaw = String(formData.get("lessonType") ?? "PRIVATE").trim();
-  const notes = String(formData.get("notes") ?? "").trim() || null;
+  const parsed = newLessonFormSchema.safeParse({
+    studentId: String(formData.get("studentId") ?? "").trim(),
+    instructorId: String(formData.get("instructorId") ?? "").trim(),
+    lessonType: String(formData.get("lessonType") ?? "PRIVATE").trim(),
+    startsAt: String(formData.get("startsAt") ?? "").trim(),
+    durationHours: formData.get("durationHours") ?? 0,
+    durationMinutesPart: formData.get("durationMinutesPart") ?? 0,
+    bundleProductId: String(formData.get("bundleProductId") ?? "").trim(),
+    notes: String(formData.get("notes") ?? "").trim() || null,
+  });
 
-  if (!studentId) throw new Error("Student is required.");
-  if (!instructorId) throw new Error("Instructor is required.");
-  if (!startsAtRaw) throw new Error("Start date/time is required.");
-
-
-  if (
-    !Number.isFinite(durationHours) ||
-    durationHours < 0 ||
-    ![0, 15, 30, 45].includes(durationMinutesPart) ||
-    durationMinutes <= 0 ||
-    durationMinutes % 15 !== 0
-  ) {
-    throw new Error("Duration must be in 15-minute intervals and greater than 0.");
+  if (!parsed.success) {
+    const first = parsed.error.issues[0];
+    throw new Error(first?.message ?? "Invalid form data.");
   }
 
+  const {
+    studentId,
+    instructorId,
+    lessonType,
+    startsAt: startsAtRaw,
+    durationHours,
+    durationMinutesPart,
+    bundleProductId,
+    notes,
+  } = parsed.data;
+
+  const durationMinutes = durationHours * 60 + durationMinutesPart;
   const startsAt = new Date(startsAtRaw);
   if (Number.isNaN(startsAt.getTime())) throw new Error("Invalid start date/time.");
-
-  const lessonType = lessonTypeRaw as LessonType;
-  if (!Object.values(LessonType).includes(lessonType)) {
-    throw new Error("Invalid lesson type.");
-  }
-
   const endsAt = new Date(startsAt.getTime() + durationMinutes * 60 * 1000);
+  const requiredHours = new Prisma.Decimal(durationMinutes).div(60);
 
   await prisma.$transaction(async (tx) => {
+    // Ensure LESSON_HOURS wallet exists for the student.
+    const wallet = await tx.userWallet.upsert({
+      where: { userId_type: { userId: studentId, type: WalletType.LESSON_HOURS } },
+      update: {},
+      create: {
+        userId: studentId,
+        type: WalletType.LESSON_HOURS,
+        unit: WalletUnit.HOUR,
+        balance: new Prisma.Decimal(0),
+      },
+    });
+
+    // Optionally top up the wallet via a BUNDLE_CREDIT product (mirrors createOrderForUser).
+    if (bundleProductId) {
+      const product = await tx.product.findUnique({ where: { id: bundleProductId } });
+      if (!product) throw new Error("Selected product not found.");
+      if (!product.isActive) throw new Error(`Product "${product.sku}" is inactive.`);
+      if (product.type !== ProductType.BUNDLE_CREDIT) {
+        throw new Error("Only bundle products can be added here.");
+      }
+      if (product.walletType !== WalletType.LESSON_HOURS || product.walletUnit !== WalletUnit.HOUR) {
+        throw new Error(`Product "${product.sku}" does not credit LESSON_HOURS.`);
+      }
+      const creditUnits = product.creditUnits ?? 0;
+      if (creditUnits <= 0) {
+        throw new Error(`Product "${product.sku}" has no credit units configured.`);
+      }
+      if (new Prisma.Decimal(creditUnits).lt(requiredHours)) {
+        throw new Error(
+          `Selected bundle covers only ${creditUnits}h — pick one with at least ${requiredHours.toString()}h.`,
+        );
+      }
+
+      const order = await tx.order.create({
+        data: {
+          userId: studentId,
+          status: OrderStatus.OPEN,
+          totalCents: product.priceCents,
+          lines: {
+            create: [
+              {
+                productId: product.id,
+                qty: 1,
+                unitPriceCents: product.priceCents,
+                lineTotalCents: product.priceCents,
+                creditUnitsEach: creditUnits,
+              },
+            ],
+          },
+        },
+        include: { lines: true },
+      });
+
+      const line = order.lines[0];
+      const updatedWallet = await tx.userWallet.update({
+        where: { id: wallet.id },
+        data: { balance: { increment: creditUnits } },
+        select: { id: true, balance: true },
+      });
+
+      await tx.walletLedger.create({
+        data: {
+          walletId: wallet.id,
+          userId: studentId,
+          delta: new Prisma.Decimal(creditUnits),
+          balanceAfter: updatedWallet.balance,
+          reason: WalletLedgerReason.PURCHASE,
+          orderId: order.id,
+          orderLineId: line.id,
+          note: `Purchased ${creditUnits} HOUR(s) — order ${order.id}`,
+          idempotencyKey: `purchase:${line.id}`,
+        },
+      });
+    }
+
+    // Verify the wallet has enough hours to cover the lesson.
+    const refreshed = await tx.userWallet.findUniqueOrThrow({
+      where: { id: wallet.id },
+      select: { balance: true },
+    });
+    if (refreshed.balance.lt(requiredHours)) {
+      throw new Error(
+        `Student has only ${refreshed.balance.toString()}h remaining — select a bundle product.`,
+      );
+    }
+
+    // Create session + booking.
     const session = await tx.lessonSession.create({
       data: {
         startsAt,
@@ -210,13 +375,36 @@ export async function createLessonSessionFromForm(formData: FormData) {
       select: { id: true },
     });
 
-    await tx.lessonBooking.create({
+    const booking = await tx.lessonBooking.create({
       data: {
         sessionId: session.id,
         guestId: studentId,
         status: LessonBookingStatus.CONFIRMED,
       },
+      select: { id: true },
     });
+
+    // Consume hours from the wallet (mirrors consumeBundleUnit).
+    const consumed = await tx.userWallet.update({
+      where: { id: wallet.id, balance: { gte: requiredHours } },
+      data: { balance: { decrement: requiredHours } },
+      select: { id: true, balance: true },
+    });
+
+    await tx.walletLedger.create({
+      data: {
+        walletId: wallet.id,
+        userId: studentId,
+        delta: requiredHours.neg(),
+        balanceAfter: consumed.balance,
+        reason: WalletLedgerReason.CONSUMPTION,
+        lessonBookingId: booking.id,
+        note: `Consumed ${requiredHours.toString()} HOUR(s) for lesson ${session.id}`,
+        idempotencyKey: `consume:LESSON_HOURS:lesson:${booking.id}`,
+      },
+    });
+
+    await ensureCommissionForSession(session.id, tx);
   });
 
   revalidatePath("/lessons");
@@ -233,6 +421,7 @@ const sessionInclude = {
     },
     orderBy: { createdAt: "desc" as const },
   },
+  commission: true,
 };
 
 export async function getLessonSessionsByDate(date: string) {
@@ -250,18 +439,19 @@ export async function batchUpdateSessionSchedule(
   updates: { id: string; startsAt: string; endsAt: string; instructorId: string | null }[]
 ) {
   try {
-    await prisma.$transaction(
-      updates.map((u) =>
-        prisma.lessonSession.update({
+    await prisma.$transaction(async (tx) => {
+      for (const u of updates) {
+        await tx.lessonSession.update({
           where: { id: u.id },
           data: {
             startsAt: new Date(u.startsAt),
             endsAt: new Date(u.endsAt),
             instructorId: u.instructorId,
           },
-        })
-      )
-    );
+        });
+        await ensureCommissionForSession(u.id, tx);
+      }
+    });
     return { success: true, message: "Schedule updated successfully." };
   } catch (error) {
     console.error("Batch session update error:", error);
@@ -279,6 +469,7 @@ export async function createLessonSessionQuick(data: {
   instructorId: string | null;
   notes: string | null;
   guestId: string | null;
+  productId?: string | null;
 }) {
   const lessonType = data.lessonType as LessonType;
   if (!Object.values(LessonType).includes(lessonType)) {
@@ -306,7 +497,15 @@ export async function createLessonSessionQuick(data: {
             status: LessonBookingStatus.CONFIRMED,
           },
         });
+
+        await chargeGuestForSession(tx, {
+          guestId: data.guestId,
+          lessonType,
+          productId: data.productId ?? null,
+        });
       }
+
+      await ensureCommissionForSession(s.id, tx);
 
       return s;
     });
@@ -428,27 +627,32 @@ export async function updateLessonSession(
   }
 ) {
   try {
-    const session = await prisma.lessonSession.update({
-      where: { id },
-      data: {
-        lessonType: data.lessonType,
-        instructorId: data.instructorId,
-        startsAt: data.startsAt,
-        endsAt: data.endsAt,
-        notes: data.notes,
-        capacity: data.capacity,
-      },
-      include: {
-        instructor: { select: { id: true, name: true, email: true } },
-        bookings: {
-          include: {
-            guest: {
-              select: { id: true, name: true, email: true, phone: true },
-            },
-          },
-          orderBy: { createdAt: "desc" },
+    const session = await prisma.$transaction(async (tx) => {
+      const s = await tx.lessonSession.update({
+        where: { id },
+        data: {
+          lessonType: data.lessonType,
+          instructorId: data.instructorId,
+          startsAt: data.startsAt,
+          endsAt: data.endsAt,
+          notes: data.notes,
+          capacity: data.capacity,
         },
-      },
+        include: {
+          instructor: { select: { id: true, name: true, email: true } },
+          bookings: {
+            include: {
+              guest: {
+                select: { id: true, name: true, email: true, phone: true },
+              },
+            },
+            orderBy: { createdAt: "desc" },
+          },
+          commission: true,
+        },
+      });
+      await ensureCommissionForSession(id, tx);
+      return s;
     });
     revalidatePath("/bookings/schedule");
     return { success: true, data: session };
@@ -480,8 +684,8 @@ export async function updateLessonBooking(
       select: { sessionId: true },
     });
 
-    await prisma.$transaction([
-      prisma.lessonBooking.update({
+    await prisma.$transaction(async (tx) => {
+      await tx.lessonBooking.update({
         where: { id },
         data: {
           status: data.status,
@@ -492,8 +696,8 @@ export async function updateLessonBooking(
               : undefined,
           notes: data.notes,
         },
-      }),
-      prisma.lessonSession.update({
+      });
+      await tx.lessonSession.update({
         where: { id: existing.sessionId },
         data: {
           instructorId: data.instructorId,
@@ -502,8 +706,9 @@ export async function updateLessonBooking(
           ...(data.lessonType !== undefined && { lessonType: data.lessonType }),
           ...(data.capacity !== undefined && { capacity: data.capacity }),
         },
-      }),
-    ]);
+      });
+      await ensureCommissionForSession(existing.sessionId, tx);
+    });
 
     revalidatePath("/bookings/schedule");
     return { success: true };
@@ -558,6 +763,7 @@ export async function getAllLessons() {
       instructor: {
         select: { id: true, name: true, email: true },
       },
+      commission: true,
       bookings: {
         include: {
           guest: {
@@ -575,9 +781,67 @@ export async function updateLessonBookingStatus(
   status: LessonBookingStatus,
 ) {
   try {
-    await prisma.lessonBooking.update({ where: { id }, data: { status } });
+    const booking = await prisma.lessonBooking.update({
+      where: { id },
+      data: { status },
+      select: { sessionId: true },
+    });
+    await ensureCommissionForSession(booking.sessionId);
     return { success: true };
   } catch {
     return { success: false };
+  }
+}
+
+export async function addGuestToSession(
+  sessionId: string,
+  data: { guestId: string; productId: string | null },
+) {
+  try {
+    const result = await prisma.$transaction(async (tx) => {
+      const session = await tx.lessonSession.findUnique({
+        where: { id: sessionId },
+        select: { id: true, lessonType: true },
+      });
+      if (!session) throw new Error("Session not found.");
+
+      const existing = await tx.lessonBooking.findUnique({
+        where: { sessionId_guestId: { sessionId, guestId: data.guestId } },
+        select: { id: true },
+      });
+      if (existing) {
+        throw new Error("This guest is already on this session.");
+      }
+
+      const booking = await tx.lessonBooking.create({
+        data: {
+          sessionId,
+          guestId: data.guestId,
+          status: LessonBookingStatus.CONFIRMED,
+        },
+        include: {
+          guest: { select: { id: true, name: true, email: true, phone: true } },
+        },
+      });
+
+      await chargeGuestForSession(tx, {
+        guestId: data.guestId,
+        lessonType: session.lessonType,
+        productId: data.productId,
+      });
+
+      await ensureCommissionForSession(sessionId, tx);
+
+      return booking;
+    });
+
+    revalidatePath("/bookings/schedule");
+    return { success: true, data: result };
+  } catch (error) {
+    console.error("Add guest to session error:", error);
+    return {
+      success: false,
+      message: `Failed to add guest. ${error instanceof Error ? error.message : String(error)}`,
+    };
   }
 }

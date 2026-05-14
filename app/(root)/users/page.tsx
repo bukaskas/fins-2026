@@ -60,7 +60,14 @@ export default async function UsersPage({ searchParams }: Props) {
             ) : (
               users.map((u) => (
                 <tr key={u.id} className="border-b">
-                  <td className="px-3 py-2">{u.name || "—"}</td>
+                  <td className="px-3 py-2">
+                    <Link
+                      href={`/users/${u.id}`}
+                      className="hover:underline"
+                    >
+                      {u.name || "—"}
+                    </Link>
+                  </td>
                   <td className="px-3 py-2">{u.email}</td>
                   <td className="px-3 py-2">{u.phone || "—"}</td>
                   <td className="px-3 py-2 font-medium">{u.role}</td>

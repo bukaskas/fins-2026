@@ -24,6 +24,7 @@ import { updateLessonBookingStatus } from "@/lib/actions/lessons.actions";
 import {
   LessonSessionEditSheet,
   type SessionRow,
+  type EditSheetServiceProduct,
 } from "./LessonSessionEditSheet";
 
 function WhatsAppIcon({ className }: { className?: string }) {
@@ -195,9 +196,11 @@ const selectClass =
 export function LessonsTable({
   lessons,
   instructors,
+  serviceProducts,
 }: {
   lessons: SessionRow[];
   instructors: { id: string; name: string | null }[];
+  serviceProducts: EditSheetServiceProduct[];
 }) {
   const [rows, setRows] = useState<SessionRow[]>(lessons);
   const [editTarget, setEditTarget] = useState<SessionRow | null>(null);
@@ -470,6 +473,7 @@ export function LessonsTable({
         <LessonSessionEditSheet
           session={editTarget}
           instructors={instructors}
+          serviceProducts={serviceProducts}
           open={!!editTarget}
           onOpenChange={(o) => {
             if (!o) setEditTarget(null);

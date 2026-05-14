@@ -48,11 +48,17 @@ export function RestaurantHero({
       {/* Content */}
       <div
         className="absolute inset-0 flex flex-col justify-end pb-20 px-8 md:px-14 lg:px-20"
-        style={{ animation: "heroContentReveal 0.9s cubic-bezier(.22,1,.36,1) 0.15s both" }}
+        style={{
+          animation:
+            "heroContentReveal 0.9s cubic-bezier(.22,1,.36,1) 0.15s both",
+        }}
       >
         {/* Eyebrow */}
         <div className="flex items-center gap-3 mb-5">
-          <span className="h-px w-9 flex-shrink-0" style={{ background: accent }} />
+          <span
+            className="h-px w-9 flex-shrink-0"
+            style={{ background: accent }}
+          />
           <span
             className="text-[0.62rem] tracking-[0.32em] uppercase font-[family-name:var(--font-raleway)] font-medium"
             style={{ color: accent }}
@@ -76,8 +82,8 @@ export function RestaurantHero({
 
         {/* Description */}
         <p className="text-white/60 text-sm md:text-[0.9rem] max-w-sm mb-5 font-[family-name:var(--font-raleway)] font-[300] leading-relaxed">
-          Savor international cuisine, burgers and pizza with stunning
-          beach views.
+          Savor international cuisine, burgers and pizza with stunning beach
+          views.
         </p>
 
         <div className="w-14 h-px bg-white/20 mb-5" />
@@ -102,10 +108,12 @@ export function RestaurantHero({
             style={{ background: accent }}
           >
             Reserve a Table
-            <span className="group-hover:translate-x-1 transition-transform duration-200 text-sm">→</span>
+            <span className="group-hover:translate-x-1 transition-transform duration-200 text-sm">
+              →
+            </span>
           </Link>
           <Link
-            href="https://drive.google.com/file/d/1ucvNArsKuwd_Em9CXWguJKIIshlh-dG0/view?usp=sharing"
+            href="https://drive.google.com/file/d/1qpcb2GbQISgk6uTCDn0KcJzagvJV1DxG/view?usp=sharing"
             className="text-white/55 hover:text-white text-[0.68rem] tracking-[0.22em] uppercase font-[family-name:var(--font-raleway)] transition-colors duration-200"
           >
             View Menu ↗

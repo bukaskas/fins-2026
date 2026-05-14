@@ -1,5 +1,5 @@
 import { email, z } from "zod";
-import { BookingStatus } from "@prisma/client";
+import { BookingStatus, CommissionType, LessonType } from "@prisma/client";
 
 export const bookingFormSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters long"),
@@ -54,12 +54,30 @@ export type SignUpFormData = z.infer<typeof signUpFormSchema>;
 
 import { Role } from "@prisma/client";
 
+const rateCentsField = z.coerce
+  .number()
+  .int("Must be a whole number")
+  .min(0, "Must be 0 or more")
+  .default(0);
+
+export const instructorRatesSchema = z.object({
+  privateRateCents: rateCentsField,
+  semiPrivateRateCents: rateCentsField,
+  extraPrivateRateCents: rateCentsField,
+  extraSemiPrivateRateCents: rateCentsField,
+  foilRateCents: rateCentsField,
+  kidsRateCents: rateCentsField,
+});
+
+export type InstructorRatesData = z.infer<typeof instructorRatesSchema>;
+
 export const userEditFormSchema = z.object({
   name: z.string().trim().nullable(),
   phone: z.string().trim().nullable(),
   email: z.string().email("Invalid email address"),
   role: z.nativeEnum(Role),
   isInstructor: z.boolean().default(false),
+  rates: instructorRatesSchema.optional(),
   // optional on edit; only validate if provided
   password: z
     .string()
@@ -72,6 +90,40 @@ export const userEditFormSchema = z.object({
 });
 
 export type UserEditFormData = z.infer<typeof userEditFormSchema>;
+
+export const commissionUpdateSchema = z.object({
+  overrideAmountCents: z
+    .union([z.coerce.number().int().min(0), z.null()])
+    .optional(),
+  commissionType: z.nativeEnum(CommissionType).optional(),
+});
+
+export type CommissionUpdateData = z.infer<typeof commissionUpdateSchema>;
+
+export const newLessonFormSchema = z
+  .object({
+    studentId: z.string().uuid({ message: "Student is required." }),
+    instructorId: z.string().uuid({ message: "Instructor is required." }),
+    lessonType: z.nativeEnum(LessonType, { message: "Invalid lesson type." }),
+    startsAt: z.string().min(1, "Start date/time is required."),
+    durationHours: z.coerce.number().int("Hours must be a whole number.").min(0),
+    durationMinutesPart: z.coerce
+      .number()
+      .refine((v) => [0, 15, 30, 45].includes(v), {
+        message: "Minutes must be 00, 15, 30 or 45.",
+      }),
+    bundleProductId: z
+      .union([z.string().uuid(), z.literal("")])
+      .optional()
+      .transform((v) => (v && v.length > 0 ? v : null)),
+    notes: z.string().nullable().optional().transform((v) => (v && v.length > 0 ? v : null)),
+  })
+  .refine((d) => d.durationHours * 60 + d.durationMinutesPart > 0, {
+    message: "Duration must be greater than 0.",
+    path: ["durationHours"],
+  });
+
+export type NewLessonFormData = z.infer<typeof newLessonFormSchema>;
 
 export const kitesurfingBookingFormSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters long"),
