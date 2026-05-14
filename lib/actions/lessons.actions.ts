@@ -241,7 +241,22 @@ export async function getActiveLessonBundleProducts() {
     }));
 }
 
+function safeReturnTo(raw: unknown): string {
+  const v = typeof raw === "string" ? raw.trim() : "";
+  // must be a same-origin relative path; reject absolute URLs, protocol-relative URLs, and backslashes.
+  if (!v.startsWith("/")) return "/lessons";
+  if (v.startsWith("//") || v.startsWith("/\\")) return "/lessons";
+  if (v.includes("\\")) return "/lessons";
+  // avoid bouncing back to the form itself
+  if (v === "/lessons/new" || v.startsWith("/lessons/new?") || v.startsWith("/lessons/new#")) {
+    return "/lessons";
+  }
+  return v;
+}
+
 export async function createLessonSessionFromForm(formData: FormData) {
+  const returnTo = safeReturnTo(formData.get("returnTo"));
+
   const parsed = newLessonFormSchema.safeParse({
     studentId: String(formData.get("studentId") ?? "").trim(),
     instructorId: String(formData.get("instructorId") ?? "").trim(),
@@ -408,7 +423,8 @@ export async function createLessonSessionFromForm(formData: FormData) {
   });
 
   revalidatePath("/lessons");
-  redirect("/lessons");
+  revalidatePath(returnTo);
+  redirect(returnTo);
 }
 
 // ---- schedule board actions ----

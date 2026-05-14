@@ -60,6 +60,21 @@ export default function NewLessonForm({
   const [bundleProductId, setBundleProductId] = useState("");
   const [submitting, startSubmit] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const [returnTo, setReturnTo] = useState("");
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const ref = document.referrer;
+    if (!ref) return;
+    try {
+      const url = new URL(ref);
+      if (url.origin !== window.location.origin) return;
+      if (url.pathname === window.location.pathname) return;
+      setReturnTo(url.pathname + url.search);
+    } catch {
+      // ignore malformed referrer
+    }
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -282,6 +297,7 @@ export default function NewLessonForm({
           </FieldBlock>
         )}
         <input type="hidden" name="bundleProductId" value={needsBundle ? bundleProductId : ""} />
+        <input type="hidden" name="returnTo" value={returnTo} />
 
         {/* Notes */}
         <FieldBlock label="Notes (optional)">

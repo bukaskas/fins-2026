@@ -147,6 +147,20 @@ export default async function UserDetailPage({ params }: Props) {
               {user.role}
             </span>
             <Link
+              href={`/lessons/new?guestId=${user.id}`}
+              className="rounded bg-black px-3 py-1.5 text-sm text-white hover:bg-black/85 transition-colors"
+            >
+              + Lesson
+            </Link>
+            <Link
+              href={`/accounting/new-payment?userId=${user.id}${
+                outstandingCents > 0 ? `&amountCents=${outstandingCents}` : ""
+              }`}
+              className="rounded bg-black px-3 py-1.5 text-sm text-white hover:bg-black/85 transition-colors"
+            >
+              + Payment
+            </Link>
+            <Link
               href={`/users/edit/${user.id}`}
               className="rounded border px-3 py-1.5 text-sm hover:bg-muted/40 transition-colors"
             >
