@@ -164,42 +164,7 @@ const courses: CourseCardProps[] = [
     subtitle: "One session to get a taste of kitesurfing",
     image: privateCourse,
     priority: true,
-    dialogTitle: "Intro Session — try kitesurfing in one session",
-    dialogContent: (
-      <div className="text-left space-y-4">
-        <p className="text-sm text-white/55 font-[family-name:var(--font-raleway)] font-[300] leading-relaxed">
-          The intro course is designed for those planning to try kitesurfing for
-          one session — to experience what we need to learn to become a
-          kitesurfer.
-        </p>
-        <p className="text-sm text-white/55 font-[family-name:var(--font-raleway)] font-[300] leading-relaxed">
-          We focus on kite control, safety, and the basic knowledge required
-          before getting on the board. Main focus: understanding how the kite
-          works and staying safe.
-        </p>
-        <p className="text-sm text-white/55 font-[family-name:var(--font-raleway)] font-[300] leading-relaxed">
-          Duration:{" "}
-          <strong className="text-white/80 font-[500]">2 hours</strong>, done in
-          one session.
-        </p>
-        <div className="space-y-2 pt-2">
-          <div
-            className="text-[0.6rem] tracking-[0.28em] uppercase font-[family-name:var(--font-raleway)] font-[600]"
-            style={{ color: accent }}
-          >
-            Pricing
-          </div>
-          <div className="text-sm text-white/70 font-[family-name:var(--font-raleway)] font-[300]">
-            Private: <span className="text-white font-[500]">8,500 EGP</span>
-          </div>
-          <div className="text-sm text-white/70 font-[family-name:var(--font-raleway)] font-[300]">
-            Group: <span className="text-white font-[500]">5,500 EGP</span> per
-            person (2–4 persons)
-          </div>
-        </div>
-        {bookBtn}
-      </div>
-    ),
+    moreInfoHref: "/kitesurfing/intro-course",
   },
 
   {
@@ -244,59 +209,22 @@ const courses: CourseCardProps[] = [
   },
   {
     index: "04",
-    tag: "Ages 6–18",
+    tag: "Ages 8+",
     title: "Kids Courses",
-    subtitle: "Purpose-built courses for young riders, ages 6 to 18",
+    subtitle: "Purpose-built courses for young riders, from age 8",
     image: kidsCourse,
     dialogTitle: "Kids Courses",
     dialogContent: (
-      <div className="space-y-4">
-        <div
-          className="text-[0.6rem] tracking-[0.28em] uppercase font-[family-name:var(--font-raleway)] font-[600] mb-3"
-          style={{ color: accent }}
-        >
-          Pricing · Ages 6–18
-        </div>
-        <div className="border border-white/10 divide-y divide-white/8">
-          {/* Header */}
-          <div className="grid grid-cols-3 px-4 py-2.5">
-            {["Course", "Duration", "Price"].map((h) => (
-              <span
-                key={h}
-                className="text-[0.58rem] tracking-[0.2em] uppercase text-white/35 font-[family-name:var(--font-raleway)] font-[500]"
-              >
-                {h}
-              </span>
-            ))}
-          </div>
-          {/* Rows */}
-          {[
-            { course: "Intro", duration: "2 hours", price: "5,000 EGP" },
-            {
-              course: "Private Beginner",
-              duration: "6 hours",
-              price: "15,000 EGP",
-            },
-            {
-              course: "Group Beginner",
-              duration: "8 hours",
-              price: "11,250 EGP",
-            },
-            { course: "Refresher", duration: "2 hours", price: "5,000 EGP" },
-          ].map((row) => (
-            <div key={row.course} className="grid grid-cols-3 px-4 py-3">
-              <span className="text-sm text-white/80 font-[family-name:var(--font-raleway)] font-[400]">
-                {row.course}
-              </span>
-              <span className="text-sm text-white/45 font-[family-name:var(--font-raleway)] font-[300]">
-                {row.duration}
-              </span>
-              <span className="text-sm text-white font-[family-name:var(--font-raleway)] font-[500]">
-                {row.price}
-              </span>
-            </div>
-          ))}
-        </div>
+      <div className="text-left space-y-4">
+        <p className="text-sm text-white/55 font-[family-name:var(--font-raleway)] font-[300] leading-relaxed">
+          Kids can start kitesurfing from the age of{" "}
+          <strong className="text-white/80 font-[500]">8 years old</strong>.
+        </p>
+        <p className="text-sm text-white/55 font-[family-name:var(--font-raleway)] font-[300] leading-relaxed">
+          We offer a{" "}
+          <strong className="text-white/80 font-[500]">15% discount</strong>{" "}
+          from the regular course price for young riders.
+        </p>
         {bookBtn}
       </div>
     ),
