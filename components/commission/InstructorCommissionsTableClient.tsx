@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { format } from "date-fns";
 import { Pencil } from "lucide-react";
-import { CommissionStatus, CommissionType } from "@prisma/client";
+import { CommissionStatus, CommissionType, RevenueSource } from "@prisma/client";
 import { COMMISSION_TYPE_LABELS, formatEGP } from "@/lib/commission";
 import { CommissionStatusBadge } from "./CommissionStatusBadge";
 import {
@@ -29,6 +29,8 @@ type CommissionRow = {
     lessonType: string;
     capacity: number;
     notes: string | null;
+    deliveredRevenueCents: number | null;
+    revenueSource: RevenueSource | null;
     instructor: { id: string; name: string | null; email: string | null } | null;
     bookings: {
       id: string;
@@ -87,9 +89,11 @@ export function InstructorCommissionsTableClient({ rows, instructors, servicePro
               <th className="px-3 py-2 text-left">Duration</th>
               <th className="px-3 py-2 text-left">Type</th>
               <th className="px-3 py-2 text-left">Student(s)</th>
+              <th className="px-3 py-2 text-right">Revenue</th>
               <th className="px-3 py-2 text-right">Calculated</th>
               <th className="px-3 py-2 text-right">Override</th>
               <th className="px-3 py-2 text-right">Final</th>
+              <th className="px-3 py-2 text-right">Profit</th>
               <th className="px-3 py-2 text-left">Status</th>
               <th className="px-3 py-2 text-left">Payment</th>
               <th className="px-3 py-2" />
@@ -124,6 +128,20 @@ export function InstructorCommissionsTableClient({ rows, instructors, servicePro
                   </td>
                   <td className="px-3 py-2">{students}</td>
                   <td className="px-3 py-2 text-right whitespace-nowrap">
+                    {r.session.deliveredRevenueCents != null ? (
+                      <>
+                        {formatEGP(r.session.deliveredRevenueCents)}
+                        {r.session.revenueSource && (
+                          <span className="ml-1 text-[10px] uppercase text-muted-foreground">
+                            {r.session.revenueSource.toLowerCase()}
+                          </span>
+                        )}
+                      </>
+                    ) : (
+                      "—"
+                    )}
+                  </td>
+                  <td className="px-3 py-2 text-right whitespace-nowrap">
                     {formatEGP(r.calculatedAmountCents)}
                   </td>
                   <td className="px-3 py-2 text-right whitespace-nowrap">
@@ -133,6 +151,20 @@ export function InstructorCommissionsTableClient({ rows, instructors, servicePro
                   </td>
                   <td className="px-3 py-2 text-right whitespace-nowrap font-medium">
                     {formatEGP(r.finalAmountCents)}
+                  </td>
+                  <td className="px-3 py-2 text-right whitespace-nowrap">
+                    {r.session.deliveredRevenueCents != null ? (
+                      (() => {
+                        const profit = r.session.deliveredRevenueCents - r.finalAmountCents;
+                        return (
+                          <span className={profit < 0 ? "text-red-600" : ""}>
+                            {formatEGP(profit)}
+                          </span>
+                        );
+                      })()
+                    ) : (
+                      "—"
+                    )}
                   </td>
                   <td className="px-3 py-2">
                     <CommissionStatusBadge status={r.status} />

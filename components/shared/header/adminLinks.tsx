@@ -34,6 +34,7 @@ const adminGroups = [
     links: [
       { title: "Open Orders", href: "/accounting/open-orders" },
       { title: "Payments",    href: "/accounting/payments" },
+      { title: "Expenses",    href: "/accounting/expenses" },
       { title: "Products",    href: "/products" },
     ],
   },

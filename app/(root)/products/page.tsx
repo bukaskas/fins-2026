@@ -2,7 +2,7 @@ import { getServerSession } from "next-auth/next";
 import { redirect } from "next/navigation";
 import { authOptions } from "@/lib/auth";
 import { getAllProducts } from "@/lib/actions/product.actions";
-import { ProductType } from "@prisma/client";
+import { ProductCategory, ProductType } from "@prisma/client";
 import { ProductsFilters } from "@/components/products/ProductsFilters";
 import { ProductDialog } from "@/components/products/ProductDialog";
 import { ToggleActiveButton } from "@/components/products/ToggleActiveButton";
@@ -22,8 +22,23 @@ const WALLET_TYPE_LABEL: Record<string, string> = {
   LESSON_HOURS: "Lesson Hours",
 };
 
+const LESSON_TYPE_LABEL: Record<string, string> = {
+  PRIVATE:       "Private",
+  GROUP:         "Group",
+  EXTRA_PRIVATE: "Extra Private",
+  EXTRA_GROUP:   "Extra Group",
+  FOIL:          "Foil",
+  KIDS:          "Kids",
+};
+
+const CATEGORY_BADGE: Record<ProductCategory, { label: string; className: string }> = {
+  BEACH_USE: { label: "Beach Use", className: "bg-[#E0F2F1] text-[#0F6B66]" },
+  RENTAL:    { label: "Rental",    className: "bg-[#FFF0DA] text-[#9B6B2A]" },
+  LESSONS:   { label: "Lessons",   className: "bg-[#E6F3E2] text-[#2A7040]" },
+};
+
 type Props = {
-  searchParams: Promise<{ type?: string; status?: string }>;
+  searchParams: Promise<{ type?: string; category?: string; status?: string }>;
 };
 
 export default async function ProductsPage({ searchParams }: Props) {
@@ -38,10 +53,19 @@ export default async function ProductsPage({ searchParams }: Props) {
       ? (sp.type as ProductType)
       : undefined;
 
+  const categoryFilter =
+    sp.category && Object.values(ProductCategory).includes(sp.category as ProductCategory)
+      ? (sp.category as ProductCategory)
+      : undefined;
+
   const isActiveFilter =
     sp.status === "active" ? true : sp.status === "inactive" ? false : undefined;
 
-  const products = await getAllProducts({ type: typeFilter, isActive: isActiveFilter });
+  const products = await getAllProducts({
+    type: typeFilter,
+    category: categoryFilter,
+    isActive: isActiveFilter,
+  });
   const activeCount = products.filter((p) => p.isActive).length;
 
   return (
@@ -87,11 +111,11 @@ export default async function ProductsPage({ searchParams }: Props) {
           <table className="min-w-full text-sm">
             <thead>
               <tr className="border-b border-[#EDE7DF] bg-[#FAF7F3]">
-                {["SKU", "Name", "Type", "Price", "Credits", "Status", ""].map((col, i) => (
+                {["SKU", "Name", "Type", "Category", "Price", "Credits", "Status", ""].map((col, i) => (
                   <th
                     key={i}
                     className={`px-4 py-3 text-[0.62rem] font-[700] tracking-[0.14em] uppercase text-[#B5A89C] ${
-                      i === 3 || i === 6 ? "text-right" : "text-left"
+                      i === 4 || i === 7 ? "text-right" : "text-left"
                     }`}
                     style={{ fontFamily: "var(--font-raleway)" }}
                   >
@@ -104,7 +128,7 @@ export default async function ProductsPage({ searchParams }: Props) {
             <tbody>
               {products.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-4 py-20 text-center">
+                  <td colSpan={8} className="px-4 py-20 text-center">
                     <div className="flex flex-col items-center gap-3">
                       <div className="w-14 h-14 rounded-2xl bg-[#F0EBE3] flex items-center justify-center">
                         <Package className="h-6 w-6 text-[#C4B5A5]" strokeWidth={1.5} />
@@ -162,6 +186,20 @@ export default async function ProductsPage({ searchParams }: Props) {
                       )}
                     </td>
 
+                    {/* Category badge */}
+                    <td className="px-4 py-3.5">
+                      {product.category ? (
+                        <span
+                          className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[0.65rem] font-[600] tracking-[0.04em] ${CATEGORY_BADGE[product.category].className}`}
+                          style={{ fontFamily: "var(--font-raleway)" }}
+                        >
+                          {CATEGORY_BADGE[product.category].label}
+                        </span>
+                      ) : (
+                        <span className="text-[#C4B5A5] text-[0.78rem]">—</span>
+                      )}
+                    </td>
+
                     {/* Price */}
                     <td className="px-4 py-3.5 text-right">
                       <span
@@ -175,13 +213,23 @@ export default async function ProductsPage({ searchParams }: Props) {
                     {/* Credits */}
                     <td className="px-4 py-3.5">
                       {product.type === ProductType.BUNDLE_CREDIT && product.creditUnits ? (
-                        <span
-                          className="text-[0.78rem] text-[#5A5048]"
-                          style={{ fontFamily: "var(--font-raleway)" }}
-                        >
-                          {product.creditUnits}
-                          {product.walletType ? ` ${WALLET_TYPE_LABEL[product.walletType]}` : ""}
-                        </span>
+                        <div className="flex items-center gap-2">
+                          <span
+                            className="text-[0.78rem] text-[#5A5048]"
+                            style={{ fontFamily: "var(--font-raleway)" }}
+                          >
+                            {product.creditUnits}
+                            {product.walletType ? ` ${WALLET_TYPE_LABEL[product.walletType]}` : ""}
+                          </span>
+                          {product.lessonType && (
+                            <span
+                              className="inline-flex items-center rounded-full bg-[#EAF4EC] px-2 py-0.5 text-[0.62rem] font-[600] text-[#2A7040] tracking-[0.04em]"
+                              style={{ fontFamily: "var(--font-raleway)" }}
+                            >
+                              {LESSON_TYPE_LABEL[product.lessonType] ?? product.lessonType}
+                            </span>
+                          )}
+                        </div>
                       ) : (
                         <span className="text-[#C4B5A5] text-[0.78rem]">—</span>
                       )}

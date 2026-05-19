@@ -4,7 +4,10 @@ import { prisma } from "@/db/prisma";
 import {
   CommissionStatus,
   CommissionType,
+  ExpenseStatus,
+  ExpenseType,
   LessonBookingStatus,
+  PaymentMethod,
   Prisma,
 } from "@prisma/client";
 import { revalidatePath } from "next/cache";
@@ -31,6 +34,7 @@ function revalidateCommissionPaths(instructorId?: string | null) {
   if (instructorId) revalidatePath(`/instructors/${instructorId}`);
   revalidatePath("/lessons");
   revalidatePath("/bookings/schedule");
+  revalidatePath("/accounting/expenses");
 }
 
 /**
@@ -82,6 +86,10 @@ export async function ensureCommissionForSession(
 
   if (!hasQualifying) {
     if (existing) {
+      await db.expense.updateMany({
+        where: { commissionId: existing.id, status: ExpenseStatus.PENDING },
+        data: { status: ExpenseStatus.CANCELED },
+      });
       await db.instructorCommission.delete({ where: { sessionId } });
     }
     return { skipped: "no-qualifying-booking" as const };
@@ -102,7 +110,7 @@ export async function ensureCommissionForSession(
   const overrideAmountCents = existing?.overrideAmountCents ?? null;
   const finalAmountCents = overrideAmountCents ?? calculatedAmountCents;
 
-  await db.instructorCommission.upsert({
+  const commission = await db.instructorCommission.upsert({
     where: { sessionId },
     create: {
       sessionId,
@@ -122,6 +130,23 @@ export async function ensureCommissionForSession(
       finalAmountCents,
     },
   });
+
+  if (existing) {
+    await db.expense.updateMany({
+      where: { commissionId: commission.id, status: ExpenseStatus.PENDING },
+      data: { amountCents: finalAmountCents },
+    });
+  } else {
+    await db.expense.create({
+      data: {
+        type: ExpenseType.INSTRUCTOR_COMMISSION,
+        amountCents: finalAmountCents,
+        status: ExpenseStatus.PENDING,
+        payeeId: session.instructorId,
+        commissionId: commission.id,
+      },
+    });
+  }
 
   return { ok: true as const };
 }
@@ -160,15 +185,21 @@ export async function updateCommission(
 
     const finalAmountCents = overrideAmountCents ?? calculatedAmountCents;
 
-    await prisma.instructorCommission.update({
-      where: { id },
-      data: {
-        commissionType,
-        overrideAmountCents,
-        calculatedAmountCents,
-        finalAmountCents,
-      },
-    });
+    await prisma.$transaction([
+      prisma.instructorCommission.update({
+        where: { id },
+        data: {
+          commissionType,
+          overrideAmountCents,
+          calculatedAmountCents,
+          finalAmountCents,
+        },
+      }),
+      prisma.expense.updateMany({
+        where: { commissionId: id, status: ExpenseStatus.PENDING },
+        data: { amountCents: finalAmountCents },
+      }),
+    ]);
 
     revalidateCommissionPaths(existing.instructorId);
     return { success: true };
@@ -204,12 +235,13 @@ export async function markCommissionPaid(id: string, paymentId: string) {
         return { success: false, message: "Payment not found." };
       }
 
+      const paidAt = new Date();
       const result = await tx.instructorCommission.updateMany({
         where: { id, status: CommissionStatus.PENDING },
         data: {
           status: CommissionStatus.PAID,
           paymentId,
-          paidAt: new Date(),
+          paidAt,
         },
       });
 
@@ -219,6 +251,15 @@ export async function markCommissionPaid(id: string, paymentId: string) {
           message: "Commission state changed while saving. Reload and try again.",
         };
       }
+
+      await tx.expense.updateMany({
+        where: { commissionId: id },
+        data: {
+          status: ExpenseStatus.PAID,
+          paymentId,
+          paidAt,
+        },
+      });
 
       revalidateCommissionPaths(commission.instructorId);
       return { success: true };
@@ -270,6 +311,8 @@ export async function getInstructorCommissions(
             lessonType: true,
             capacity: true,
             notes: true,
+            deliveredRevenueCents: true,
+            revenueSource: true,
             instructor: { select: { id: true, name: true, email: true } },
             bookings: {
               select: {
@@ -310,6 +353,91 @@ export async function getInstructorCommissions(
   }
 
   return { rows, totals };
+}
+
+type SettleInstructorCommissionsInput = {
+  instructorId: string;
+  from: Date;
+  to: Date;
+  method: PaymentMethod;
+  reference?: string | null;
+  receivedAt?: Date;
+};
+
+export async function settleInstructorCommissions(
+  input: SettleInstructorCommissionsInput
+) {
+  const { instructorId, from, to, method, reference, receivedAt } = input;
+
+  try {
+    return await prisma.$transaction(async (tx) => {
+      const pending = await tx.instructorCommission.findMany({
+        where: {
+          instructorId,
+          status: CommissionStatus.PENDING,
+          session: { startsAt: { gte: from, lte: to } },
+        },
+        select: { id: true, finalAmountCents: true },
+      });
+
+      if (pending.length === 0) {
+        return { success: false as const, message: "No pending commissions in period." };
+      }
+
+      const totalCents = pending.reduce((sum, c) => sum + c.finalAmountCents, 0);
+      const ids = pending.map((c) => c.id);
+
+      const payment = await tx.payment.create({
+        data: {
+          userId: instructorId,
+          amountCents: totalCents,
+          method,
+          reference: reference?.trim() ? reference.trim() : null,
+          receivedAt: receivedAt ?? new Date(),
+        },
+      });
+
+      const paidAt = new Date();
+      const result = await tx.instructorCommission.updateMany({
+        where: { id: { in: ids }, status: CommissionStatus.PENDING },
+        data: {
+          status: CommissionStatus.PAID,
+          paymentId: payment.id,
+          paidAt,
+        },
+      });
+
+      if (result.count !== ids.length) {
+        throw new Error(
+          "Commission state changed during settlement. Reload and try again."
+        );
+      }
+
+      await tx.expense.updateMany({
+        where: { commissionId: { in: ids } },
+        data: {
+          status: ExpenseStatus.PAID,
+          paymentId: payment.id,
+          paidAt,
+        },
+      });
+
+      revalidateCommissionPaths(instructorId);
+      return {
+        success: true as const,
+        paymentId: payment.id,
+        count: result.count,
+        totalCents,
+      };
+    });
+  } catch (error) {
+    return {
+      success: false as const,
+      message: `Failed to settle commissions. ${
+        error instanceof Error ? error.message : String(error)
+      }`,
+    };
+  }
 }
 
 export async function listPayoutPaymentsForInstructor(instructorId: string) {

@@ -45,22 +45,23 @@ There are two ways to start a rental:
 ### Filling out the rental form
 
 1. **Guest** — Search by name, email, or phone. Click to select.
-2. **Start / Due back** — Set the rental period (date and time)
-3. **Add Equipment** — For each item:
-   - Select the equipment from the dropdown (shows available stock)
-   - Set the quantity
-   - Enter the price in EGP (this is the unit price, not total)
-   - Click **Add**
-4. Review the items table and running total
-5. Add optional **Notes**
-6. Click **Create Rental**
+2. **Add rental product** — Search for a rental product by name or SKU and click it. Each product becomes its own block on the form.
+3. For each product block:
+   - Set the product **quantity** (defaults to 1). The line total updates automatically from the product price × qty.
+   - Use the **equipment picker** below the product to add the inventory items used with that product. Pick the item, set qty, click **Add**. Available stock shown in the picker reflects the items you've already allocated to other product blocks on this form.
+   - Repeat to add as many equipment items as needed under that product
+4. Add more products if the guest is renting multiple things at once — each one gets its own equipment list
+5. Review the rental total at the bottom
+6. Add optional **Notes**
+7. Click **Create Rental** — the button stays disabled until every product has at least one equipment item
 
 ### What happens when you submit
 
-- A **Rental** record is created with status **Active**
-- Inventory stock (**availableQty**) is decremented for each item
+- A single **Order** is created with one **OrderLine** per product
+- A **Rental** record is created (linked to that Order) with status **Active**
+- For each equipment item under a product, a **RentalLine** is created linking the inventory item to that specific OrderLine — this is how you can later see which equipment was used with each product
+- Inventory stock (**availableQty**) is decremented for each equipment item
 - An **inventory movement** (OUT) is logged for each item
-- An **open Order** is created in the accounting system for the rental total
 - You are redirected to the rentals list
 
 ---
@@ -68,7 +69,7 @@ There are two ways to start a rental:
 ## Step 3: Managing Rentals
 
 ### Viewing rentals
-Go to **Admin > Rentals** (`/rentals`) to see all rentals. The table shows guest, items, dates, status, and total.
+Go to **Admin > Rentals** (`/rentals`) to see all rentals. The table shows guest, products, equipment, dates, status, and total. Open a rental's detail page to see each product with its equipment grouped beneath it.
 
 ### Rental statuses
 - **Active** (blue) — Equipment is currently rented out

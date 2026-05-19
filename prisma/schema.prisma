@@ -39,6 +39,20 @@ enum CommissionStatus {
   PAID
 }
 
+enum ExpenseType {
+  INSTRUCTOR_COMMISSION
+  TRANSPORTATION
+  MAINTENANCE
+  SUPPLIES
+  OTHER
+}
+
+enum ExpenseStatus {
+  PENDING
+  PAID
+  CANCELED
+}
+
 enum BeachUseType {
   REGULAR
   LOCAL
@@ -100,8 +114,11 @@ enum MembershipType {
 enum PaymentMethod {
   CASH
   CARD
+  VISA
   TRANSFER
   DISCOUNT
+  EURO
+  USD
 }
 
 enum BookingStatus {
@@ -184,6 +201,7 @@ model User {
 
   instructorProfile       InstructorProfile?
   commissionsAsInstructor InstructorCommission[] @relation("CommissionInstructor")
+  expensesAsPayee         Expense[]              @relation("ExpensePayee")
 }
 
 model Account {
@@ -237,6 +255,12 @@ enum ProductType {
   BUNDLE_CREDIT
 }
 
+enum ProductCategory {
+  BEACH_USE
+  RENTAL
+  LESSONS
+}
+
 enum WalletType {
   BEACH_USE
   LESSON_HOURS
@@ -257,20 +281,24 @@ enum WalletLedgerReason {
 }
 
 model Product {
-  id              String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  id              String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   name            String
-  sku             String      @unique
+  sku             String           @unique
   type            ProductType
+  category        ProductCategory?
   priceCents      Int // always store money in cents
-  currency        String      @default("EGP")
+  currency        String           @default("EGP")
   creditUnits     Int? // e.g. 10 or 20 for bundle products
   creditValidDays Int? // optional expiry window
   walletType      WalletType? // which wallet to credit (required for BUNDLE_CREDIT)
   walletUnit      WalletUnit? // unit for ledger delta (required for BUNDLE_CREDIT)
-  isActive        Boolean     @default(true)
-  createdAt       DateTime    @default(now()) @db.Timestamp(6)
+  lessonType      LessonType? // for LESSON_HOURS bundles: auto-applies this lesson type when used
+  isActive        Boolean          @default(true)
+  createdAt       DateTime         @default(now()) @db.Timestamp(6)
 
   orderLines OrderLine[]
+
+  @@index([category])
 }
 
 // When selling prepaid credits (bundle/hours):
@@ -293,6 +321,7 @@ model Order {
   lines         OrderLine[]
   allocations   PaymentAllocation[]
   walletEntries WalletLedger[]
+  rentals       Rental[]
 }
 
 model OrderLine {
@@ -308,6 +337,7 @@ model OrderLine {
   // snapshot for bundles at time of sale
   creditUnitsEach Int?
   walletEntries   WalletLedger[]
+  rentalLines     RentalLine[]
 }
 
 model Payment {
@@ -322,6 +352,7 @@ model Payment {
   allocations   PaymentAllocation[]
   walletEntries WalletLedger[]
   commissions   InstructorCommission[]
+  expenses      Expense[]
 }
 
 model PaymentAllocation {
@@ -386,16 +417,24 @@ model WalletLedger {
   @@index([reason, occurredAt])
 }
 
+enum RevenueSource {
+  BUNDLE
+  ORDER
+  FREE
+}
+
 model LessonSession {
-  id           String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  startsAt     DateTime   @db.Timestamp(6)
-  endsAt       DateTime   @db.Timestamp(6)
-  lessonType   LessonType
-  capacity     Int        @default(1)
-  instructorId String?    @db.Uuid
-  notes        String?
-  createdAt    DateTime   @default(now()) @db.Timestamp(6)
-  updatedAt    DateTime   @default(now()) @updatedAt
+  id                    String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  startsAt              DateTime       @db.Timestamp(6)
+  endsAt                DateTime       @db.Timestamp(6)
+  lessonType            LessonType
+  capacity              Int            @default(1)
+  instructorId          String?        @db.Uuid
+  notes                 String?
+  deliveredRevenueCents Int?
+  revenueSource         RevenueSource?
+  createdAt             DateTime       @default(now()) @db.Timestamp(6)
+  updatedAt             DateTime       @default(now()) @updatedAt
 
   instructor User?                 @relation("LessonInstructor", fields: [instructorId], references: [id], onDelete: SetNull)
   bookings   LessonBooking[]
@@ -443,8 +482,9 @@ model BeachVisit {
 model Rental {
   id         String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   guestId    String       @db.Uuid
+  orderId    String       @db.Uuid
   startsAt   DateTime     @db.Timestamp(6)
-  dueAt      DateTime     @db.Timestamp(6)
+  dueAt      DateTime?    @db.Timestamp(6)
   returnedAt DateTime?    @db.Timestamp(6)
   status     RentalStatus @default(OPEN)
   totalCents Int          @default(0)
@@ -453,28 +493,35 @@ model Rental {
   updatedAt  DateTime     @default(now()) @updatedAt
 
   guest         User           @relation(fields: [guestId], references: [id], onDelete: Cascade)
+  order         Order          @relation(fields: [orderId], references: [id], onDelete: Restrict)
   lines         RentalLine[]
   walletEntries WalletLedger[]
 
   @@index([guestId, startsAt])
-  @@index([status, dueAt])
+  @@index([status, startsAt])
+  @@index([orderId])
 }
 
 model RentalLine {
-  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  rentalId        String   @db.Uuid
-  inventoryItemId String   @db.Uuid
-  qty             Int      @default(1)
+  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  rentalId        String    @db.Uuid
+  orderLineId     String    @db.Uuid
+  inventoryItemId String    @db.Uuid
+  qty             Int       @default(1)
   unitPriceCents  Int
   lineTotalCents  Int
-  createdAt       DateTime @default(now()) @db.Timestamp(6)
+  returnedAt      DateTime? @db.Timestamp(6)
+  createdAt       DateTime  @default(now()) @db.Timestamp(6)
 
   rental        Rental              @relation(fields: [rentalId], references: [id], onDelete: Cascade)
+  orderLine     OrderLine           @relation(fields: [orderLineId], references: [id], onDelete: Restrict)
   inventoryItem InventoryItem       @relation(fields: [inventoryItemId], references: [id], onDelete: Restrict)
   movements     InventoryMovement[]
 
   @@index([rentalId])
+  @@index([orderLineId])
   @@index([inventoryItemId])
+  @@index([rentalId, returnedAt])
 }
 
 model InventoryItem {
@@ -547,7 +594,33 @@ model InstructorCommission {
   session    LessonSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
   instructor User          @relation("CommissionInstructor", fields: [instructorId], references: [id], onDelete: Restrict)
   payment    Payment?      @relation(fields: [paymentId], references: [id], onDelete: SetNull)
+  expense    Expense?
 
   @@index([instructorId, status])
   @@index([paymentId])
+}
+
+model Expense {
+  id          String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  type        ExpenseType
+  description String?
+  amountCents Int
+  status      ExpenseStatus @default(PENDING)
+
+  payeeId String? @db.Uuid
+  payee   User?   @relation("ExpensePayee", fields: [payeeId], references: [id], onDelete: SetNull)
+
+  commissionId String?               @unique @db.Uuid
+  commission   InstructorCommission? @relation(fields: [commissionId], references: [id], onDelete: SetNull)
+
+  paymentId String?   @db.Uuid
+  payment   Payment?  @relation(fields: [paymentId], references: [id], onDelete: SetNull)
+  paidAt    DateTime? @db.Timestamp(6)
+
+  createdAt DateTime @default(now()) @db.Timestamp(6)
+  updatedAt DateTime @default(now()) @updatedAt
+
+  @@index([status, type])
+  @@index([payeeId, status])
+  @@index([status, createdAt])
 }

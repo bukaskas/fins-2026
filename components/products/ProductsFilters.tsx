@@ -9,6 +9,13 @@ const TYPE_OPTIONS = [
   { value: "BUNDLE_CREDIT", label: "Bundle" },
 ];
 
+const CATEGORY_OPTIONS = [
+  { value: "all",       label: "All" },
+  { value: "BEACH_USE", label: "Beach Use" },
+  { value: "RENTAL",    label: "Rental" },
+  { value: "LESSONS",   label: "Lessons" },
+];
+
 const STATUS_OPTIONS = [
   { value: "all",      label: "All" },
   { value: "active",   label: "Active" },
@@ -69,8 +76,9 @@ export function ProductsFilters() {
   const searchParams = useSearchParams();
   const [, startTransition] = useTransition();
 
-  const type   = searchParams.get("type")   ?? "all";
-  const status = searchParams.get("status") ?? "all";
+  const type     = searchParams.get("type")     ?? "all";
+  const category = searchParams.get("category") ?? "all";
+  const status   = searchParams.get("status")   ?? "all";
 
   function push(updates: Record<string, string>) {
     const params = new URLSearchParams(searchParams.toString());
@@ -91,6 +99,12 @@ export function ProductsFilters() {
         options={TYPE_OPTIONS}
         value={type}
         onChange={(val) => push({ type: val })}
+      />
+      <SegmentedControl
+        label="Category"
+        options={CATEGORY_OPTIONS}
+        value={category}
+        onChange={(val) => push({ category: val })}
       />
       <SegmentedControl
         label="Status"

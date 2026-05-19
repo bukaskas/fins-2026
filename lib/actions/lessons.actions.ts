@@ -18,6 +18,7 @@ import {
   newLessonFormSchema,
 } from "@/lib/validators";
 import { ensureCommissionForSession } from "@/lib/actions/commission.actions";
+import { ensureSessionRevenue } from "@/lib/actions/session-revenue";
 import { getDefaultProductForLessonType } from "@/lib/lesson-products";
 
 type TxClient = Prisma.TransactionClient;
@@ -227,6 +228,7 @@ export async function getActiveLessonBundleProducts() {
       sku: true,
       priceCents: true,
       creditUnits: true,
+      lessonType: true,
     },
     orderBy: { creditUnits: "asc" },
   });
@@ -238,6 +240,7 @@ export async function getActiveLessonBundleProducts() {
       sku: p.sku,
       priceCents: p.priceCents,
       creditUnits: p.creditUnits as number,
+      lessonType: p.lessonType,
     }));
 }
 
@@ -420,6 +423,7 @@ export async function createLessonSessionFromForm(formData: FormData) {
     });
 
     await ensureCommissionForSession(session.id, tx);
+    await ensureSessionRevenue(session.id, tx);
   });
 
   revalidatePath("/lessons");
@@ -466,6 +470,7 @@ export async function batchUpdateSessionSchedule(
           },
         });
         await ensureCommissionForSession(u.id, tx);
+        await ensureSessionRevenue(u.id, tx);
       }
     });
     return { success: true, message: "Schedule updated successfully." };
@@ -522,6 +527,7 @@ export async function createLessonSessionQuick(data: {
       }
 
       await ensureCommissionForSession(s.id, tx);
+      await ensureSessionRevenue(s.id, tx);
 
       return s;
     });
@@ -668,6 +674,7 @@ export async function updateLessonSession(
         },
       });
       await ensureCommissionForSession(id, tx);
+      await ensureSessionRevenue(id, tx);
       return s;
     });
     revalidatePath("/bookings/schedule");
@@ -724,6 +731,7 @@ export async function updateLessonBooking(
         },
       });
       await ensureCommissionForSession(existing.sessionId, tx);
+      await ensureSessionRevenue(existing.sessionId, tx);
     });
 
     revalidatePath("/bookings/schedule");
@@ -803,6 +811,7 @@ export async function updateLessonBookingStatus(
       select: { sessionId: true },
     });
     await ensureCommissionForSession(booking.sessionId);
+    await ensureSessionRevenue(booking.sessionId);
     return { success: true };
   } catch {
     return { success: false };
@@ -847,6 +856,7 @@ export async function addGuestToSession(
       });
 
       await ensureCommissionForSession(sessionId, tx);
+      await ensureSessionRevenue(sessionId, tx);
 
       return booking;
     });

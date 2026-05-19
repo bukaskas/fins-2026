@@ -2,6 +2,7 @@ import Link from "next/link";
 import { getAllRentals, markOverdueRentals } from "@/lib/actions/rental.actions";
 import { RentalStatusBadge } from "@/components/rentals/RentalStatusBadge";
 import { ReturnRentalButton } from "@/components/rentals/ReturnRentalButton";
+import { formatElapsed } from "@/lib/utils";
 
 export default async function RentalsPage() {
   await markOverdueRentals();
@@ -24,9 +25,10 @@ export default async function RentalsPage() {
           <thead className="border-b bg-muted/40">
             <tr>
               <th className="px-3 py-2 text-left">Guest</th>
-              <th className="px-3 py-2 text-left">Items</th>
+              <th className="px-3 py-2 text-left">Products</th>
+              <th className="px-3 py-2 text-left">Equipment</th>
               <th className="px-3 py-2 text-left">Start</th>
-              <th className="px-3 py-2 text-left">Due</th>
+              <th className="px-3 py-2 text-left">Open for</th>
               <th className="px-3 py-2 text-left">Status</th>
               <th className="px-3 py-2 text-right">Total</th>
               <th className="px-3 py-2 text-right">Actions</th>
@@ -36,7 +38,7 @@ export default async function RentalsPage() {
             {rentals.length === 0 ? (
               <tr>
                 <td
-                  colSpan={7}
+                  colSpan={8}
                   className="px-3 py-8 text-center text-muted-foreground"
                 >
                   No rentals found.
@@ -49,6 +51,11 @@ export default async function RentalsPage() {
                     {rental.guest.name || rental.guest.email}
                   </td>
                   <td className="px-3 py-2">
+                    {rental.order.lines
+                      .map((l) => `${l.qty}× ${l.product.name}`)
+                      .join(", ")}
+                  </td>
+                  <td className="px-3 py-2">
                     {rental.lines
                       .map(
                         (l) =>
@@ -57,10 +64,13 @@ export default async function RentalsPage() {
                       .join(", ")}
                   </td>
                   <td className="px-3 py-2">
-                    {new Date(rental.startsAt).toLocaleDateString()}
+                    {new Date(rental.startsAt).toLocaleString()}
                   </td>
                   <td className="px-3 py-2">
-                    {new Date(rental.dueAt).toLocaleDateString()}
+                    {formatElapsed(
+                      rental.startsAt,
+                      rental.returnedAt ?? undefined,
+                    )}
                   </td>
                   <td className="px-3 py-2">
                     <RentalStatusBadge status={rental.status} />

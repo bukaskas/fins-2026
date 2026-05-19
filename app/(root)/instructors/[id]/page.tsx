@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import CreateSessionSheet from "./CreateSessionSheet";
 import { CopyWhatsAppButton } from "./CopyWhatsAppButton";
+import { DownloadInvoiceButton } from "./DownloadInvoiceButton";
 import { format, addMonths, subMonths, startOfMonth, endOfMonth } from "date-fns";
 import { prisma } from "@/db/prisma";
 import { CommissionStatus } from "@prisma/client";
@@ -84,13 +85,7 @@ export default async function InstructorDetailPage({ params, searchParams }: Pro
             from={from}
             to={to}
           />
-          <Link
-            href={`/instructors/${id}/invoice?from=${from}&to=${to}`}
-            target="_blank"
-            className="rounded border px-3 py-1.5 text-sm hover:bg-muted/40 transition-colors"
-          >
-            Download Invoice
-          </Link>
+          <DownloadInvoiceButton instructorId={id} from={from} to={to} />
           <CreateSessionSheet instructorId={instructor.id} instructorName={instructor.name} />
         </div>
       </div>
@@ -100,6 +95,7 @@ export default async function InstructorDetailPage({ params, searchParams }: Pro
         from={rangeStart}
         to={rangeEnd}
         status={status}
+        periodLabel={monthLabel}
       />
     </main>
   );

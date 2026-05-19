@@ -119,6 +119,7 @@ export async function quickAddBeachUse(formData: FormData) {
           name: "Beach Use Day",
           sku: BEACH_USE_SKU,
           type: "SERVICE",
+          category: "BEACH_USE",
           priceCents: DAY_USE_PRICE_CENTS,
           currency: "EGP",
           isActive: true,

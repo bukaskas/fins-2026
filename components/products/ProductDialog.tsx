@@ -2,7 +2,7 @@
 
 import { useState, useRef } from "react";
 import { toast } from "sonner";
-import { ProductType, WalletType, WalletUnit } from "@prisma/client";
+import { LessonType, ProductCategory, ProductType, WalletType, WalletUnit } from "@prisma/client";
 import {
   Dialog,
   DialogContent,
@@ -17,11 +17,28 @@ type Product = {
   sku: string;
   name: string;
   type: ProductType;
+  category: ProductCategory | null;
   priceCents: number;
   creditUnits: number | null;
   creditValidDays: number | null;
   walletType: WalletType | null;
   walletUnit: WalletUnit | null;
+  lessonType: LessonType | null;
+};
+
+const LESSON_TYPE_LABEL: Record<LessonType, string> = {
+  PRIVATE:       "Private",
+  GROUP:         "Group",
+  EXTRA_PRIVATE: "Extra Private",
+  EXTRA_GROUP:   "Extra Group",
+  FOIL:          "Foil",
+  KIDS:          "Kids",
+};
+
+const CATEGORY_LABEL: Record<ProductCategory, string> = {
+  BEACH_USE: "Beach Use",
+  RENTAL:    "Rental",
+  LESSONS:   "Lessons",
 };
 
 type Props = {
@@ -36,12 +53,22 @@ export function ProductDialog({ children, product }: Props) {
   const [selectedType, setSelectedType] = useState<ProductType>(
     product?.type ?? ProductType.SERVICE
   );
+  const [selectedCategory, setSelectedCategory] = useState<ProductCategory | "">(
+    product?.category ?? ""
+  );
+  const [selectedWalletType, setSelectedWalletType] = useState<WalletType | "">(
+    product?.walletType ?? ""
+  );
   const formRef = useRef<HTMLFormElement>(null);
   const isEdit = !!product;
 
   function handleOpenChange(v: boolean) {
     setOpen(v);
-    if (!v) setSelectedType(product?.type ?? ProductType.SERVICE);
+    if (!v) {
+      setSelectedType(product?.type ?? ProductType.SERVICE);
+      setSelectedCategory(product?.category ?? "");
+      setSelectedWalletType(product?.walletType ?? "");
+    }
   }
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -56,6 +83,8 @@ export function ProductDialog({ children, product }: Props) {
       setOpen(false);
       formRef.current?.reset();
       setSelectedType(ProductType.SERVICE);
+      setSelectedCategory("");
+      setSelectedWalletType("");
     } else {
       toast.error(result.error ?? "Something went wrong.");
     }
@@ -122,8 +151,8 @@ export function ProductDialog({ children, product }: Props) {
             />
           </div>
 
-          {/* Type + Price */}
-          <div className="grid grid-cols-2 gap-3">
+          {/* Type + Category + Price */}
+          <div className="grid grid-cols-3 gap-3">
             <div>
               <label className="block text-[0.62rem] font-[700] tracking-[0.12em] uppercase text-[#9A8E84] mb-1.5" style={raleway}>
                 Type
@@ -138,6 +167,25 @@ export function ProductDialog({ children, product }: Props) {
               >
                 <option value={ProductType.SERVICE}>Service</option>
                 <option value={ProductType.BUNDLE_CREDIT}>Bundle Credit</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-[0.62rem] font-[700] tracking-[0.12em] uppercase text-[#9A8E84] mb-1.5" style={raleway}>
+                Category
+              </label>
+              <select
+                name="category"
+                value={selectedCategory}
+                onChange={(e) => setSelectedCategory(e.target.value as ProductCategory | "")}
+                className={inputBase}
+                style={inputStyle}
+              >
+                <option value="">—</option>
+                {Object.values(ProductCategory).map((c) => (
+                  <option key={c} value={c}>
+                    {CATEGORY_LABEL[c]}
+                  </option>
+                ))}
               </select>
             </div>
             <div>
@@ -207,7 +255,8 @@ export function ProductDialog({ children, product }: Props) {
                   </label>
                   <select
                     name="walletType"
-                    defaultValue={product?.walletType ?? ""}
+                    value={selectedWalletType}
+                    onChange={(e) => setSelectedWalletType(e.target.value as WalletType | "")}
                     required
                     className={inputBase}
                     style={inputStyle}
@@ -234,6 +283,27 @@ export function ProductDialog({ children, product }: Props) {
                   </select>
                 </div>
               </div>
+
+              {selectedWalletType === WalletType.LESSON_HOURS && (
+                <div>
+                  <label className="block text-[0.62rem] font-[700] tracking-[0.12em] uppercase text-[#9A8E84] mb-1.5" style={raleway}>
+                    Lesson Type
+                  </label>
+                  <select
+                    name="lessonType"
+                    defaultValue={product?.lessonType ?? ""}
+                    className={inputBase}
+                    style={inputStyle}
+                  >
+                    <option value="">Any (manual pick on lesson form)</option>
+                    {Object.values(LessonType).map((t) => (
+                      <option key={t} value={t}>
+                        {LESSON_TYPE_LABEL[t]}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
             </div>
           )}
 

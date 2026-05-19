@@ -3,34 +3,30 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/db/prisma";
+import { createRentalSchema } from "@/lib/validators";
 
-const RENTAL_SERVICE_SKU = "RENTAL_SERVICE";
-
-type RentalLineInput = {
-  inventoryItemId: string;
-  qty: number;
-  unitPriceCents: number;
-};
+const OVERDUE_AFTER_HOURS = 4;
 
 export async function createRental(formData: FormData) {
-  const guestId = String(formData.get("guestId") ?? "").trim();
-  const startsAt = new Date(String(formData.get("startsAt") ?? ""));
-  const dueAt = new Date(String(formData.get("dueAt") ?? ""));
-  const notes = String(formData.get("notes") ?? "").trim() || null;
   const actorId = String(formData.get("actorId") ?? "").trim() || null;
-  const linesJson = String(formData.get("linesJson") ?? "[]");
+  const productLinesJson = String(formData.get("productLinesJson") ?? "[]");
 
-  let lines: RentalLineInput[];
+  let productLinesRaw: unknown;
   try {
-    lines = JSON.parse(linesJson);
+    productLinesRaw = JSON.parse(productLinesJson);
   } catch {
-    throw new Error("Invalid lines data.");
+    throw new Error("Invalid product lines data.");
   }
 
-  if (!guestId) throw new Error("Guest is required.");
-  if (lines.length === 0) throw new Error("At least one item is required.");
-  if (isNaN(startsAt.getTime()) || isNaN(dueAt.getTime())) throw new Error("Invalid dates.");
-  if (dueAt <= startsAt) throw new Error("Due date must be after start date.");
+  const parsed = createRentalSchema.safeParse({
+    guestId: String(formData.get("guestId") ?? "").trim(),
+    notes: String(formData.get("notes") ?? ""),
+    productLines: productLinesRaw,
+  });
+  if (!parsed.success) {
+    throw new Error(parsed.error.issues[0]?.message ?? "Invalid rental data.");
+  }
+  const { guestId, notes, productLines } = parsed.data;
 
   await prisma.$transaction(async (tx) => {
     const user = await tx.user.findUnique({
@@ -39,98 +35,122 @@ export async function createRental(formData: FormData) {
     });
     if (!user) throw new Error("User not found.");
 
-    // Validate availability and calculate total
-    let totalCents = 0;
-    for (const line of lines) {
-      const item = await tx.inventoryItem.findUnique({
-        where: { id: line.inventoryItemId },
-        select: { id: true, availableQty: true, isActive: true, name: true },
-      });
-      if (!item || !item.isActive) throw new Error(`Item not found or inactive.`);
-      if (item.availableQty < line.qty) {
-        throw new Error(`Not enough stock for "${item.name}" (available: ${item.availableQty}).`);
+    const productIds = Array.from(new Set(productLines.map((p) => p.productId)));
+    const products = await tx.product.findMany({
+      where: { id: { in: productIds } },
+      select: {
+        id: true,
+        name: true,
+        priceCents: true,
+        category: true,
+        isActive: true,
+      },
+    });
+    const productById = new Map(products.map((p) => [p.id, p]));
+    for (const pl of productLines) {
+      const p = productById.get(pl.productId);
+      if (!p || !p.isActive) {
+        throw new Error("Rental product not found or inactive.");
       }
-      totalCents += line.qty * line.unitPriceCents;
+      if (p.category !== "RENTAL") {
+        throw new Error(`"${p.name}" is not a rental product.`);
+      }
     }
 
-    // Create rental
+    const itemIds = Array.from(
+      new Set(productLines.flatMap((p) => p.equipment.map((e) => e.inventoryItemId))),
+    );
+    const items = await tx.inventoryItem.findMany({
+      where: { id: { in: itemIds } },
+      select: { id: true, name: true, availableQty: true, isActive: true },
+    });
+    const itemById = new Map(items.map((i) => [i.id, i]));
+
+    const requestedById = new Map<string, number>();
+    for (const pl of productLines) {
+      for (const eq of pl.equipment) {
+        requestedById.set(
+          eq.inventoryItemId,
+          (requestedById.get(eq.inventoryItemId) ?? 0) + eq.qty,
+        );
+      }
+    }
+    for (const [itemId, requested] of requestedById) {
+      const item = itemById.get(itemId);
+      if (!item || !item.isActive) throw new Error("Equipment item not found or inactive.");
+      if (item.availableQty < requested) {
+        throw new Error(
+          `Not enough stock for "${item.name}" (available: ${item.availableQty}, requested: ${requested}).`,
+        );
+      }
+    }
+
+    const totalCents = productLines.reduce((sum, pl) => {
+      const p = productById.get(pl.productId)!;
+      return sum + p.priceCents * pl.qty;
+    }, 0);
+
+    const order = await tx.order.create({
+      data: {
+        userId: guestId,
+        status: "OPEN",
+        totalCents,
+      },
+    });
+
     const rental = await tx.rental.create({
       data: {
         guestId,
-        startsAt,
-        dueAt,
+        orderId: order.id,
+        startsAt: new Date(),
         status: "OPEN",
         totalCents,
         notes,
       },
     });
 
-    // Create lines, decrement inventory, log movements
-    for (const line of lines) {
-      const rentalLine = await tx.rentalLine.create({
+    for (const pl of productLines) {
+      const product = productById.get(pl.productId)!;
+      const lineTotalCents = product.priceCents * pl.qty;
+      const orderLine = await tx.orderLine.create({
         data: {
-          rentalId: rental.id,
-          inventoryItemId: line.inventoryItemId,
-          qty: line.qty,
-          unitPriceCents: line.unitPriceCents,
-          lineTotalCents: line.qty * line.unitPriceCents,
+          orderId: order.id,
+          productId: product.id,
+          qty: pl.qty,
+          unitPriceCents: product.priceCents,
+          lineTotalCents,
         },
       });
 
-      await tx.inventoryItem.update({
-        where: { id: line.inventoryItemId },
-        data: { availableQty: { decrement: line.qty } },
-      });
+      for (const eq of pl.equipment) {
+        const rentalLine = await tx.rentalLine.create({
+          data: {
+            rentalId: rental.id,
+            orderLineId: orderLine.id,
+            inventoryItemId: eq.inventoryItemId,
+            qty: eq.qty,
+            unitPriceCents: 0,
+            lineTotalCents: 0,
+          },
+        });
 
-      await tx.inventoryMovement.create({
-        data: {
-          inventoryItemId: line.inventoryItemId,
-          rentalLineId: rentalLine.id,
-          actorId,
-          type: "OUT",
-          qty: line.qty,
-          reason: "Rental checkout",
-        },
-      });
+        await tx.inventoryItem.update({
+          where: { id: eq.inventoryItemId },
+          data: { availableQty: { decrement: eq.qty } },
+        });
+
+        await tx.inventoryMovement.create({
+          data: {
+            inventoryItemId: eq.inventoryItemId,
+            rentalLineId: rentalLine.id,
+            actorId,
+            type: "OUT",
+            qty: eq.qty,
+            reason: "Rental checkout",
+          },
+        });
+      }
     }
-
-    // Create order for payment tracking
-    let product = await tx.product.findUnique({
-      where: { sku: RENTAL_SERVICE_SKU },
-      select: { id: true },
-    });
-
-    if (!product) {
-      product = await tx.product.create({
-        data: {
-          name: "Equipment Rental",
-          sku: RENTAL_SERVICE_SKU,
-          type: "SERVICE",
-          priceCents: 0,
-          currency: "EGP",
-          isActive: true,
-        },
-        select: { id: true },
-      });
-    }
-
-    await tx.order.create({
-      data: {
-        userId: guestId,
-        status: "OPEN",
-        totalCents,
-        lines: {
-          create: [
-            {
-              productId: product.id,
-              qty: 1,
-              unitPriceCents: totalCents,
-              lineTotalCents: totalCents,
-            },
-          ],
-        },
-      },
-    });
   });
 
   revalidatePath("/rentals");
@@ -148,12 +168,15 @@ export async function returnRental(rentalId: string) {
       throw new Error("Only active rentals can be returned.");
     }
 
-    await tx.rental.update({
-      where: { id: rentalId },
-      data: { status: "RETURNED", returnedAt: new Date() },
-    });
+    const now = new Date();
+    const openLines = rental.lines.filter((l) => l.returnedAt === null);
 
-    for (const line of rental.lines) {
+    for (const line of openLines) {
+      await tx.rentalLine.update({
+        where: { id: line.id },
+        data: { returnedAt: now },
+      });
+
       await tx.inventoryItem.update({
         where: { id: line.inventoryItemId },
         data: { availableQty: { increment: line.qty } },
@@ -169,9 +192,69 @@ export async function returnRental(rentalId: string) {
         },
       });
     }
+
+    await tx.rental.update({
+      where: { id: rentalId },
+      data: { status: "RETURNED", returnedAt: now },
+    });
   });
 
   revalidatePath("/rentals");
+  revalidatePath(`/rentals/${rentalId}`);
+}
+
+export async function returnRentalLine(rentalLineId: string) {
+  await prisma.$transaction(async (tx) => {
+    const line = await tx.rentalLine.findUnique({
+      where: { id: rentalLineId },
+      include: { rental: true },
+    });
+    if (!line) throw new Error("Rental line not found.");
+    if (line.returnedAt) throw new Error("Item already returned.");
+    if (line.rental.status !== "OPEN" && line.rental.status !== "LATE") {
+      throw new Error("Rental is not active.");
+    }
+
+    const now = new Date();
+
+    await tx.rentalLine.update({
+      where: { id: rentalLineId },
+      data: { returnedAt: now },
+    });
+
+    await tx.inventoryItem.update({
+      where: { id: line.inventoryItemId },
+      data: { availableQty: { increment: line.qty } },
+    });
+
+    await tx.inventoryMovement.create({
+      data: {
+        inventoryItemId: line.inventoryItemId,
+        rentalLineId: line.id,
+        type: "IN",
+        qty: line.qty,
+        reason: "Rental line returned",
+      },
+    });
+
+    const stillOpen = await tx.rentalLine.count({
+      where: { rentalId: line.rentalId, returnedAt: null },
+    });
+
+    if (stillOpen === 0) {
+      await tx.rental.update({
+        where: { id: line.rentalId },
+        data: { status: "RETURNED", returnedAt: now },
+      });
+    }
+  });
+
+  const line = await prisma.rentalLine.findUnique({
+    where: { id: rentalLineId },
+    select: { rentalId: true },
+  });
+  revalidatePath("/rentals");
+  if (line) revalidatePath(`/rentals/${line.rentalId}`);
 }
 
 export async function cancelRental(rentalId: string) {
@@ -190,7 +273,8 @@ export async function cancelRental(rentalId: string) {
       data: { status: "CANCELED" },
     });
 
-    for (const line of rental.lines) {
+    const openLines = rental.lines.filter((l) => l.returnedAt === null);
+    for (const line of openLines) {
       await tx.inventoryItem.update({
         where: { id: line.inventoryItemId },
         data: { availableQty: { increment: line.qty } },
@@ -209,6 +293,7 @@ export async function cancelRental(rentalId: string) {
   });
 
   revalidatePath("/rentals");
+  revalidatePath(`/rentals/${rentalId}`);
 }
 
 export async function getAllRentals() {
@@ -216,6 +301,15 @@ export async function getAllRentals() {
     orderBy: { createdAt: "desc" },
     include: {
       guest: { select: { id: true, name: true, email: true, phone: true } },
+      order: {
+        include: {
+          lines: {
+            include: {
+              product: { select: { id: true, name: true, sku: true } },
+            },
+          },
+        },
+      },
       lines: {
         include: {
           inventoryItem: { select: { name: true, category: true, size: true } },
@@ -230,6 +324,15 @@ export async function getRentalById(id: string) {
     where: { id },
     include: {
       guest: { select: { id: true, name: true, email: true, phone: true } },
+      order: {
+        include: {
+          lines: {
+            include: {
+              product: { select: { id: true, name: true, sku: true, priceCents: true } },
+            },
+          },
+        },
+      },
       lines: {
         include: {
           inventoryItem: { select: { id: true, name: true, category: true, size: true } },
@@ -237,16 +340,25 @@ export async function getRentalById(id: string) {
             orderBy: { createdAt: "desc" },
             include: { actor: { select: { name: true, email: true } } },
           },
+          orderLine: { select: { id: true } },
         },
       },
     },
   });
 }
 
+export async function getRentalProducts() {
+  return prisma.product.findMany({
+    where: { category: "RENTAL", isActive: true },
+    select: { id: true, name: true, sku: true, priceCents: true },
+    orderBy: { name: "asc" },
+  });
+}
+
 export async function markOverdueRentals() {
-  const now = new Date();
+  const cutoff = new Date(Date.now() - OVERDUE_AFTER_HOURS * 60 * 60 * 1000);
   await prisma.rental.updateMany({
-    where: { status: "OPEN", dueAt: { lt: now } },
+    where: { status: "OPEN", startsAt: { lt: cutoff } },
     data: { status: "LATE" },
   });
 }

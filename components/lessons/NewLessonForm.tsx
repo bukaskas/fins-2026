@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { LessonType } from "@prisma/client";
 import StudentSearchField from "@/components/lessons/StudentSearchField";
+import BundleSearchField from "@/components/lessons/BundleSearchField";
 import {
   createLessonSessionFromForm,
   getUserLessonHoursBalance,
@@ -36,6 +37,7 @@ type BundleProduct = {
   sku: string;
   priceCents: number;
   creditUnits: number;
+  lessonType: LessonType | null;
 };
 
 export default function NewLessonForm({
@@ -55,9 +57,15 @@ export default function NewLessonForm({
   const [balance, setBalance] = useState<number | null>(initialBalance);
   const [balanceLoading, setBalanceLoading] = useState(false);
 
+  const [startsAtDate, setStartsAtDate] = useState("");
+  const [startsAtHour, setStartsAtHour] = useState("");
+  const [startsAtMinute, setStartsAtMinute] = useState("");
+  const startsAtTime =
+    startsAtHour && startsAtMinute ? `${startsAtHour}:${startsAtMinute}` : "";
   const [durationHours, setDurationHours] = useState(1);
   const [durationMinutesPart, setDurationMinutesPart] = useState(0);
   const [bundleProductId, setBundleProductId] = useState("");
+  const [lessonType, setLessonType] = useState<LessonType>(LessonType.PRIVATE);
   const [submitting, startSubmit] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [returnTo, setReturnTo] = useState("");
@@ -108,6 +116,10 @@ export default function NewLessonForm({
   const selectedBundle = bundleProducts.find((p) => p.id === bundleProductId) ?? null;
   const bundleCoversDuration =
     selectedBundle != null && selectedBundle.creditUnits >= requiredHours;
+
+  const lessonTypeFromBundle = selectedBundle?.lessonType ?? null;
+  const effectiveLessonType = lessonTypeFromBundle ?? lessonType;
+  const lessonTypeAutoDerived = lessonTypeFromBundle != null;
 
   const submitDisabled =
     submitting ||
@@ -204,32 +216,97 @@ export default function NewLessonForm({
           </select>
         </FieldBlock>
 
-        {/* Lesson type */}
-        <FieldBlock label="Lesson type">
-          <select
-            name="lessonType"
-            defaultValue={LessonType.PRIVATE}
-            className="w-full bg-transparent text-[0.92rem] font-[300] focus:outline-none appearance-none cursor-pointer"
-            style={{ color: "#0c2340", fontFamily: "var(--font-raleway)" }}
-          >
-            {Object.values(LessonType).map((t) => (
-              <option key={t} value={t}>
-                {LESSON_TYPE_LABELS[t] ?? t}
-              </option>
-            ))}
-          </select>
-        </FieldBlock>
+        {/* Lesson type — hidden when a bundle with a built-in lessonType is selected */}
+        {!lessonTypeAutoDerived && (
+          <FieldBlock label="Lesson type">
+            <select
+              value={lessonType}
+              onChange={(e) => setLessonType(e.target.value as LessonType)}
+              className="w-full bg-transparent text-[0.92rem] font-[300] focus:outline-none appearance-none cursor-pointer"
+              style={{ color: "#0c2340", fontFamily: "var(--font-raleway)" }}
+            >
+              {Object.values(LessonType).map((t) => (
+                <option key={t} value={t}>
+                  {LESSON_TYPE_LABELS[t] ?? t}
+                </option>
+              ))}
+            </select>
+          </FieldBlock>
+        )}
+        <input type="hidden" name="lessonType" value={effectiveLessonType} />
 
         {/* Start date/time */}
-        <FieldBlock label="Starts at">
+        <div>
+          <p
+            className="text-[0.55rem] tracking-[0.24em] uppercase font-[700] mb-2.5"
+            style={{ color: "#94a3b8", fontFamily: "var(--font-raleway)" }}
+          >
+            Starts at
+          </p>
+          <div className="grid grid-cols-2 gap-3">
+            <FieldBlock label="Date" compact>
+              <input
+                type="date"
+                value={startsAtDate}
+                onChange={(e) => setStartsAtDate(e.target.value)}
+                required
+                className="w-full bg-transparent text-[0.92rem] font-[300] focus:outline-none cursor-pointer"
+                style={{ color: "#0c2340", fontFamily: "var(--font-raleway)" }}
+              />
+            </FieldBlock>
+            <FieldBlock label="Time" compact>
+              <div className="flex items-center gap-1.5">
+                <select
+                  value={startsAtHour}
+                  onChange={(e) => setStartsAtHour(e.target.value)}
+                  required
+                  aria-label="Hour"
+                  className="flex-1 bg-transparent text-[0.92rem] font-[300] focus:outline-none appearance-none cursor-pointer text-center"
+                  style={{ color: "#0c2340", fontFamily: "var(--font-raleway)" }}
+                >
+                  <option value="" disabled>
+                    HH
+                  </option>
+                  {Array.from({ length: 24 }, (_, i) => {
+                    const v = String(i).padStart(2, "0");
+                    return (
+                      <option key={v} value={v}>
+                        {v}
+                      </option>
+                    );
+                  })}
+                </select>
+                <span
+                  className="text-[0.92rem] font-[300] select-none"
+                  style={{ color: "#94a3b8", fontFamily: "var(--font-raleway)" }}
+                >
+                  :
+                </span>
+                <select
+                  value={startsAtMinute}
+                  onChange={(e) => setStartsAtMinute(e.target.value)}
+                  required
+                  aria-label="Minute"
+                  className="flex-1 bg-transparent text-[0.92rem] font-[300] focus:outline-none appearance-none cursor-pointer text-center"
+                  style={{ color: "#0c2340", fontFamily: "var(--font-raleway)" }}
+                >
+                  <option value="" disabled>
+                    MM
+                  </option>
+                  <option value="00">00</option>
+                  <option value="15">15</option>
+                  <option value="30">30</option>
+                  <option value="45">45</option>
+                </select>
+              </div>
+            </FieldBlock>
+          </div>
           <input
-            type="datetime-local"
+            type="hidden"
             name="startsAt"
-            required
-            className="w-full bg-transparent text-[0.92rem] font-[300] focus:outline-none"
-            style={{ color: "#0c2340", fontFamily: "var(--font-raleway)" }}
+            value={startsAtDate && startsAtTime ? `${startsAtDate}T${startsAtTime}` : ""}
           />
-        </FieldBlock>
+        </div>
 
         {/* Duration */}
         <div>
@@ -272,29 +349,13 @@ export default function NewLessonForm({
 
         {/* Bundle product picker (only when student has insufficient hours) */}
         {needsBundle && (
-          <FieldBlock label={`Add hours — needs ${requiredHours.toFixed(2)}h`}>
-            <select
-              value={bundleProductId}
-              onChange={(e) => setBundleProductId(e.target.value)}
-              className="w-full bg-transparent text-[0.92rem] font-[300] focus:outline-none appearance-none cursor-pointer"
-              style={{ color: "#0c2340", fontFamily: "var(--font-raleway)" }}
-              required
-            >
-              <option value="" disabled>Select a bundle</option>
-              {bundleProducts.length === 0 && (
-                <option value="" disabled>No bundle products configured</option>
-              )}
-              {bundleProducts.map((p) => {
-                const tooSmall = p.creditUnits < requiredHours;
-                return (
-                  <option key={p.id} value={p.id} disabled={tooSmall}>
-                    {p.name} · {p.creditUnits}h — {(p.priceCents / 100).toLocaleString()} EGP
-                    {tooSmall ? " (too small)" : ""}
-                  </option>
-                );
-              })}
-            </select>
-          </FieldBlock>
+          <BundleSearchField
+            bundles={bundleProducts}
+            selectedId={bundleProductId}
+            onSelect={setBundleProductId}
+            requiredHours={requiredHours}
+            label={`Add hours — needs ${requiredHours.toFixed(2)}h`}
+          />
         )}
         <input type="hidden" name="bundleProductId" value={needsBundle ? bundleProductId : ""} />
         <input type="hidden" name="returnTo" value={returnTo} />

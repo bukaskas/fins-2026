@@ -84,15 +84,25 @@ export default async function RentalGuidePage() {
           <h3 className="text-xl font-medium">Filling Out The Rental Form</h3>
           <ol className="list-decimal pl-6 space-y-1">
             <li>Guest: search by name, email, or phone and select</li>
-            <li>Start / Due back: set rental period (date and time)</li>
             <li>
-              Add Equipment: choose item (with available stock), quantity, and
-              unit price in EGP, then click Add
+              Add one or more rental products. Each product becomes its own
+              block on the form with its own quantity and equipment list.
             </li>
-            <li>Review the items table and running total</li>
+            <li>
+              Inside each product block, pick the equipment used with that
+              product (kite, bar, board, etc.) and the quantity for each item
+            </li>
+            <li>
+              Repeat for additional products if the same guest is taking out
+              multiple rentals at once
+            </li>
             <li>Add optional notes</li>
-            <li>Click Create Rental</li>
+            <li>Click Create Rental — the rental clock starts on submit</li>
           </ol>
+          <p className="text-sm text-muted-foreground">
+            Equipment is recorded per product so you can later see exactly which
+            inventory items were used with each product purchase.
+          </p>
         </div>
 
         <div className="space-y-2">
@@ -118,8 +128,8 @@ export default async function RentalGuidePage() {
           <h3 className="text-xl font-medium">Rental Statuses</h3>
           <ul className="list-disc pl-6 space-y-1">
             <li>Active (blue): equipment is currently rented out</li>
-            <li>Overdue (red): due date passed and not returned</li>
-            <li>Returned (green): equipment has been returned</li>
+            <li>Overdue (red): rental has been open more than 4 hours</li>
+            <li>Returned (green): all items have been returned</li>
             <li>Canceled (gray): rental was canceled</li>
           </ul>
           <p className="text-sm text-muted-foreground">
@@ -130,13 +140,18 @@ export default async function RentalGuidePage() {
         <div className="space-y-2">
           <h3 className="text-xl font-medium">Returning Equipment</h3>
           <ol className="list-decimal pl-6 space-y-1">
-            <li>Click Return from the rentals list, or</li>
-            <li>Open a rental detail page and click Return</li>
-            <li>Confirm the return</li>
+            <li>
+              Open the rental detail page and click Mark returned on each item
+              as it comes back
+            </li>
+            <li>
+              Or click Return on the rentals list / detail page to return every
+              remaining item at once
+            </li>
           </ol>
           <p className="text-sm text-muted-foreground">
-            This sets status to Returned, restores stock, and logs an IN
-            movement.
+            Each item logs an IN movement and restores stock when returned. The
+            rental flips to Returned once every item has come back.
           </p>
         </div>
 

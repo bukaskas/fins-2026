@@ -94,9 +94,17 @@ export default async function UserDetailPage({ params }: Props) {
     prisma.rental.findMany({
       where: { guestId: id },
       include: {
+        order: {
+          include: {
+            lines: {
+              include: { product: { select: { name: true, sku: true } } },
+            },
+          },
+        },
         lines: {
           include: {
             inventoryItem: { select: { name: true, sku: true } },
+            orderLine: { select: { id: true } },
           },
         },
       },
@@ -300,7 +308,7 @@ export default async function UserDetailPage({ params }: Props) {
                 <TableHead>Starts</TableHead>
                 <TableHead>Due</TableHead>
                 <TableHead>Returned</TableHead>
-                <TableHead>Items</TableHead>
+                <TableHead>Products & equipment</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="text-right">Total</TableHead>
               </TableRow>
@@ -312,13 +320,31 @@ export default async function UserDetailPage({ params }: Props) {
                   <TableCell>{fmtDate(r.dueAt)}</TableCell>
                   <TableCell>{fmtDate(r.returnedAt)}</TableCell>
                   <TableCell>
-                    <div className="space-y-0.5">
-                      {r.lines.map((l) => (
-                        <div key={l.id} className="text-xs">
-                          {l.qty}× {l.inventoryItem.name}
-                          <span className="text-muted-foreground"> ({l.inventoryItem.sku})</span>
-                        </div>
-                      ))}
+                    <div className="space-y-2">
+                      {r.order.lines.map((ol) => {
+                        const equip = r.lines.filter(
+                          (l) => l.orderLine.id === ol.id,
+                        );
+                        return (
+                          <div key={ol.id}>
+                            <div className="text-xs font-medium">
+                              {ol.qty}× {ol.product.name}
+                              <span className="text-muted-foreground">
+                                {" "}({ol.product.sku})
+                              </span>
+                            </div>
+                            {equip.length > 0 && (
+                              <ul className="ml-3 list-disc text-xs text-muted-foreground">
+                                {equip.map((l) => (
+                                  <li key={l.id}>
+                                    {l.qty}× {l.inventoryItem.name} ({l.inventoryItem.sku})
+                                  </li>
+                                ))}
+                              </ul>
+                            )}
+                          </div>
+                        );
+                      })}
                     </div>
                   </TableCell>
                   <TableCell>{r.status}</TableCell>

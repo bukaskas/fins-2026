@@ -1,5 +1,5 @@
 import { email, z } from "zod";
-import { BookingStatus, CommissionType, LessonType } from "@prisma/client";
+import { BookingStatus, CommissionType, ExpenseType, LessonType } from "@prisma/client";
 
 export const bookingFormSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters long"),
@@ -100,6 +100,33 @@ export const commissionUpdateSchema = z.object({
 
 export type CommissionUpdateData = z.infer<typeof commissionUpdateSchema>;
 
+const MANUAL_EXPENSE_TYPES = [
+  ExpenseType.TRANSPORTATION,
+  ExpenseType.MAINTENANCE,
+  ExpenseType.SUPPLIES,
+  ExpenseType.OTHER,
+] as const;
+
+export const newExpenseSchema = z.object({
+  type: z.enum(MANUAL_EXPENSE_TYPES),
+  description: z
+    .string()
+    .trim()
+    .max(500)
+    .optional()
+    .transform((v) => (v && v.length > 0 ? v : undefined)),
+  amountCents: z
+    .number()
+    .int("Amount must be a whole number of cents")
+    .positive("Amount must be greater than 0"),
+  payeeId: z
+    .string()
+    .uuid()
+    .optional()
+    .or(z.literal("").transform(() => undefined)),
+});
+export type NewExpenseData = z.infer<typeof newExpenseSchema>;
+
 export const newLessonFormSchema = z
   .object({
     studentId: z.string().uuid({ message: "Student is required." }),
@@ -138,24 +165,30 @@ export type KitesurfingBookingFormData = z.infer<typeof kitesurfingBookingFormSc
 
 import { InventoryCategory, ItemCondition } from "@prisma/client";
 
-export const rentalLineSchema = z.object({
-  inventoryItemId: z.string().min(1, "Item is required"),
+export const rentalEquipmentSchema = z.object({
+  inventoryItemId: z.string().uuid("Invalid inventory item"),
   qty: z.number().int().min(1, "Quantity must be at least 1"),
-  unitPriceCents: z.number().int().min(0, "Price must be 0 or more"),
 });
 
-export const createRentalSchema = z
-  .object({
-    guestId: z.string().min(1, "Guest is required"),
-    startsAt: z.coerce.date(),
-    dueAt: z.coerce.date(),
-    notes: z.string().nullable().default(null),
-    lines: z.array(rentalLineSchema).min(1, "At least one item is required"),
-  })
-  .refine((d) => d.dueAt > d.startsAt, {
-    message: "Due date must be after start date",
-    path: ["dueAt"],
-  });
+export const rentalProductLineSchema = z.object({
+  productId: z.string().uuid("Invalid product"),
+  qty: z.number().int().min(1, "Quantity must be at least 1"),
+  equipment: z
+    .array(rentalEquipmentSchema)
+    .min(1, "At least one equipment item per product"),
+});
+
+export const createRentalSchema = z.object({
+  guestId: z.string().uuid("Guest is required"),
+  notes: z
+    .string()
+    .nullable()
+    .optional()
+    .transform((v) => (v && v.trim().length > 0 ? v : null)),
+  productLines: z
+    .array(rentalProductLineSchema)
+    .min(1, "At least one product is required"),
+});
 
 export type CreateRentalData = z.infer<typeof createRentalSchema>;
 

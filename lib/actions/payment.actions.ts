@@ -298,7 +298,7 @@ export async function settleUserBalance(input: SettleUserBalanceInput) {
       unappliedCents: remaining,
       outstandingCents: Math.max(totalCharged - totalPaid, 0),
     };
-  });
+  }, { timeout: 30000 });
 }
 
 export async function submitPaymentFromForm(formData: FormData) {
@@ -346,7 +346,13 @@ function parseMoneyToCents(value: FormDataEntryValue | null) {
 
 // Payment list grouped by payment method
 export async function listPaymentsGroupedByMethod() {
+  // Only incoming guest payments: exclude rows that were created as the
+  // settlement side of an instructor commission or an expense payout.
   const payments = await prisma.payment.findMany({
+    where: {
+      commissions: { none: {} },
+      expenses: { none: {} },
+    },
     include: {
       user: {
         select: { id: true, name: true, email: true },

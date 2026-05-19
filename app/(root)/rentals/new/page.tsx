@@ -1,6 +1,9 @@
 import NewRentalForm from "@/components/rentals/NewRentalForm";
 import { getAvailableInventoryItems } from "@/lib/actions/inventory.actions";
-import { getRentalFormUsers } from "@/lib/actions/rental.actions";
+import {
+  getRentalFormUsers,
+  getRentalProducts,
+} from "@/lib/actions/rental.actions";
 
 type Props = {
   searchParams: Promise<{ guestId?: string }>;
@@ -8,8 +11,9 @@ type Props = {
 
 export default async function NewRentalPage({ searchParams }: Props) {
   const { guestId } = await searchParams;
-  const [guests, inventoryItems] = await Promise.all([
+  const [guests, rentalProducts, inventoryItems] = await Promise.all([
     getRentalFormUsers(),
+    getRentalProducts(),
     getAvailableInventoryItems(),
   ]);
 
@@ -28,6 +32,7 @@ export default async function NewRentalPage({ searchParams }: Props) {
       ) : (
         <NewRentalForm
           guests={guests}
+          rentalProducts={rentalProducts}
           inventoryItems={inventoryItems}
           initialGuestId={guestId}
         />
