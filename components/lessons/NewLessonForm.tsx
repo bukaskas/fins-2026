@@ -46,20 +46,35 @@ export default function NewLessonForm({
   bundleProducts,
   initialStudentId,
   initialBalance,
+  initialStartsAt,
+  initialInstructorId,
 }: {
   students: Student[];
   instructors: Instructor[];
   bundleProducts: BundleProduct[];
   initialStudentId?: string;
   initialBalance: number | null;
+  initialStartsAt?: string;
+  initialInstructorId?: string;
 }) {
   const [selectedStudentId, setSelectedStudentId] = useState(initialStudentId ?? "");
   const [balance, setBalance] = useState<number | null>(initialBalance);
   const [balanceLoading, setBalanceLoading] = useState(false);
 
-  const [startsAtDate, setStartsAtDate] = useState("");
-  const [startsAtHour, setStartsAtHour] = useState("");
-  const [startsAtMinute, setStartsAtMinute] = useState("");
+  const initialStartsAtDate = initialStartsAt ? new Date(initialStartsAt) : null;
+  const pad2 = (n: number) => String(n).padStart(2, "0");
+
+  const [startsAtDate, setStartsAtDate] = useState(
+    initialStartsAtDate
+      ? `${initialStartsAtDate.getFullYear()}-${pad2(initialStartsAtDate.getMonth() + 1)}-${pad2(initialStartsAtDate.getDate())}`
+      : "",
+  );
+  const [startsAtHour, setStartsAtHour] = useState(
+    initialStartsAtDate ? pad2(initialStartsAtDate.getHours()) : "",
+  );
+  const [startsAtMinute, setStartsAtMinute] = useState(
+    initialStartsAtDate ? pad2(initialStartsAtDate.getMinutes()) : "",
+  );
   const startsAtTime =
     startsAtHour && startsAtMinute ? `${startsAtHour}:${startsAtMinute}` : "";
   const [durationHours, setDurationHours] = useState(1);
@@ -205,7 +220,7 @@ export default function NewLessonForm({
             required
             className="w-full bg-transparent text-[0.92rem] font-[300] focus:outline-none appearance-none cursor-pointer"
             style={{ color: "#0c2340", fontFamily: "var(--font-raleway)" }}
-            defaultValue=""
+            defaultValue={initialInstructorId ?? ""}
           >
             <option value="" disabled>Select instructor</option>
             {instructors.map((u) => (

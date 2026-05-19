@@ -427,8 +427,8 @@ export async function createLessonSessionFromForm(formData: FormData) {
   });
 
   revalidatePath("/lessons");
-  revalidatePath(returnTo);
-  redirect(returnTo);
+  revalidatePath("/bookings/schedule");
+  redirect("/bookings/schedule");
 }
 
 // ---- schedule board actions ----

@@ -26,7 +26,6 @@ import {
   SheetContent,
   SheetHeader,
   SheetTitle,
-  SheetTrigger,
 } from "@/components/ui/sheet";
 import {
   Select,
@@ -52,14 +51,12 @@ import {
 } from "lucide-react";
 import {
   batchUpdateSessionSchedule,
-  createLessonSessionQuick,
   deleteLessonSession,
   getLessonSessionsByDate,
   updateLessonSession,
 } from "@/lib/actions/lessons.actions";
 import { LessonType } from "@prisma/client";
-import { searchUser } from "@/lib/actions/user.actions";
-import { LESSON_TYPE_SKU } from "@/lib/lesson-products";
+import NewLessonForm from "@/components/lessons/NewLessonForm";
 import { toast } from "sonner";
 
 // ---------- types ----------
@@ -97,7 +94,7 @@ export type ServiceProduct = {
   priceCents: number;
 };
 
-type Instructor = { id: string; name: string | null };
+type Instructor = { id: string; name: string | null; email: string };
 
 // ---------- helpers ----------
 
@@ -153,25 +150,26 @@ function DroppableCell({
   children,
   isOccupied,
   rowSpan = 1,
+  onDoubleClick,
 }: {
   id: string;
   children: React.ReactNode;
   isOccupied: boolean;
   rowSpan?: number;
+  onDoubleClick?: () => void;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id });
   return (
     <td
       ref={setNodeRef}
       rowSpan={rowSpan}
-      // Explicit height so children's h-full resolves correctly.
-      // In CSS table layout height% on a child only works when the parent
-      // has an explicit height declaration, not just a computed one.
+      onDoubleClick={!isOccupied ? onDoubleClick : undefined}
       style={{ height: `${rowSpan * ROW_HEIGHT_REM}rem` }}
       className={cn(
         "border p-1 min-w-35 align-top transition-colors",
         isOver && !isOccupied && "bg-primary/10",
         isOver && isOccupied && "bg-destructive/10",
+        !isOccupied && onDoubleClick && "cursor-cell hover:bg-muted/40",
       )}
     >
       {children}
@@ -639,8 +637,6 @@ function ListView({
   );
 }
 
-// ---------- create session sheet ----------
-
 const LESSON_TYPES: { value: string; label: string }[] = [
   { value: "PRIVATE", label: "Private" },
   { value: "GROUP", label: "Group" },
@@ -650,368 +646,46 @@ const LESSON_TYPES: { value: string; label: string }[] = [
   { value: "KIDS", label: "Kids" },
 ];
 
+// ---------- create session sheet ----------
+
 function CreateSessionSheet({
-  defaultDate,
+  students,
   instructors,
-  serviceProducts,
-  onCreated,
+  bundleProducts,
+  open,
+  onOpenChange,
+  initialStartsAt,
+  initialInstructorId,
 }: {
-  defaultDate: Date;
+  students: LessonFormStudent[];
   instructors: Instructor[];
-  serviceProducts: ServiceProduct[];
-  onCreated: (session: SessionWithBookings) => void;
+  bundleProducts: LessonBundleProduct[];
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  initialStartsAt?: string;
+  initialInstructorId?: string;
 }) {
-  const productBySku = useMemo(() => {
-    const m = new Map<string, ServiceProduct>();
-    serviceProducts.forEach((p) => m.set(p.sku, p));
-    return m;
-  }, [serviceProducts]);
-
-  const defaultProductIdFor = useCallback(
-    (lt: string) => {
-      const sku = LESSON_TYPE_SKU[lt as LessonType];
-      return sku ? (productBySku.get(sku)?.id ?? "") : "";
-    },
-    [productBySku],
-  );
-
-  const [open, setOpen] = useState(false);
-  const [calOpen, setCalOpen] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
-  const [date, setDate] = useState<Date>(defaultDate);
-  const [time, setTime] = useState("");
-  const [durationHours, setDurationHours] = useState("1");
-  const [durationMinutes, setDurationMinutes] = useState("0");
-  const [lessonType, setLessonType] = useState("PRIVATE");
-  const [productId, setProductId] = useState<string>(() => defaultProductIdFor("PRIVATE"));
-  const [instructorId, setInstructorId] = useState("");
-  const [notes, setNotes] = useState("");
-
-  const handleLessonTypeChange = (value: string) => {
-    setLessonType(value);
-    setProductId(defaultProductIdFor(value));
-  };
-
-  // student search
-  const [studentQuery, setStudentQuery] = useState("");
-  const [studentResults, setStudentResults] = useState<SessionGuest[]>([]);
-  const [selectedStudent, setSelectedStudent] = useState<SessionGuest | null>(
-    null,
-  );
-  const [searching, setSearching] = useState(false);
-
-  const handleOpen = (v: boolean) => {
-    if (v) setDate(defaultDate);
-    setOpen(v);
-  };
-
-  const handleStudentSearch = useCallback(async (q: string) => {
-    setStudentQuery(q);
-    setSelectedStudent(null);
-    if (q.trim().length < 2) {
-      setStudentResults([]);
-      return;
-    }
-    setSearching(true);
-    try {
-      const results = await searchUser(q);
-      setStudentResults(
-        results.map((u) => ({
-          id: u.id,
-          name: u.name,
-          email: u.email,
-          phone: u.phone,
-        })),
-      );
-    } finally {
-      setSearching(false);
-    }
-  }, []);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!time || !date) {
-      toast.error("Please select a date and time.");
-      return;
-    }
-
-    const totalMinutes =
-      (parseInt(durationHours, 10) || 0) * 60 +
-      (parseInt(durationMinutes, 10) || 0);
-    if (totalMinutes <= 0) {
-      toast.error("Duration must be greater than 0.");
-      return;
-    }
-
-    const startsAt = replaceTime(date, time);
-    const endsAt = new Date(startsAt.getTime() + totalMinutes * 60 * 1000);
-
-    if (selectedStudent && !productId) {
-      toast.error(
-        "No product available for this lesson type — add it in /products or pick one manually.",
-      );
-      return;
-    }
-
-    setSubmitting(true);
-    try {
-      const result = await createLessonSessionQuick({
-        startsAt: startsAt.toISOString(),
-        endsAt: endsAt.toISOString(),
-        lessonType,
-        instructorId: instructorId || null,
-        notes: notes || null,
-        guestId: selectedStudent?.id ?? null,
-        productId: selectedStudent ? (productId || null) : null,
-      });
-
-      if (result.success && result.data) {
-        toast.success("Session created");
-        onCreated(result.data as SessionWithBookings);
-        setOpen(false);
-        // reset form
-        setTime("");
-        setDurationHours("1");
-        setDurationMinutes("0");
-        setLessonType("PRIVATE");
-        setProductId(defaultProductIdFor("PRIVATE"));
-        setInstructorId("");
-        setNotes("");
-        setStudentQuery("");
-        setSelectedStudent(null);
-        setStudentResults([]);
-      } else {
-        toast.error(result.message || "Failed to create session.");
-      }
-    } finally {
-      setSubmitting(false);
-    }
-  };
+  // Re-mount the form whenever prefill or open state changes so default values
+  // applied on mount (date/time fields, instructor select) refresh correctly.
+  const formKey = `${initialStartsAt ?? ""}|${initialInstructorId ?? ""}|${open ? 1 : 0}`;
 
   return (
-    <Sheet open={open} onOpenChange={handleOpen}>
-      <SheetTrigger asChild>
-        <Button size="sm" variant="outline">
-          <Plus className="mr-1 size-4" />
-          New Session
-        </Button>
-      </SheetTrigger>
-      <SheetContent className="overflow-y-auto">
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent className="overflow-y-auto sm:max-w-lg">
         <SheetHeader>
           <SheetTitle>New Lesson Session</SheetTitle>
         </SheetHeader>
-        <form onSubmit={handleSubmit} className="space-y-4 mt-4 px-1">
-          {/* Student search */}
-          <div className="space-y-1">
-            <Label>Student</Label>
-            <Input
-              value={studentQuery}
-              onChange={(e) => handleStudentSearch(e.target.value)}
-              placeholder="Search by name, email, or phone"
-              disabled={submitting}
-            />
-            {selectedStudent && (
-              <p className="text-xs text-primary">
-                Selected: {selectedStudent.name || selectedStudent.email}
-              </p>
-            )}
-            {!selectedStudent && studentResults.length > 0 && (
-              <div className="max-h-40 overflow-auto rounded border text-sm">
-                {studentResults.map((u) => (
-                  <button
-                    key={u.id}
-                    type="button"
-                    onClick={() => {
-                      setSelectedStudent(u);
-                      setStudentQuery(`${u.name || "Unnamed"} - ${u.email}`);
-                      setStudentResults([]);
-                    }}
-                    className="block w-full border-b px-3 py-2 text-left last:border-b-0 hover:bg-muted/40"
-                  >
-                    <span className="font-medium">{u.name || "Unnamed"}</span>
-                    <span className="text-xs text-muted-foreground ml-2">
-                      {u.email}
-                    </span>
-                  </button>
-                ))}
-              </div>
-            )}
-            {searching && (
-              <p className="text-xs text-muted-foreground">Searching...</p>
-            )}
-          </div>
-
-          {/* Instructor */}
-          <div className="space-y-1">
-            <Label>Instructor</Label>
-            <Select
-              value={instructorId}
-              onValueChange={setInstructorId}
-              disabled={submitting}
-            >
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Select instructor" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectGroup>
-                  {instructors.map((i) => (
-                    <SelectItem key={i.id} value={i.id}>
-                      {i.name ?? "Unknown"}
-                    </SelectItem>
-                  ))}
-                </SelectGroup>
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Date */}
-          <div className="space-y-1">
-            <Label>Date *</Label>
-            <Popover open={calOpen} onOpenChange={setCalOpen}>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  className="w-full justify-start font-normal"
-                >
-                  <CalendarIcon className="mr-2 size-4" />
-                  {format(date, "PPP")}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
-                <Calendar
-                  mode="single"
-                  selected={date}
-                  onSelect={(d) => {
-                    if (d) {
-                      setDate(d);
-                      setCalOpen(false);
-                    }
-                  }}
-                />
-              </PopoverContent>
-            </Popover>
-          </div>
-
-          {/* Time */}
-          <div className="space-y-1">
-            <Label>Time *</Label>
-            <Select value={time} onValueChange={setTime} disabled={submitting}>
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Select time" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectGroup>
-                  {TIME_SLOTS.map((t) => (
-                    <SelectItem key={t} value={t}>
-                      {t}
-                    </SelectItem>
-                  ))}
-                </SelectGroup>
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Duration */}
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1">
-              <Label>Hours</Label>
-              <Input
-                type="number"
-                min="0"
-                value={durationHours}
-                onChange={(e) => setDurationHours(e.target.value)}
-                disabled={submitting}
-              />
-            </div>
-            <div className="space-y-1">
-              <Label>Minutes</Label>
-              <Select
-                value={durationMinutes}
-                onValueChange={setDurationMinutes}
-                disabled={submitting}
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="0">00</SelectItem>
-                  <SelectItem value="15">15</SelectItem>
-                  <SelectItem value="30">30</SelectItem>
-                  <SelectItem value="45">45</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          {/* Lesson Type */}
-          <div className="space-y-1">
-            <Label>Lesson Type</Label>
-            <Select
-              value={lessonType}
-              onValueChange={handleLessonTypeChange}
-              disabled={submitting}
-            >
-              <SelectTrigger className="w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectGroup>
-                  {LESSON_TYPES.map((t) => (
-                    <SelectItem key={t.value} value={t.value}>
-                      {t.label}
-                    </SelectItem>
-                  ))}
-                </SelectGroup>
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Product (charge guest) */}
-          {selectedStudent && (
-            <div className="space-y-1">
-              <Label>Product (charge)</Label>
-              <Select
-                value={productId}
-                onValueChange={setProductId}
-                disabled={submitting}
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Select a product" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectGroup>
-                    {serviceProducts.map((p) => (
-                      <SelectItem key={p.id} value={p.id}>
-                        {p.name} — {(p.priceCents / 100).toLocaleString()} EGP
-                      </SelectItem>
-                    ))}
-                  </SelectGroup>
-                </SelectContent>
-              </Select>
-              {!productId && (
-                <p className="text-xs text-amber-600">
-                  No matching product for this lesson type. Add it in{" "}
-                  <code>/products</code> or pick one manually.
-                </p>
-              )}
-            </div>
-          )}
-
-          {/* Notes */}
-          <div className="space-y-1">
-            <Label>Notes</Label>
-            <Input
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              placeholder="Optional notes"
-              disabled={submitting}
-            />
-          </div>
-
-          <Button type="submit" className="w-full" disabled={submitting}>
-            {submitting ? "Creating..." : "Create Session"}
-          </Button>
-        </form>
+        <div className="mt-4 px-1 pb-6">
+          <NewLessonForm
+            key={formKey}
+            students={students}
+            instructors={instructors}
+            bundleProducts={bundleProducts}
+            initialBalance={null}
+            initialStartsAt={initialStartsAt}
+            initialInstructorId={initialInstructorId}
+          />
+        </div>
       </SheetContent>
     </Sheet>
   );
@@ -1019,16 +693,36 @@ function CreateSessionSheet({
 
 // ---------- main component ----------
 
+type LessonFormStudent = {
+  id: string;
+  name: string | null;
+  email: string;
+  phone: string | null;
+};
+
+type LessonBundleProduct = {
+  id: string;
+  name: string;
+  sku: string;
+  priceCents: number;
+  creditUnits: number;
+  lessonType: LessonType | null;
+};
+
 export default function ScheduleBoard({
   instructors,
   initialSessions,
   initialDate,
   serviceProducts,
+  students,
+  bundleProducts,
 }: {
   instructors: Instructor[];
   initialSessions: SessionWithBookings[];
   initialDate: string; // YYYY-MM-DD
   serviceProducts: ServiceProduct[];
+  students: LessonFormStudent[];
+  bundleProducts: LessonBundleProduct[];
 }) {
   const [selectedDate, setSelectedDate] = useState<Date>(
     new Date(initialDate + "T00:00:00"),
@@ -1055,17 +749,22 @@ export default function ScheduleBoard({
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  const handleSessionCreated = useCallback((session: SessionWithBookings) => {
-    setSessions((prev) => [...prev, session]);
-    setOriginalMap((prev) => {
-      const next = new Map(prev);
-      next.set(session.id, {
-        startsAt: new Date(session.startsAt).toISOString(),
-        instructorId: session.instructorId,
-      });
-      return next;
-    });
-  }, []);
+  // New-session sheet state — controlled so we can open it from the top-bar
+  // button (no prefill) or from a double-click on a slot (prefill date+instructor).
+  const [newSessionOpen, setNewSessionOpen] = useState(false);
+  const [newSessionPrefill, setNewSessionPrefill] = useState<{
+    startsAt?: string;
+    instructorId?: string;
+  }>({});
+
+  const openNewSession = useCallback(
+    (prefill: { startsAt?: string; instructorId?: string } = {}) => {
+      setNewSessionPrefill(prefill);
+      setNewSessionOpen(true);
+    },
+    [],
+  );
+
 
   const handleSessionUpdated = useCallback((updated: SessionWithBookings) => {
     setSessions((prev) => prev.map((s) => (s.id === updated.id ? updated : s)));
@@ -1297,11 +996,22 @@ export default function ScheduleBoard({
           </PopoverContent>
         </Popover>
 
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() => openNewSession()}
+        >
+          <Plus className="mr-1 size-4" />
+          New Session
+        </Button>
         <CreateSessionSheet
-          defaultDate={selectedDate}
+          students={students}
           instructors={instructors}
-          serviceProducts={serviceProducts}
-          onCreated={handleSessionCreated}
+          bundleProducts={bundleProducts}
+          open={newSessionOpen}
+          onOpenChange={setNewSessionOpen}
+          initialStartsAt={newSessionPrefill.startsAt}
+          initialInstructorId={newSessionPrefill.instructorId}
         />
 
         <div className="flex items-center gap-2 ml-auto">
@@ -1371,6 +1081,12 @@ export default function ScheduleBoard({
                         id={cellId}
                         isOccupied={!!session}
                         rowSpan={span}
+                        onDoubleClick={() =>
+                          openNewSession({
+                            startsAt: replaceTime(selectedDate, slot).toISOString(),
+                            instructorId: inst.id,
+                          })
+                        }
                       >
                         {session && (
                           <DraggableSession
