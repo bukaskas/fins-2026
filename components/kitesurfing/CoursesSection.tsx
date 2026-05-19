@@ -190,10 +190,10 @@ const courses: CourseCardProps[] = [
             Pricing
           </div>
           <div className="text-sm text-white/70 font-[family-name:var(--font-raleway)] font-[300]">
-            Private: <span className="text-white font-[500]">7,500 EGP</span>
+            Private: <span className="text-white font-[500]">8,500 EGP</span>
           </div>
           <div className="text-sm text-white/70 font-[family-name:var(--font-raleway)] font-[300]">
-            Group: <span className="text-white font-[500]">5,000 EGP</span> per
+            Group: <span className="text-white font-[500]">5,500 EGP</span> per
             person (2–4 persons)
           </div>
         </div>

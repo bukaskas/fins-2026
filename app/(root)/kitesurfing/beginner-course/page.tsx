@@ -76,8 +76,8 @@ function BeginnerCoursePage() {
             <DetailRow label="Private duration" value="6 hours" />
             <DetailRow label="Group duration" value="8 hours" />
             <DetailRow label="Course length" value="2 to 3 days" />
-            <DetailRow label="Private price" value="22,000 EGP" />
-            <DetailRow label="Group price" value="17,000 EGP per person" />
+            <DetailRow label="Private price" value="25,500 EGP" />
+            <DetailRow label="Group price" value="22,000 EGP per person" />
             <DetailRow label="Group size" value="2 to 4 students" />
           </div>
 
