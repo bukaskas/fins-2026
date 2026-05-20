@@ -6,6 +6,7 @@ import bcryptjs from "bcryptjs";
 import { Prisma, Role } from "@prisma/client";
 import { sendRegistrationEmail } from "@/emails";
 import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
 
 // ...existing code...
 
@@ -262,6 +263,26 @@ export async function createGuest(data: { name: string; email: string; phone: st
     }
     console.error("Error creating guest:", error);
     return { success: false as const, message: "Failed to create guest." };
+  }
+}
+
+export async function deleteUser(id: string) {
+  try {
+    await prisma.user.delete({ where: { id } });
+    revalidatePath("/users");
+    return { success: true as const, message: "User deleted." };
+  } catch (error: any) {
+    if (error.code === "P2025") {
+      return { success: false as const, message: "User not found." };
+    }
+    if (error.code === "P2003") {
+      return {
+        success: false as const,
+        message: "Cannot delete: user has instructor commissions on record.",
+      };
+    }
+    console.error("Error deleting user:", error);
+    return { success: false as const, message: "Failed to delete user." };
   }
 }
 

@@ -8,8 +8,8 @@ import { RestaurantHero } from "./RestaurantHero";
 import { PharaohHero } from "./PharaohHero";
 
 const heroComponents = [
-  KitesurfingHero,
   DayUseHero,
+  KitesurfingHero,
   RestaurantHero,
   PharaohHero,
 ];

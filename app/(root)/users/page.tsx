@@ -2,6 +2,7 @@ import { Button } from "@/components/ui/button";
 import { listUsers } from "@/lib/actions/user.actions";
 import Link from "next/link";
 import { Plus } from "lucide-react";
+import { DeleteUserButton } from "@/components/users/DeleteUserButton";
 
 type Props = {
   searchParams: Promise<{ q?: string }>;
@@ -74,7 +75,7 @@ export default async function UsersPage({ searchParams }: Props) {
                   <td className="px-3 py-2">
                     {new Date(u.createdAt).toLocaleDateString()}
                   </td>
-                  <td>
+                  <td className="whitespace-nowrap">
                     <Button asChild variant={"link"}>
                       <Link
                         href={`/users/edit/${u.id}`}
@@ -83,6 +84,10 @@ export default async function UsersPage({ searchParams }: Props) {
                         Edit
                       </Link>
                     </Button>
+                    <DeleteUserButton
+                      userId={u.id}
+                      userLabel={u.name || u.email}
+                    />
                   </td>
                 </tr>
               ))
