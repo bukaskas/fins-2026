@@ -101,6 +101,12 @@ async function BookingsDashboardPage({
             </Link>
             <div className="flex items-center gap-3">
               <Link
+                href="/bookings/agents"
+                className="inline-flex items-center gap-1.5 text-[0.65rem] tracking-[0.18em] uppercase font-[family-name:var(--font-raleway)] font-[600] text-[#8a8480] hover:text-[#1a1614] border border-[#ece8e3] px-4 py-2.5 hover:border-[#d6d0c8] transition-colors duration-200"
+              >
+                Team Stats
+              </Link>
+              <Link
                 href="/bookings/closed-dates"
                 className="inline-flex items-center gap-1.5 text-[0.65rem] tracking-[0.18em] uppercase font-[family-name:var(--font-raleway)] font-[600] text-[#8a8480] hover:text-[#1a1614] border border-[#ece8e3] px-4 py-2.5 hover:border-[#d6d0c8] transition-colors duration-200"
               >

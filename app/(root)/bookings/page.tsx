@@ -2,6 +2,7 @@ import { getAllBookings, type BookingWithAgent } from "@/lib/actions/booking.act
 import { listAgents } from "@/lib/actions/user.actions";
 import BookingComponent from "@/components/kitesurfing/BookingComponent";
 import { BookingsFilters } from "@/components/bookings/BookingsFilters";
+import { CopyGuestsButton } from "@/components/bookings/CopyGuestsButton";
 import { Button } from "@/components/ui/button";
 import { BookingStatus } from "@prisma/client";
 import { format, addDays } from "date-fns";
@@ -142,15 +143,25 @@ async function BookingsPage({
         <h1 className="font-[family-name:var(--font-raleway)] text-3xl font-[200] tracking-tight text-[#1a1614]">
           Bookings
         </h1>
-        <Button asChild className="rounded-full">
-          <Link href="/bookings/day-use/new">+ New Day Use</Link>
-        </Button>
+        <div className="flex items-center gap-2">
+          <CopyGuestsButton
+            guests={bookings.map((b) => ({
+              name: b.name,
+              date: b.date,
+              phone: b.phone,
+            }))}
+          />
+          <Button asChild className="rounded-full">
+            <Link href="/bookings/day-use/new">+ New Day Use</Link>
+          </Button>
+        </div>
       </div>
 
       {/* Nav */}
       <div className="mb-6 flex gap-2 flex-wrap">
         {[
           { label: "Dashboard",   href: "/bookings/dashboard",  variant: "secondary" },
+          { label: "Agents",      href: "/bookings/agents",      variant: "outline" },
           { label: "Kitesurfing", href: "/bookings/kitesurfing", variant: "outline" },
           { label: "Lessons",     href: "/lessons",              variant: "outline" },
           { label: "Day Use",     href: "/bookings/day-use",     variant: "outline" },

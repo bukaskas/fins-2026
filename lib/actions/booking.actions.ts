@@ -161,6 +161,217 @@ export async function deleteBooking(id: string) {
   }
 }
 
+export type AgentStatsRow = {
+  agentId: string | null;
+  name: string;
+  email: string | null;
+  touched: number;
+  byStatus: Record<BookingStatus, number>;
+  confirmedCount: number;
+  declinedCount: number;
+  pendingCount: number;
+  revenueCents: number;
+  collectedCents: number;
+  peopleCount: number;
+  serviceBreakdown: Record<string, number>;
+  topService: string | null;
+};
+
+export type AgentStatsResult = {
+  team: {
+    totalBookings: number;
+    confirmedCount: number;
+    declinedCount: number;
+    pendingCount: number;
+    unassignedCount: number;
+    conversionRate: number;
+    revenueCents: number;
+    collectedCents: number;
+    serviceBreakdown: Record<string, number>;
+  };
+  perAgent: AgentStatsRow[];
+};
+
+const CONFIRMED_STATUSES: BookingStatus[] = [
+  BookingStatus.CONFIRMED,
+  BookingStatus.ARRIVED,
+];
+const DECLINED_STATUSES: BookingStatus[] = [
+  BookingStatus.DECLINED,
+  BookingStatus.NO_RESPONSE_EXPIRED,
+  BookingStatus.CANCELED,
+];
+
+function emptyStatusMap(): Record<BookingStatus, number> {
+  return Object.values(BookingStatus).reduce((acc, status) => {
+    acc[status] = 0;
+    return acc;
+  }, {} as Record<BookingStatus, number>);
+}
+
+export async function getAgentStats(
+  rangeStart: Date | null,
+  rangeEnd: Date | null,
+): Promise<{ success: true; data: AgentStatsResult } | { success: false; message: string }> {
+  try {
+    const where =
+      rangeStart && rangeEnd ? { createdAt: { gte: rangeStart, lte: rangeEnd } } : {};
+
+    const [bookings, agents] = await Promise.all([
+      prisma.booking.findMany({
+        where,
+        select: {
+          id: true,
+          agentId: true,
+          service: true,
+          bookingStatus: true,
+          totalPriceCents: true,
+          amountPaidCents: true,
+          numberOfPeople: true,
+          numberOfKids: true,
+          agent: { select: { id: true, name: true, email: true } },
+        },
+      }),
+      prisma.user.findMany({
+        where: { role: { in: [Role.ADMIN, Role.STAFF] } },
+        select: { id: true, name: true, email: true },
+      }),
+    ]);
+
+    const rowsById = new Map<string | null, AgentStatsRow>();
+
+    for (const a of agents) {
+      rowsById.set(a.id, {
+        agentId: a.id,
+        name: a.name || a.email,
+        email: a.email,
+        touched: 0,
+        byStatus: emptyStatusMap(),
+        confirmedCount: 0,
+        declinedCount: 0,
+        pendingCount: 0,
+        revenueCents: 0,
+        collectedCents: 0,
+        peopleCount: 0,
+        serviceBreakdown: {},
+        topService: null,
+      });
+    }
+
+    const ensureRow = (
+      key: string | null,
+      seedName: string,
+      seedEmail: string | null,
+    ): AgentStatsRow => {
+      const existing = rowsById.get(key);
+      if (existing) return existing;
+      const row: AgentStatsRow = {
+        agentId: key,
+        name: seedName,
+        email: seedEmail,
+        touched: 0,
+        byStatus: emptyStatusMap(),
+        confirmedCount: 0,
+        declinedCount: 0,
+        pendingCount: 0,
+        revenueCents: 0,
+        collectedCents: 0,
+        peopleCount: 0,
+        serviceBreakdown: {},
+        topService: null,
+      };
+      rowsById.set(key, row);
+      return row;
+    };
+
+    const teamServiceBreakdown: Record<string, number> = {};
+    let teamRevenue = 0;
+    let teamCollected = 0;
+    let teamConfirmed = 0;
+    let teamDeclined = 0;
+    let teamPending = 0;
+    let unassignedCount = 0;
+
+    for (const b of bookings) {
+      const key = b.agentId ?? null;
+      const seedName = b.agent ? b.agent.name || b.agent.email : "Unassigned";
+      const seedEmail = b.agent?.email ?? null;
+      const row = ensureRow(key, seedName, seedEmail);
+
+      row.touched += 1;
+      row.byStatus[b.bookingStatus] += 1;
+
+      const isConfirmed = CONFIRMED_STATUSES.includes(b.bookingStatus);
+      const isDeclined = DECLINED_STATUSES.includes(b.bookingStatus);
+
+      if (isConfirmed) row.confirmedCount += 1;
+      else if (isDeclined) row.declinedCount += 1;
+      else row.pendingCount += 1;
+
+      if (isConfirmed) {
+        row.revenueCents += b.totalPriceCents ?? 0;
+        row.peopleCount += b.numberOfPeople + (b.numberOfKids ?? 0);
+      }
+      row.collectedCents += b.amountPaidCents;
+      row.serviceBreakdown[b.service] = (row.serviceBreakdown[b.service] ?? 0) + 1;
+
+      teamServiceBreakdown[b.service] = (teamServiceBreakdown[b.service] ?? 0) + 1;
+      if (isConfirmed) {
+        teamConfirmed += 1;
+        teamRevenue += b.totalPriceCents ?? 0;
+      } else if (isDeclined) {
+        teamDeclined += 1;
+      } else {
+        teamPending += 1;
+      }
+      teamCollected += b.amountPaidCents;
+      if (key === null) unassignedCount += 1;
+    }
+
+    for (const row of rowsById.values()) {
+      const entries = Object.entries(row.serviceBreakdown);
+      if (entries.length > 0) {
+        entries.sort((a, b) => b[1] - a[1]);
+        row.topService = entries[0][0];
+      }
+    }
+
+    const perAgent = Array.from(rowsById.values()).sort((a, b) => {
+      if (a.agentId === null) return 1;
+      if (b.agentId === null) return -1;
+      return b.touched - a.touched;
+    });
+
+    const totalBookings = bookings.length;
+    const decided = teamConfirmed + teamDeclined;
+    const conversionRate = decided > 0 ? teamConfirmed / decided : 0;
+
+    return {
+      success: true,
+      data: {
+        team: {
+          totalBookings,
+          confirmedCount: teamConfirmed,
+          declinedCount: teamDeclined,
+          pendingCount: teamPending,
+          unassignedCount,
+          conversionRate,
+          revenueCents: teamRevenue,
+          collectedCents: teamCollected,
+          serviceBreakdown: teamServiceBreakdown,
+        },
+        perAgent,
+      },
+    };
+  } catch (error) {
+    console.error("Error fetching agent stats:", error);
+    return {
+      success: false,
+      message: `Failed to fetch agent stats. Error: ${error instanceof Error ? error.message : String(error)}`,
+    };
+  }
+}
+
 export async function getBookingsByDate(date: string, statuses?: BookingStatus[]) {
   try {
     const start = new Date(`${date}T00:00:00.000Z`);
