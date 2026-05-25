@@ -131,7 +131,6 @@ export default function DayUseAdminForm() {
           <PhoneInput
             value={phone}
             onChange={setPhone}
-            international
             defaultCountry="EG"
             disabled={saving}
           />

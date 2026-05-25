@@ -187,7 +187,6 @@ function BookingEditForm({ booking, instructors, allUsers }: Props) {
                         onBlur={field.handleBlur}
                         onChange={field.handleChange}
                         aria-invalid={isInvalid}
-                        international
                         defaultCountry="EG"
                         disabled={isSubmitting}
                       />

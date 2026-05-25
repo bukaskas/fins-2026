@@ -1,5 +1,25 @@
 import { email, z } from "zod";
 import { BookingStatus, CommissionType, ExpenseType } from "@prisma/client";
+import { isValidPhoneNumber } from "libphonenumber-js";
+
+// E.164 phone validator. isValidPhoneNumber enforces the per-country
+// digit-count rules from libphonenumber metadata, so a number that's
+// too short, too long, or missing its country code is rejected.
+export const phoneSchema = z
+  .string()
+  .trim()
+  .refine(isValidPhoneNumber, "Enter a valid phone number with country code");
+
+export const optionalPhoneSchema = z
+  .string()
+  .trim()
+  .nullable()
+  .optional()
+  .transform((v) => (v && v.length > 0 ? v : null))
+  .refine(
+    (v) => v == null || isValidPhoneNumber(v),
+    "Enter a valid phone number with country code",
+  );
 
 export const bookingFormSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters long"),
@@ -14,7 +34,7 @@ export const bookingFormSchema = z.object({
     },
     "Date must be today or in the future"
   ),
-  phone: z.string().min(7, "Phone number must be at least 7 digits long"),
+  phone: phoneSchema,
   email: z.string().email("Invalid email address"),
   service: z.string().min(1, "Service is required"),
   numberOfPeople: z.number().int().min(1, "At least 1 person required"),
@@ -34,7 +54,7 @@ export const updateBookingSchema = z.object({
     (v) => (v === "" || v == null) ? null : v,
     z.string().email("Invalid email address").nullable()
   ),
-  phone:            z.string().min(7, "Phone number must be at least 7 digits long"),
+  phone:            phoneSchema,
   service:          z.string().min(1, "Service is required"),
   numberOfPeople:   z.number().int().min(1, "At least 1 person required"),
   numberOfKids:     z.number().int().min(0).default(0),
@@ -46,7 +66,7 @@ export type UpdateBookingData = z.infer<typeof updateBookingSchema>;
 
 export const signUpFormSchema = z.object({
   name: z.string().nullable(),
-  phone: z.string().nullable(),
+  phone: optionalPhoneSchema,
   email: z.string().email("Invalid email address"),
   password: z.string(),
 });
@@ -73,7 +93,7 @@ export type InstructorRatesData = z.infer<typeof instructorRatesSchema>;
 
 export const userEditFormSchema = z.object({
   name: z.string().trim().nullable(),
-  phone: z.string().trim().nullable(),
+  phone: optionalPhoneSchema,
   email: z.string().email("Invalid email address"),
   role: z.nativeEnum(Role),
   isInstructor: z.boolean().default(false),
@@ -151,7 +171,7 @@ export type NewLessonFormData = z.infer<typeof newLessonFormSchema>;
 export const kitesurfingBookingFormSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters long"),
   email: z.string().email("Invalid email address"),
-  phone: z.string().min(7, "Phone number must be at least 7 digits long"),
+  phone: phoneSchema,
   date: z.date({ error: "Date is required" }),
   time: z.string().min(1, "Please select a time"),
   notes: z.string().nullable().default(null),

@@ -141,7 +141,6 @@ export default function UserCreateForm() {
                   value={field.state.value}
                   onBlur={field.handleBlur}
                   onChange={field.handleChange}
-                  international
                   defaultCountry="EG"
                   disabled={isSubmitting}
                   className="rounded-full"

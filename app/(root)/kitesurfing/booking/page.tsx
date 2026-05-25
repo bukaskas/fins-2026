@@ -252,7 +252,6 @@ function KitesurfingBookingForm() {
                       value={field.state.value}
                       onBlur={field.handleBlur}
                       onChange={field.handleChange}
-                      international
                       defaultCountry="EG"
                       disabled={isSubmitting}
                     />

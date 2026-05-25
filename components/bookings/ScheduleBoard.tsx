@@ -1,6 +1,7 @@
 "use client";
 
 import { useId, useState, useMemo, useCallback } from "react";
+import Link from "next/link";
 import {
   DndContext,
   DragOverlay,
@@ -27,13 +28,21 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import {
   CalendarIcon,
   GripVertical,
+  MoreVertical,
   Pencil,
+  Phone,
   Plus,
   Save,
   Undo2,
@@ -184,62 +193,119 @@ function SessionCard({
   overlay?: boolean;
   onEditClick?: (e: React.MouseEvent) => void;
 }) {
-  const students = session.bookings
-    .map((b) => b.guest.name || b.guest.email)
-    .join(", ");
+  const guestsWithPhone = session.bookings.filter((b) => b.guest.phone);
+  const stop = (e: React.SyntheticEvent) => e.stopPropagation();
 
   return (
     <div
       className={cn(
-        "rounded-md border px-2 py-1 text-xs select-none h-full",
-        "bg-card shadow-sm transition-shadow",
+        "rounded-md border px-2 py-1.5 text-xs select-none h-full",
+        "bg-[#DBE9F4] border-slate-300/70 text-slate-900 shadow-sm transition-shadow",
         overlay
-          ? "shadow-lg ring-2 ring-primary"
+          ? "shadow-lg ring-2 ring-slate-500"
           : "cursor-grab active:cursor-grabbing hover:shadow-md",
-        isChanged && !overlay && "ring-2 ring-primary/50",
+        isChanged && !overlay && "ring-2 ring-slate-500/60",
       )}
     >
       <div className="flex items-center gap-1">
-        <GripVertical className="size-3 text-muted-foreground shrink-0" />
-        <Badge variant="outline" className="text-[10px] px-1 py-0">
+        <GripVertical className="size-3 text-slate-500 shrink-0 hidden md:inline-block" />
+        <Badge
+          variant="outline"
+          className="text-[10px] px-1 py-0 bg-white/70 border-slate-300 text-slate-700"
+        >
           {session.lessonType}
         </Badge>
-        <div className="ml-auto flex items-center gap-0.5">
-          {session.bookings.map((b) =>
-            b.guest.phone ? (
-              <a
-                key={b.id}
-                href={`https://wa.me/${b.guest.phone.replace(/\D/g, "")}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                onPointerDown={(e) => e.stopPropagation()}
-                onClick={(e) => e.stopPropagation()}
-                className="p-0.5 rounded opacity-60 hover:opacity-100"
-                title={`WhatsApp ${b.guest.name || b.guest.email}`}
+
+        {/* desktop inline actions */}
+        <div className="ml-auto hidden md:flex items-center gap-0.5">
+          {guestsWithPhone.map((b) => (
+            <a
+              key={b.id}
+              href={`https://wa.me/${b.guest.phone!.replace(/\D/g, "")}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              onPointerDown={stop}
+              onClick={stop}
+              className="p-0.5 rounded opacity-70 hover:opacity-100 hover:bg-white/60"
+              title={`WhatsApp ${b.guest.name || b.guest.email}`}
+            >
+              <svg
+                viewBox="0 0 24 24"
+                className="size-2.5 fill-green-600"
+                xmlns="http://www.w3.org/2000/svg"
               >
-                <svg
-                  viewBox="0 0 24 24"
-                  className="size-2.5 fill-green-500"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
-                </svg>
-              </a>
-            ) : null,
-          )}
+                <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
+              </svg>
+            </a>
+          ))}
           {onEditClick && (
             <button
               onClick={onEditClick}
-              onPointerDown={(e) => e.stopPropagation()}
-              className="p-0.5 rounded hover:bg-muted-foreground/20 opacity-60 hover:opacity-100"
+              onPointerDown={stop}
+              className="p-0.5 rounded text-slate-600 hover:text-slate-900 hover:bg-white/60"
             >
               <Pencil className="size-2.5" />
             </button>
           )}
         </div>
+
+        {/* mobile dropdown */}
+        {onEditClick && (
+          <div className="ml-auto md:hidden">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  onPointerDown={stop}
+                  onClick={stop}
+                  className="p-1 -m-1 rounded text-slate-600 hover:bg-white/60"
+                  aria-label="Session actions"
+                >
+                  <MoreVertical className="size-4" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent
+                align="end"
+                onPointerDown={stop}
+                onClick={stop}
+              >
+                <DropdownMenuItem onClick={onEditClick}>
+                  <Pencil />
+                  Edit session
+                </DropdownMenuItem>
+                {guestsWithPhone.map((b) => (
+                  <DropdownMenuItem key={b.id} asChild>
+                    <a href={`tel:${b.guest.phone!.replace(/[^\d+]/g, "")}`}>
+                      <Phone />
+                      Call {b.guest.name || b.guest.email}
+                    </a>
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        )}
       </div>
-      <div className="font-medium truncate mt-0.5">
-        {students || "No students"}
+
+      <div className="font-medium mt-1 truncate">
+        {session.bookings.length === 0 ? (
+          <span className="text-slate-500 italic font-normal">No students</span>
+        ) : (
+          session.bookings.map((b, i) => (
+            <span key={b.id}>
+              <Link
+                href={`/users/${b.guestId}`}
+                onPointerDown={stop}
+                onClick={stop}
+                className="text-slate-900 hover:underline underline-offset-2 decoration-slate-500/60"
+              >
+                {b.guest.name || b.guest.email}
+              </Link>
+              {i < session.bookings.length - 1 && (
+                <span className="text-slate-400">, </span>
+              )}
+            </span>
+          ))
+        )}
       </div>
     </div>
   );
