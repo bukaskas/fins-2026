@@ -24,6 +24,7 @@ type Product = {
   walletType: WalletType | null;
   walletUnit: WalletUnit | null;
   lessonType: LessonType | null;
+  referenceDurationMinutes: number | null;
 };
 
 const LESSON_TYPE_LABEL: Record<LessonType, string> = {
@@ -284,7 +285,7 @@ export function ProductDialog({ children, product }: Props) {
                 </div>
               </div>
 
-              {selectedWalletType === WalletType.LESSON_HOURS && (
+              {selectedWalletType === WalletType.LESSON_HOURS && selectedCategory !== ProductCategory.LESSONS && (
                 <div>
                   <label className="block text-[0.62rem] font-[700] tracking-[0.12em] uppercase text-[#9A8E84] mb-1.5" style={raleway}>
                     Lesson Type
@@ -304,6 +305,59 @@ export function ProductDialog({ children, product }: Props) {
                   </select>
                 </div>
               )}
+            </div>
+          )}
+
+          {/* Lesson settings (LESSONS-category products require lesson type + reference duration) */}
+          {selectedCategory === ProductCategory.LESSONS && (
+            <div className="rounded-[12px] border border-[#D7E9D9] bg-[#F4FAF5] p-4 space-y-3">
+              <p
+                className="text-[0.58rem] font-[800] tracking-[0.18em] uppercase text-[#2A7040]"
+                style={raleway}
+              >
+                Lesson Settings
+              </p>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[0.62rem] font-[700] tracking-[0.12em] uppercase text-[#9A8E84] mb-1.5" style={raleway}>
+                    Lesson Type
+                  </label>
+                  <select
+                    name="lessonType"
+                    defaultValue={product?.lessonType ?? ""}
+                    required
+                    className={inputBase}
+                    style={inputStyle}
+                  >
+                    <option value="" disabled>Select…</option>
+                    {Object.values(LessonType).map((t) => (
+                      <option key={t} value={t}>
+                        {LESSON_TYPE_LABEL[t]}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-[0.62rem] font-[700] tracking-[0.12em] uppercase text-[#9A8E84] mb-1.5" style={raleway}>
+                    Reference Duration (min)
+                  </label>
+                  <input
+                    type="number"
+                    name="referenceDurationMinutes"
+                    defaultValue={product?.referenceDurationMinutes ?? undefined}
+                    min={1}
+                    step={1}
+                    required
+                    className={inputBase}
+                    style={inputStyle}
+                    placeholder="e.g. 60"
+                  />
+                </div>
+              </div>
+              <p className="text-[0.68rem] text-[#5A5048]" style={raleway}>
+                Price is quoted for this duration. Sessions of other durations prorate from this number.
+              </p>
             </div>
           )}
 

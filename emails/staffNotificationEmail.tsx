@@ -34,6 +34,7 @@ const StaffNotificationEmail = ({
 }: StaffNotificationEmailProps) => {
   const isDayUse = service === "day-use";
   const isPharaoh = service === "pharaoh-airstyle";
+  const isKitesurfingCourse = service === "kitesurfing-course";
   const showTickets = isDayUse || isPharaoh;
   const fmt = (cents: number) => `${(cents / 100).toLocaleString("en-EG")} EGP`;
 
@@ -45,16 +46,21 @@ const StaffNotificationEmail = ({
     : encodeURIComponent(`Hi ${customerName}, this is Fins regarding your booking.`);
   const waLink = `https://wa.me/${waPhone}?text=${waMessage}`;
   const bookingsLink = `https://www.finskitesurfing.com/bookings?q=${customerPhone.replace(/\D/g, "")}`;
+  const scheduleLink = "https://www.finskitesurfing.com/bookings/schedule";
 
   return (
     <Html>
       <Head />
-      <Preview>New booking: {customerName} — {service} on {date}</Preview>
+      <Preview>
+        {isKitesurfingCourse
+          ? `Kitesurf booking at ${date}`
+          : `New booking: ${customerName} — ${service} on ${date}`}
+      </Preview>
       <Tailwind>
         <Body className="m-auto font-sans">
           <Container className="mb-10 mx-auto p-5 max-w-[465px]">
             <Heading className="text-2xl font-normal text-center p-0 my-8 mx-0">
-              New Booking Received
+              {isKitesurfingCourse ? "Kitesurfing Course" : "New Booking Received"}
             </Heading>
             <Section className="bg-gray-50 rounded-lg p-4">
               <Text className="text-sm m-0"><strong>Customer:</strong> {customerName}</Text>
@@ -90,6 +96,16 @@ const StaffNotificationEmail = ({
                 View All Bookings
               </Button>
             </Section>
+            {isKitesurfingCourse && (
+              <Section className="text-center mt-3">
+                <Button
+                  href={scheduleLink}
+                  className="py-2.5 px-5 bg-blue-600 rounded-md text-white text-sm font-semibold no-underline text-center"
+                >
+                  View Schedule
+                </Button>
+              </Section>
+            )}
           </Container>
         </Body>
       </Tailwind>

@@ -63,10 +63,15 @@ export async function sendStaffNotificationEmail(
   const staffEmails = serviceToStaffEmails[service];
   if (!staffEmails?.length) return;
 
+  const subject =
+    service === "kitesurfing-course"
+      ? `Kitesurf booking at ${date.toDateString()}`
+      : `New booking: ${customerName} — ${service}`;
+
   await resend.emails.send({
     from: EMAIL_ADDRESS,
     to: staffEmails,
-    subject: `New booking: ${customerName} — ${service}`,
+    subject,
     react: (
       <StaffNotificationEmail
         customerName={customerName}

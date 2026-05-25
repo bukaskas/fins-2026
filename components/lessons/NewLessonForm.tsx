@@ -3,11 +3,12 @@
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { LessonType } from "@prisma/client";
 import StudentSearchField from "@/components/lessons/StudentSearchField";
-import BundleSearchField from "@/components/lessons/BundleSearchField";
+import LessonProductSearchField from "@/components/lessons/LessonProductSearchField";
 import {
   createLessonSessionFromForm,
   getUserLessonHoursBalance,
 } from "@/lib/actions/lessons.actions";
+import { LESSON_CANONICAL_MINUTES } from "@/lib/lesson-products";
 
 const LESSON_TYPE_LABELS: Record<string, string> = {
   PRIVATE:       "Private",
@@ -31,19 +32,19 @@ type Instructor = {
   email: string;
 };
 
-type BundleProduct = {
+export type LessonProductOption = {
   id: string;
   name: string;
   sku: string;
   priceCents: number;
-  creditUnits: number;
-  lessonType: LessonType | null;
+  lessonType: LessonType;
+  referenceDurationMinutes: number | null;
 };
 
 export default function NewLessonForm({
   students,
   instructors,
-  bundleProducts,
+  lessonProducts,
   initialStudentId,
   initialBalance,
   initialStartsAt,
@@ -51,7 +52,7 @@ export default function NewLessonForm({
 }: {
   students: Student[];
   instructors: Instructor[];
-  bundleProducts: BundleProduct[];
+  lessonProducts: LessonProductOption[];
   initialStudentId?: string;
   initialBalance: number | null;
   initialStartsAt?: string;
@@ -64,6 +65,7 @@ export default function NewLessonForm({
   const initialStartsAtDate = initialStartsAt ? new Date(initialStartsAt) : null;
   const pad2 = (n: number) => String(n).padStart(2, "0");
 
+  const [productId, setProductId] = useState<string>("");
   const [startsAtDate, setStartsAtDate] = useState(
     initialStartsAtDate
       ? `${initialStartsAtDate.getFullYear()}-${pad2(initialStartsAtDate.getMonth() + 1)}-${pad2(initialStartsAtDate.getDate())}`
@@ -79,8 +81,6 @@ export default function NewLessonForm({
     startsAtHour && startsAtMinute ? `${startsAtHour}:${startsAtMinute}` : "";
   const [durationHours, setDurationHours] = useState(1);
   const [durationMinutesPart, setDurationMinutesPart] = useState(0);
-  const [bundleProductId, setBundleProductId] = useState("");
-  const [lessonType, setLessonType] = useState<LessonType>(LessonType.PRIVATE);
   const [submitting, startSubmit] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [returnTo, setReturnTo] = useState("");
@@ -120,33 +120,33 @@ export default function NewLessonForm({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedStudentId]);
 
-  const requiredHours = useMemo(
-    () => durationHours + durationMinutesPart / 60,
+  const selectedProduct = useMemo(
+    () => lessonProducts.find((p) => p.id === productId) ?? null,
+    [lessonProducts, productId],
+  );
+
+  const durationMinutes = useMemo(
+    () => durationHours * 60 + durationMinutesPart,
     [durationHours, durationMinutesPart],
   );
 
-  const hasEnoughHours = balance != null && balance >= requiredHours;
-  const needsBundle = selectedStudentId !== "" && !hasEnoughHours && requiredHours > 0;
-
-  const selectedBundle = bundleProducts.find((p) => p.id === bundleProductId) ?? null;
-  const bundleCoversDuration =
-    selectedBundle != null && selectedBundle.creditUnits >= requiredHours;
-
-  const lessonTypeFromBundle = selectedBundle?.lessonType ?? null;
-  const effectiveLessonType = lessonTypeFromBundle ?? lessonType;
-  const lessonTypeAutoDerived = lessonTypeFromBundle != null;
-
-  const submitDisabled =
-    submitting ||
-    !selectedStudentId ||
-    requiredHours <= 0 ||
-    (needsBundle && (!selectedBundle || !bundleCoversDuration));
+  const chargeCents = useMemo(() => {
+    if (!selectedProduct || durationMinutes <= 0) return null;
+    const reference =
+      selectedProduct.referenceDurationMinutes ??
+      LESSON_CANONICAL_MINUTES[selectedProduct.lessonType];
+    if (!reference) return null;
+    return Math.round((selectedProduct.priceCents * durationMinutes) / reference);
+  }, [selectedProduct, durationMinutes]);
 
   const balanceLabel = balanceLoading
     ? "Checking…"
     : balance == null
       ? "—"
       : `${balance.toFixed(2)}h`;
+
+  const submitDisabled =
+    submitting || !selectedStudentId || !productId || durationMinutes <= 0;
 
   function handleSubmit(formData: FormData) {
     setError(null);
@@ -176,7 +176,7 @@ export default function NewLessonForm({
     >
       <div className="px-7 pt-7 pb-6 space-y-5">
 
-        {/* Student */}
+        {/* 1. Student */}
         <StudentSearchField
           students={students}
           initialStudentId={initialStudentId}
@@ -188,14 +188,14 @@ export default function NewLessonForm({
           <div
             className="rounded-2xl px-4 py-3 flex items-center justify-between"
             style={{
-              background: hasEnoughHours ? "#ecfdf5" : "#fff7ed",
-              border: `1px solid ${hasEnoughHours ? "rgba(167, 243, 208, 0.6)" : "rgba(254, 215, 170, 0.7)"}`,
+              background: balance && balance > 0 ? "#ecfdf5" : "#f8fafc",
+              border: `1px solid ${balance && balance > 0 ? "rgba(167, 243, 208, 0.6)" : "rgba(203, 213, 225, 0.6)"}`,
             }}
           >
             <span
               className="text-[0.6rem] tracking-[0.22em] uppercase font-[700]"
               style={{
-                color: hasEnoughHours ? "#047857" : "#c2410c",
+                color: balance && balance > 0 ? "#047857" : "#64748b",
                 fontFamily: "var(--font-raleway)",
               }}
             >
@@ -204,11 +204,37 @@ export default function NewLessonForm({
             <span
               className="text-[0.92rem] font-[500]"
               style={{
-                color: hasEnoughHours ? "#065f46" : "#9a3412",
+                color: balance && balance > 0 ? "#065f46" : "#475569",
                 fontFamily: "var(--font-raleway)",
               }}
             >
               {balanceLabel}
+            </span>
+          </div>
+        )}
+
+        {/* 2. Product */}
+        <LessonProductSearchField
+          products={lessonProducts}
+          onSelect={setProductId}
+        />
+
+        {selectedProduct && (
+          <div
+            className="rounded-2xl px-4 py-3 flex items-center justify-between"
+            style={{ background: "#f0f9ff", border: "1px solid rgba(186, 230, 253, 0.6)" }}
+          >
+            <span
+              className="text-[0.6rem] tracking-[0.22em] uppercase font-[700]"
+              style={{ color: "#0369a1", fontFamily: "var(--font-raleway)" }}
+            >
+              Lesson type
+            </span>
+            <span
+              className="text-[0.92rem] font-[500]"
+              style={{ color: "#0c2340", fontFamily: "var(--font-raleway)" }}
+            >
+              {LESSON_TYPE_LABELS[selectedProduct.lessonType] ?? selectedProduct.lessonType}
             </span>
           </div>
         )}
@@ -231,26 +257,7 @@ export default function NewLessonForm({
           </select>
         </FieldBlock>
 
-        {/* Lesson type — hidden when a bundle with a built-in lessonType is selected */}
-        {!lessonTypeAutoDerived && (
-          <FieldBlock label="Lesson type">
-            <select
-              value={lessonType}
-              onChange={(e) => setLessonType(e.target.value as LessonType)}
-              className="w-full bg-transparent text-[0.92rem] font-[300] focus:outline-none appearance-none cursor-pointer"
-              style={{ color: "#0c2340", fontFamily: "var(--font-raleway)" }}
-            >
-              {Object.values(LessonType).map((t) => (
-                <option key={t} value={t}>
-                  {LESSON_TYPE_LABELS[t] ?? t}
-                </option>
-              ))}
-            </select>
-          </FieldBlock>
-        )}
-        <input type="hidden" name="lessonType" value={effectiveLessonType} />
-
-        {/* Start date/time */}
+        {/* 3. Start date/time */}
         <div>
           <p
             className="text-[0.55rem] tracking-[0.24em] uppercase font-[700] mb-2.5"
@@ -279,15 +286,11 @@ export default function NewLessonForm({
                   className="flex-1 bg-transparent text-[0.92rem] font-[300] focus:outline-none appearance-none cursor-pointer text-center"
                   style={{ color: "#0c2340", fontFamily: "var(--font-raleway)" }}
                 >
-                  <option value="" disabled>
-                    HH
-                  </option>
+                  <option value="" disabled>HH</option>
                   {Array.from({ length: 24 }, (_, i) => {
                     const v = String(i).padStart(2, "0");
                     return (
-                      <option key={v} value={v}>
-                        {v}
-                      </option>
+                      <option key={v} value={v}>{v}</option>
                     );
                   })}
                 </select>
@@ -305,9 +308,7 @@ export default function NewLessonForm({
                   className="flex-1 bg-transparent text-[0.92rem] font-[300] focus:outline-none appearance-none cursor-pointer text-center"
                   style={{ color: "#0c2340", fontFamily: "var(--font-raleway)" }}
                 >
-                  <option value="" disabled>
-                    MM
-                  </option>
+                  <option value="" disabled>MM</option>
                   <option value="00">00</option>
                   <option value="15">15</option>
                   <option value="30">30</option>
@@ -323,7 +324,7 @@ export default function NewLessonForm({
           />
         </div>
 
-        {/* Duration */}
+        {/* 4. Duration */}
         <div>
           <p
             className="text-[0.55rem] tracking-[0.24em] uppercase font-[700] mb-2.5"
@@ -362,17 +363,27 @@ export default function NewLessonForm({
           </div>
         </div>
 
-        {/* Bundle product picker (only when student has insufficient hours) */}
-        {needsBundle && (
-          <BundleSearchField
-            bundles={bundleProducts}
-            selectedId={bundleProductId}
-            onSelect={setBundleProductId}
-            requiredHours={requiredHours}
-            label={`Add hours — needs ${requiredHours.toFixed(2)}h`}
-          />
+        {/* Charge preview */}
+        {chargeCents != null && (
+          <div
+            className="rounded-2xl px-4 py-3 flex items-center justify-between"
+            style={{ background: "#fefce8", border: "1px solid rgba(254, 240, 138, 0.7)" }}
+          >
+            <span
+              className="text-[0.6rem] tracking-[0.22em] uppercase font-[700]"
+              style={{ color: "#854d0e", fontFamily: "var(--font-raleway)" }}
+            >
+              Will charge
+            </span>
+            <span
+              className="text-[0.92rem] font-[500]"
+              style={{ color: "#713f12", fontFamily: "var(--font-raleway)" }}
+            >
+              {(chargeCents / 100).toLocaleString()} EGP
+            </span>
+          </div>
         )}
-        <input type="hidden" name="bundleProductId" value={needsBundle ? bundleProductId : ""} />
+
         <input type="hidden" name="returnTo" value={returnTo} />
 
         {/* Notes */}

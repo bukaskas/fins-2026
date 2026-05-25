@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { format } from "date-fns";
 import { prisma } from "@/db/prisma";
-import { OrderStatus } from "@prisma/client";
+import { OrderStatus, ProductCategory, ProductType } from "@prisma/client";
 import {
   Table,
   TableBody,
@@ -11,6 +11,17 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { listInstructors } from "@/lib/actions/user.actions";
+import { getAllProducts } from "@/lib/actions/product.actions";
+import UserDetailActionsBar from "@/components/users/UserDetailActionsBar";
+import UserLessonSessionRow from "@/components/users/UserLessonSessionRow";
+import EditOrderTrigger from "@/components/users/EditOrderTrigger";
+import type { LessonProductOption } from "@/components/lessons/NewLessonForm";
+import type {
+  EditSheetServiceProduct,
+  SessionRow,
+} from "@/components/lessons/LessonSessionEditSheet";
+import type { ProductSearchOption } from "@/components/products/ProductSearchField";
 
 export const dynamic = "force-dynamic";
 
@@ -18,6 +29,13 @@ type Props = { params: Promise<{ id: string }> };
 
 function fmtMoney(cents: number) {
   return `${(cents / 100).toLocaleString()} EGP`;
+}
+
+function fmtQty(qty: { toString: () => string } | number) {
+  const n = typeof qty === "number" ? qty : Number(qty.toString());
+  if (Number.isInteger(n)) return n.toString();
+  // up to 4 decimals, strip trailing zeros.
+  return n.toFixed(4).replace(/\.?0+$/, "");
 }
 
 function fmtDate(d: Date | null | undefined) {
@@ -28,15 +46,6 @@ function fmtDate(d: Date | null | undefined) {
 function fmtDay(d: Date | null | undefined) {
   if (!d) return "—";
   return format(d, "PP");
-}
-
-function fmtDuration(start: Date, end: Date) {
-  const mins = Math.max(0, Math.round((end.getTime() - start.getTime()) / 60000));
-  const h = Math.floor(mins / 60);
-  const m = mins % 60;
-  if (h === 0) return `${m}m`;
-  if (m === 0) return `${h}h`;
-  return `${h}h ${m}m`;
 }
 
 export default async function UserDetailPage({ params }: Props) {
@@ -50,6 +59,9 @@ export default async function UserDetailPage({ params }: Props) {
     bookings,
     rentals,
     beachVisits,
+    instructors,
+    lessonProductsRaw,
+    allProductsRaw,
   ] = await Promise.all([
     prisma.user.findUnique({
       where: { id },
@@ -64,7 +76,7 @@ export default async function UserDetailPage({ params }: Props) {
       include: {
         lines: {
           include: {
-            product: { select: { name: true, sku: true, type: true } },
+            product: { select: { id: true, name: true, sku: true, type: true, priceCents: true } },
           },
         },
         allocations: { select: { amountCents: true } },
@@ -80,12 +92,15 @@ export default async function UserDetailPage({ params }: Props) {
       where: { guestId: id },
       include: {
         session: {
-          select: {
-            id: true,
-            startsAt: true,
-            endsAt: true,
-            lessonType: true,
-            instructor: { select: { name: true, email: true } },
+          include: {
+            instructor: { select: { id: true, name: true, email: true } },
+            bookings: {
+              include: {
+                guest: { select: { id: true, name: true, email: true, phone: true } },
+              },
+              orderBy: { createdAt: "desc" },
+            },
+            commission: true,
           },
         },
       },
@@ -114,6 +129,9 @@ export default async function UserDetailPage({ params }: Props) {
       where: { guestId: id },
       orderBy: [{ visitDate: "desc" }, { createdAt: "desc" }],
     }),
+    listInstructors(),
+    getAllProducts({ category: ProductCategory.LESSONS, isActive: true }),
+    getAllProducts({ isActive: true }),
   ]);
 
   if (!user) notFound();
@@ -130,6 +148,74 @@ export default async function UserDetailPage({ params }: Props) {
 
   const totalPaidCents = payments.reduce((s, p) => s + p.amountCents, 0);
   const productLineCount = orders.reduce((s, o) => s + o.lines.length, 0);
+
+  const lessonProducts: LessonProductOption[] = lessonProductsRaw
+    .filter((p) => p.lessonType != null)
+    .map((p) => ({
+      id: p.id,
+      name: p.name,
+      sku: p.sku,
+      priceCents: p.priceCents,
+      lessonType: p.lessonType!,
+      referenceDurationMinutes: p.referenceDurationMinutes,
+    }));
+
+  // The edit sheet needs lesson products in the EditSheetServiceProduct shape.
+  const editSheetServiceProducts: EditSheetServiceProduct[] = lessonProductsRaw.map((p) => ({
+    id: p.id,
+    sku: p.sku,
+    name: p.name,
+    priceCents: p.priceCents,
+    category: p.category,
+    lessonType: p.lessonType,
+    referenceDurationMinutes: p.referenceDurationMinutes,
+  }));
+
+  const allProducts: ProductSearchOption[] = allProductsRaw.map((p) => ({
+    id: p.id,
+    name: p.name,
+    sku: p.sku,
+    priceCents: p.priceCents,
+    type: p.type,
+  }));
+
+  // De-dupe sessions in case a guest has multiple bookings on the same session.
+  const sessionRowMap = new Map<string, { row: SessionRow; bookingStatus: string }>();
+  for (const b of bookings) {
+    if (sessionRowMap.has(b.session.id)) continue;
+    sessionRowMap.set(b.session.id, {
+      bookingStatus: b.status,
+      row: {
+        id: b.session.id,
+        startsAt: b.session.startsAt.toISOString(),
+        endsAt: b.session.endsAt.toISOString(),
+        lessonType: b.session.lessonType,
+        capacity: b.session.capacity,
+        notes: b.session.notes,
+        instructor: b.session.instructor,
+        bookings: b.session.bookings.map((bk) => ({
+          id: bk.id,
+          status: bk.status,
+          guest: bk.guest,
+        })),
+        commission: b.session.commission
+          ? {
+              id: b.session.commission.id,
+              commissionType: b.session.commission.commissionType,
+              durationMinutes: b.session.commission.durationMinutes,
+              rateAtCreationCents: b.session.commission.rateAtCreationCents,
+              calculatedAmountCents: b.session.commission.calculatedAmountCents,
+              overrideAmountCents: b.session.commission.overrideAmountCents,
+              finalAmountCents: b.session.commission.finalAmountCents,
+              status: b.session.commission.status,
+            }
+          : null,
+      },
+    });
+  }
+  const sessionRows = Array.from(sessionRowMap.values());
+
+  const initialLessonHoursBalance = lessonHours ? Number(lessonHours.balance) : 0;
 
   return (
     <main className="mx-auto max-w-5xl p-6 space-y-6">
@@ -154,12 +240,18 @@ export default async function UserDetailPage({ params }: Props) {
             <span className="rounded-full border px-3 py-1 text-xs font-medium tracking-wide">
               {user.role}
             </span>
-            <Link
-              href={`/lessons/new?guestId=${user.id}`}
-              className="rounded bg-black px-3 py-1.5 text-sm text-white hover:bg-black/85 transition-colors"
-            >
-              + Lesson
-            </Link>
+            <UserDetailActionsBar
+              user={{
+                id: user.id,
+                name: user.name,
+                email: user.email,
+                phone: user.phone,
+              }}
+              instructors={instructors}
+              lessonProducts={lessonProducts}
+              allProducts={allProducts}
+              initialBalance={initialLessonHoursBalance}
+            />
             <Link
               href={`/accounting/new-payment?userId=${user.id}${
                 outstandingCents > 0 ? `&amountCents=${outstandingCents}` : ""
@@ -210,11 +302,28 @@ export default async function UserDetailPage({ params }: Props) {
                 <TableHead className="text-right">Qty</TableHead>
                 <TableHead className="text-right">Line total</TableHead>
                 <TableHead>Order status</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {orders.flatMap((o) =>
-                o.lines.map((line) => (
+              {orders.flatMap((o) => {
+                const hasBundleCredit = o.lines.some(
+                  (l) => l.product.type === ProductType.BUNDLE_CREDIT,
+                );
+                const hasAllocations = o.allocations.length > 0;
+                const canEdit = o.status === OrderStatus.OPEN && !hasBundleCredit;
+                const canCancel = o.status === OrderStatus.OPEN && !hasAllocations;
+                const editReason = !canEdit
+                  ? o.status !== OrderStatus.OPEN
+                    ? `Order is ${o.status.toLowerCase()}`
+                    : "Order contains bundle credit lines"
+                  : undefined;
+                const cancelReason = !canCancel
+                  ? o.status !== OrderStatus.OPEN
+                    ? `Order is ${o.status.toLowerCase()}`
+                    : "Order has payment allocations"
+                  : undefined;
+                return o.lines.map((line, idx) => (
                   <TableRow key={line.id}>
                     <TableCell>{fmtDate(o.createdAt)}</TableCell>
                     <TableCell>
@@ -222,20 +331,39 @@ export default async function UserDetailPage({ params }: Props) {
                       <div className="text-xs text-muted-foreground">{line.product.sku}</div>
                     </TableCell>
                     <TableCell>{line.product.type}</TableCell>
-                    <TableCell className="text-right">{line.qty}</TableCell>
+                    <TableCell className="text-right">{fmtQty(line.qty)}</TableCell>
                     <TableCell className="text-right">{fmtMoney(line.lineTotalCents)}</TableCell>
                     <TableCell>{o.status}</TableCell>
+                    <TableCell className="text-right">
+                      {idx === 0 && (
+                        <EditOrderTrigger
+                          orderId={o.id}
+                          initialLines={o.lines.map((l) => ({
+                            productId: l.product.id,
+                            name: l.product.name,
+                            sku: l.product.sku,
+                            unitPriceCents: l.unitPriceCents,
+                            qty: Number(l.qty),
+                          }))}
+                          products={allProducts}
+                          canEdit={canEdit}
+                          canCancel={canCancel}
+                          editReason={editReason}
+                          cancelReason={cancelReason}
+                        />
+                      )}
+                    </TableCell>
                   </TableRow>
-                )),
-              )}
+                ));
+              })}
             </TableBody>
           </Table>
         )}
       </Section>
 
       {/* Lesson sessions */}
-      <Section title="Lesson sessions" count={bookings.length}>
-        {bookings.length === 0 ? (
+      <Section title="Lesson sessions" count={sessionRows.length}>
+        {sessionRows.length === 0 ? (
           <EmptyMessage>No lesson sessions yet.</EmptyMessage>
         ) : (
           <Table>
@@ -249,16 +377,14 @@ export default async function UserDetailPage({ params }: Props) {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {bookings.map((b) => (
-                <TableRow key={b.id}>
-                  <TableCell>{fmtDate(b.session.startsAt)}</TableCell>
-                  <TableCell>{b.session.lessonType.replace(/_/g, " ")}</TableCell>
-                  <TableCell>
-                    {b.session.instructor?.name ?? b.session.instructor?.email ?? "—"}
-                  </TableCell>
-                  <TableCell>{fmtDuration(b.session.startsAt, b.session.endsAt)}</TableCell>
-                  <TableCell>{b.status}</TableCell>
-                </TableRow>
+              {sessionRows.map(({ row, bookingStatus }) => (
+                <UserLessonSessionRow
+                  key={row.id}
+                  session={row}
+                  bookingStatus={bookingStatus}
+                  instructors={instructors}
+                  serviceProducts={editSheetServiceProducts}
+                />
               ))}
             </TableBody>
           </Table>
@@ -328,7 +454,7 @@ export default async function UserDetailPage({ params }: Props) {
                         return (
                           <div key={ol.id}>
                             <div className="text-xs font-medium">
-                              {ol.qty}× {ol.product.name}
+                              {fmtQty(ol.qty)}× {ol.product.name}
                               <span className="text-muted-foreground">
                                 {" "}({ol.product.sku})
                               </span>

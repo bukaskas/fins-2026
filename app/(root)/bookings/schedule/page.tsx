@@ -3,12 +3,13 @@ import {
   getLessonSessionsByDate,
   getAllLessons,
   getLessonFormUsers,
-  getActiveLessonBundleProducts,
 } from "@/lib/actions/lessons.actions";
 import { listInstructors, listAgents } from "@/lib/actions/user.actions";
 import { getAllProducts } from "@/lib/actions/product.actions";
 import ScheduleBoard from "@/components/bookings/ScheduleBoard";
 import type { SessionWithBookings, ServiceProduct } from "@/components/bookings/ScheduleBoard";
+import type { LessonProductOption } from "@/components/lessons/NewLessonForm";
+import { ProductCategory } from "@prisma/client";
 import BookingComponent from "@/components/kitesurfing/BookingComponent";
 import { format } from "date-fns";
 import { LessonsTable } from "@/components/lessons/LessonsTable";
@@ -30,16 +31,14 @@ export default async function SchedulePage() {
     allUsers,
     productsRaw,
     lessonFormUsers,
-    bundleProducts,
   ] = await Promise.all([
     getLessonSessionsByDate(today),
     listInstructors(),
     getFutureKitesurfingBookings(),
     getAllLessons(),
     listAgents(),
-    getAllProducts({ type: "SERVICE", isActive: true }),
+    getAllProducts({ category: ProductCategory.LESSONS, isActive: true }),
     getLessonFormUsers(),
-    getActiveLessonBundleProducts(),
   ]);
 
   const serviceProducts: ServiceProduct[] = productsRaw.map((p) => ({
@@ -47,7 +46,21 @@ export default async function SchedulePage() {
     sku: p.sku,
     name: p.name,
     priceCents: p.priceCents,
+    category: p.category,
+    lessonType: p.lessonType,
+    referenceDurationMinutes: p.referenceDurationMinutes,
   }));
+
+  const lessonProducts: LessonProductOption[] = productsRaw
+    .filter((p) => p.lessonType != null)
+    .map((p) => ({
+      id: p.id,
+      name: p.name,
+      sku: p.sku,
+      priceCents: p.priceCents,
+      lessonType: p.lessonType!,
+      referenceDurationMinutes: p.referenceDurationMinutes,
+    }));
 
   const sessionsTyped = sessions as SessionWithBookings[];
 
@@ -205,7 +218,7 @@ export default async function SchedulePage() {
             initialDate={today}
             serviceProducts={serviceProducts}
             students={lessonFormUsers.students}
-            bundleProducts={bundleProducts}
+            lessonProducts={lessonProducts}
           />
         </SurfaceCard>
 

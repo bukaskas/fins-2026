@@ -26,7 +26,7 @@ export async function InstructorCommissionsTable({
   const [{ rows, totals }, instructors, productsRaw] = await Promise.all([
     getInstructorCommissions(instructorId, { from, to, status }),
     listInstructors(),
-    getAllProducts({ type: "SERVICE", isActive: true }),
+    getAllProducts({ category: "LESSONS", isActive: true }),
   ]);
 
   const serviceProducts: EditSheetServiceProduct[] = productsRaw.map((p) => ({
@@ -34,6 +34,9 @@ export async function InstructorCommissionsTable({
     sku: p.sku,
     name: p.name,
     priceCents: p.priceCents,
+    category: p.category,
+    lessonType: p.lessonType,
+    referenceDurationMinutes: p.referenceDurationMinutes,
   }));
 
   const revenueCents = rows.reduce(

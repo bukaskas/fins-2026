@@ -50,39 +50,9 @@ export async function createProduct(
 
   const priceCents = Math.round(priceEgp * 100);
 
-  let creditUnits: number | null = null;
-  let creditValidDays: number | null = null;
-  let walletType: WalletType | null = null;
-  let walletUnit: WalletUnit | null = null;
-  let lessonType: LessonType | null = null;
-
-  if (type === ProductType.BUNDLE_CREDIT) {
-    creditUnits = Number(formData.get("creditUnits") ?? 0);
-    const validDaysRaw = formData.get("creditValidDays");
-    creditValidDays = validDaysRaw ? Number(validDaysRaw) : null;
-    walletType = String(formData.get("walletType") ?? "") as WalletType;
-    walletUnit = String(formData.get("walletUnit") ?? "") as WalletUnit;
-
-    if (!creditUnits || creditUnits < 1) {
-      return { success: false, error: "Credit units must be at least 1 for bundle products." };
-    }
-    if (!walletType || !Object.values(WalletType).includes(walletType)) {
-      return { success: false, error: "Wallet type is required for bundle products." };
-    }
-    if (!walletUnit || !Object.values(WalletUnit).includes(walletUnit)) {
-      return { success: false, error: "Wallet unit is required for bundle products." };
-    }
-
-    if (walletType === WalletType.LESSON_HOURS) {
-      const lessonTypeRaw = String(formData.get("lessonType") ?? "").trim();
-      if (lessonTypeRaw) {
-        if (!Object.values(LessonType).includes(lessonTypeRaw as LessonType)) {
-          return { success: false, error: "Invalid lesson type." };
-        }
-        lessonType = lessonTypeRaw as LessonType;
-      }
-    }
-  }
+  const lessonFields = parseLessonFields(formData, type, category);
+  if ("error" in lessonFields) return { success: false, error: lessonFields.error };
+  const { creditUnits, creditValidDays, walletType, walletUnit, lessonType, referenceDurationMinutes } = lessonFields;
 
   try {
     await prisma.product.create({
@@ -97,6 +67,7 @@ export async function createProduct(
         walletType,
         walletUnit,
         lessonType,
+        referenceDurationMinutes,
       },
     });
   } catch (err: any) {
@@ -132,39 +103,9 @@ export async function updateProduct(
 
   const priceCents = Math.round(priceEgp * 100);
 
-  let creditUnits: number | null = null;
-  let creditValidDays: number | null = null;
-  let walletType: WalletType | null = null;
-  let walletUnit: WalletUnit | null = null;
-  let lessonType: LessonType | null = null;
-
-  if (type === ProductType.BUNDLE_CREDIT) {
-    creditUnits = Number(formData.get("creditUnits") ?? 0);
-    const validDaysRaw = formData.get("creditValidDays");
-    creditValidDays = validDaysRaw ? Number(validDaysRaw) : null;
-    walletType = String(formData.get("walletType") ?? "") as WalletType;
-    walletUnit = String(formData.get("walletUnit") ?? "") as WalletUnit;
-
-    if (!creditUnits || creditUnits < 1) {
-      return { success: false, error: "Credit units must be at least 1 for bundle products." };
-    }
-    if (!walletType || !Object.values(WalletType).includes(walletType)) {
-      return { success: false, error: "Wallet type is required for bundle products." };
-    }
-    if (!walletUnit || !Object.values(WalletUnit).includes(walletUnit)) {
-      return { success: false, error: "Wallet unit is required for bundle products." };
-    }
-
-    if (walletType === WalletType.LESSON_HOURS) {
-      const lessonTypeRaw = String(formData.get("lessonType") ?? "").trim();
-      if (lessonTypeRaw) {
-        if (!Object.values(LessonType).includes(lessonTypeRaw as LessonType)) {
-          return { success: false, error: "Invalid lesson type." };
-        }
-        lessonType = lessonTypeRaw as LessonType;
-      }
-    }
-  }
+  const lessonFields = parseLessonFields(formData, type, category);
+  if ("error" in lessonFields) return { success: false, error: lessonFields.error };
+  const { creditUnits, creditValidDays, walletType, walletUnit, lessonType, referenceDurationMinutes } = lessonFields;
 
   try {
     await prisma.product.update({
@@ -179,6 +120,7 @@ export async function updateProduct(
         walletType,
         walletUnit,
         lessonType,
+        referenceDurationMinutes,
       },
     });
   } catch {
@@ -187,6 +129,74 @@ export async function updateProduct(
 
   revalidatePath("/products");
   return { success: true };
+}
+
+type LessonFields = {
+  creditUnits: number | null;
+  creditValidDays: number | null;
+  walletType: WalletType | null;
+  walletUnit: WalletUnit | null;
+  lessonType: LessonType | null;
+  referenceDurationMinutes: number | null;
+};
+
+function parseLessonFields(
+  formData: FormData,
+  type: ProductType,
+  category: ProductCategory | null,
+): LessonFields | { error: string } {
+  let creditUnits: number | null = null;
+  let creditValidDays: number | null = null;
+  let walletType: WalletType | null = null;
+  let walletUnit: WalletUnit | null = null;
+  let lessonType: LessonType | null = null;
+  let referenceDurationMinutes: number | null = null;
+
+  if (type === ProductType.BUNDLE_CREDIT) {
+    creditUnits = Number(formData.get("creditUnits") ?? 0);
+    const validDaysRaw = formData.get("creditValidDays");
+    creditValidDays = validDaysRaw ? Number(validDaysRaw) : null;
+    walletType = String(formData.get("walletType") ?? "") as WalletType;
+    walletUnit = String(formData.get("walletUnit") ?? "") as WalletUnit;
+
+    if (!creditUnits || creditUnits < 1) {
+      return { error: "Credit units must be at least 1 for bundle products." };
+    }
+    if (!walletType || !Object.values(WalletType).includes(walletType)) {
+      return { error: "Wallet type is required for bundle products." };
+    }
+    if (!walletUnit || !Object.values(WalletUnit).includes(walletUnit)) {
+      return { error: "Wallet unit is required for bundle products." };
+    }
+  }
+
+  const lessonTypeRaw = String(formData.get("lessonType") ?? "").trim();
+  if (lessonTypeRaw) {
+    if (!Object.values(LessonType).includes(lessonTypeRaw as LessonType)) {
+      return { error: "Invalid lesson type." };
+    }
+    lessonType = lessonTypeRaw as LessonType;
+  }
+
+  const refDurationRaw = formData.get("referenceDurationMinutes");
+  if (refDurationRaw && String(refDurationRaw).trim() !== "") {
+    const parsed = Number(refDurationRaw);
+    if (!Number.isFinite(parsed) || parsed < 1) {
+      return { error: "Reference duration must be a positive number of minutes." };
+    }
+    referenceDurationMinutes = Math.round(parsed);
+  }
+
+  if (category === ProductCategory.LESSONS) {
+    if (!lessonType) {
+      return { error: "Lesson type is required for LESSONS-category products." };
+    }
+    if (!referenceDurationMinutes) {
+      return { error: "Reference duration (minutes) is required for LESSONS-category products." };
+    }
+  }
+
+  return { creditUnits, creditValidDays, walletType, walletUnit, lessonType, referenceDurationMinutes };
 }
 
 export async function toggleProductActive(id: string): Promise<void> {

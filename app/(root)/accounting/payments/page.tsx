@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import {
   Card,
@@ -61,6 +62,7 @@ export default async function PaymentsPage() {
                       <th className="px-3 py-2 text-left">Guest</th>
                       <th className="px-3 py-2 text-left">Reference</th>
                       <th className="px-3 py-2 text-right">Amount</th>
+                      <th className="px-3 py-2 text-right">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -78,6 +80,14 @@ export default async function PaymentsPage() {
                         <td className="px-3 py-2">{p.reference || "-"}</td>
                         <td className="px-3 py-2 text-right">
                           {money(p.amountCents)}
+                        </td>
+                        <td className="px-3 py-2 text-right">
+                          <Link
+                            href={`/accounting/payments/${p.id}/edit`}
+                            className="text-xs text-blue-600 hover:underline"
+                          >
+                            Edit
+                          </Link>
                         </td>
                       </tr>
                     ))}

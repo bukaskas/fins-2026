@@ -101,8 +101,8 @@ export async function createOrderForUser(input: CreateOrderForUserInput) {
         );
       }
 
-      const totalUnits = (line.creditUnitsEach ?? 0) * line.qty;
-      if (totalUnits <= 0) continue;
+      const totalUnits = new Prisma.Decimal(line.creditUnitsEach ?? 0).mul(line.qty);
+      if (totalUnits.lte(0)) continue;
 
       // Find or create wallet
       const wallet = await tx.userWallet.upsert({
@@ -133,12 +133,12 @@ export async function createOrderForUser(input: CreateOrderForUserInput) {
         data: {
           walletId: wallet.id,
           userId,
-          delta: new Prisma.Decimal(totalUnits),
+          delta: totalUnits,
           balanceAfter: updatedWallet.balance,
           reason: WalletLedgerReason.PURCHASE,
           orderId: order.id,
           orderLineId: line.id,
-          note: `Purchased ${totalUnits} ${product.walletUnit}(s) — order ${order.id}`,
+          note: `Purchased ${totalUnits.toString()} ${product.walletUnit}(s) — order ${order.id}`,
           idempotencyKey: `purchase:${line.id}`,
         },
       });
@@ -299,6 +299,129 @@ export async function settleUserBalance(input: SettleUserBalanceInput) {
       outstandingCents: Math.max(totalCharged - totalPaid, 0),
     };
   }, { timeout: 30000 });
+}
+
+type UpdatePaymentPatch = {
+  receivedAt: Date;
+  amountCents: number;
+  method: PaymentMethod;
+  reference: string | null;
+};
+
+export async function updatePayment(
+  paymentId: string,
+  patch: UpdatePaymentPatch,
+): Promise<{ success: true } | { success: false; error: string }> {
+  if (!paymentId) return { success: false, error: "Missing payment id." };
+
+  const newAmount = toInt(patch.amountCents);
+  if (!Number.isFinite(newAmount) || newAmount <= 0) {
+    return { success: false, error: "Amount must be greater than 0." };
+  }
+  if (!(patch.receivedAt instanceof Date) || Number.isNaN(patch.receivedAt.getTime())) {
+    return { success: false, error: "Invalid date." };
+  }
+
+  try {
+    const userId = await prisma.$transaction(async (tx) => {
+      const payment = await tx.payment.findUnique({
+        where: { id: paymentId },
+        include: {
+          allocations: { select: { orderId: true, amountCents: true } },
+          commissions: { select: { id: true }, take: 1 },
+          expenses: { select: { id: true }, take: 1 },
+        },
+      });
+      if (!payment) throw new Error("Payment not found.");
+      if (payment.commissions.length > 0 || payment.expenses.length > 0) {
+        throw new Error("This payment is tied to a commission or expense settlement and can't be edited here.");
+      }
+
+      const amountChanged = newAmount !== payment.amountCents;
+
+      if (amountChanged) {
+        const affectedOrderIds = new Set(payment.allocations.map((a) => a.orderId));
+
+        await tx.paymentAllocation.deleteMany({ where: { paymentId } });
+
+        // Gather candidate orders: user's open/partial orders + any order this
+        // payment previously touched (since shrinking may free a previously-PAID order).
+        const candidateOrders = await tx.order.findMany({
+          where: {
+            userId: payment.userId,
+            OR: [
+              { status: { in: [OrderStatus.OPEN, OrderStatus.PARTIAL] } },
+              { id: { in: Array.from(affectedOrderIds) } },
+            ],
+            NOT: { status: OrderStatus.CANCELED },
+          },
+          orderBy: { createdAt: "asc" },
+          include: { allocations: { select: { amountCents: true } } },
+        });
+
+        let remaining = newAmount;
+        const newAllocations: Array<{ orderId: string; amountCents: number }> = [];
+        for (const order of candidateOrders) {
+          if (remaining <= 0) break;
+          const alreadyPaid = order.allocations.reduce((s, a) => s + a.amountCents, 0);
+          const outstanding = order.totalCents - alreadyPaid;
+          if (outstanding <= 0) continue;
+          const alloc = Math.min(outstanding, remaining);
+          newAllocations.push({ orderId: order.id, amountCents: alloc });
+          remaining -= alloc;
+        }
+
+        for (const a of newAllocations) {
+          await tx.paymentAllocation.create({
+            data: { paymentId, orderId: a.orderId, amountCents: a.amountCents },
+          });
+        }
+
+        const ordersToRecompute = new Set<string>(affectedOrderIds);
+        for (const a of newAllocations) ordersToRecompute.add(a.orderId);
+
+        for (const orderId of ordersToRecompute) {
+          const order = await tx.order.findUnique({
+            where: { id: orderId },
+            include: { allocations: { select: { amountCents: true } } },
+          });
+          if (!order || order.status === OrderStatus.CANCELED) continue;
+          const paid = order.allocations.reduce((s, x) => s + x.amountCents, 0);
+          const status =
+            paid >= order.totalCents
+              ? OrderStatus.PAID
+              : paid > 0
+                ? OrderStatus.PARTIAL
+                : OrderStatus.OPEN;
+          if (status !== order.status) {
+            await tx.order.update({ where: { id: order.id }, data: { status } });
+          }
+        }
+      }
+
+      await tx.payment.update({
+        where: { id: paymentId },
+        data: {
+          receivedAt: patch.receivedAt,
+          amountCents: newAmount,
+          method: patch.method,
+          reference: patch.reference,
+        },
+      });
+
+      return payment.userId;
+    }, { timeout: 30000 });
+
+    revalidatePath("/accounting/payments");
+    revalidatePath("/accounting/open-orders");
+    revalidatePath(`/users/${userId}`);
+    return { success: true };
+  } catch (err) {
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : "Failed to update payment.",
+    };
+  }
 }
 
 export async function submitPaymentFromForm(formData: FormData) {

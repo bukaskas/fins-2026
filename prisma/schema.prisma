@@ -290,9 +290,10 @@ model Product {
   currency        String           @default("EGP")
   creditUnits     Int? // e.g. 10 or 20 for bundle products
   creditValidDays Int? // optional expiry window
+  referenceDurationMinutes Int? // for LESSONS service products: the duration `priceCents` is quoted for
   walletType      WalletType? // which wallet to credit (required for BUNDLE_CREDIT)
   walletUnit      WalletUnit? // unit for ledger delta (required for BUNDLE_CREDIT)
-  lessonType      LessonType? // for LESSON_HOURS bundles: auto-applies this lesson type when used
+  lessonType      LessonType? // required for LESSONS-category products (and LESSON_HOURS bundles)
   isActive        Boolean          @default(true)
   createdAt       DateTime         @default(now()) @db.Timestamp(6)
 
@@ -330,7 +331,7 @@ model OrderLine {
   order          Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
   productId      String  @db.Uuid
   product        Product @relation(fields: [productId], references: [id])
-  qty            Int     @default(1)
+  qty            Decimal @default(1) @db.Decimal(10, 4)
   unitPriceCents Int
   lineTotalCents Int
 

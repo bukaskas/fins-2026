@@ -168,12 +168,12 @@ async function classifyBooking(db: Db, args: ClassifyArgs): Promise<Contribution
           createdAt: { gte: windowStart, lte: windowEnd },
         },
       },
-      select: { unitPriceCents: true },
+      select: { lineTotalCents: true },
       orderBy: { order: { createdAt: "desc" } },
     });
 
     if (orderLine) {
-      return { cents: orderLine.unitPriceCents, source: RevenueSource.ORDER };
+      return { cents: orderLine.lineTotalCents, source: RevenueSource.ORDER };
     }
   }
 

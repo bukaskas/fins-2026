@@ -1,9 +1,12 @@
 import {
-  getActiveLessonBundleProducts,
   getLessonFormUsers,
   getUserLessonHoursBalance,
 } from "@/lib/actions/lessons.actions";
-import NewLessonForm from "@/components/lessons/NewLessonForm";
+import { getAllProducts } from "@/lib/actions/product.actions";
+import NewLessonForm, {
+  type LessonProductOption,
+} from "@/components/lessons/NewLessonForm";
+import { ProductCategory } from "@prisma/client";
 import Link from "next/link";
 
 type Props = {
@@ -12,11 +15,22 @@ type Props = {
 
 export default async function NewLessonPage({ searchParams }: Props) {
   const { guestId } = await searchParams;
-  const [{ students, instructors }, bundleProducts, initialBalance] = await Promise.all([
+  const [{ students, instructors }, productsRaw, initialBalance] = await Promise.all([
     getLessonFormUsers(),
-    getActiveLessonBundleProducts(),
+    getAllProducts({ category: ProductCategory.LESSONS, isActive: true }),
     guestId ? getUserLessonHoursBalance(guestId) : Promise.resolve(null),
   ]);
+
+  const lessonProducts: LessonProductOption[] = productsRaw
+    .filter((p) => p.lessonType != null)
+    .map((p) => ({
+      id: p.id,
+      name: p.name,
+      sku: p.sku,
+      priceCents: p.priceCents,
+      lessonType: p.lessonType!,
+      referenceDurationMinutes: p.referenceDurationMinutes,
+    }));
 
   return (
     <div className="min-h-screen" style={{ background: "linear-gradient(160deg, #f0f9ff 0%, #faf7f2 50%, #f0fdf4 100%)" }}>
@@ -73,7 +87,7 @@ export default async function NewLessonPage({ searchParams }: Props) {
         <NewLessonForm
           students={students}
           instructors={instructors}
-          bundleProducts={bundleProducts}
+          lessonProducts={lessonProducts}
           initialStudentId={guestId}
           initialBalance={initialBalance}
         />

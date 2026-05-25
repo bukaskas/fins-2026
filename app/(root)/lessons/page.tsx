@@ -11,7 +11,7 @@ export default async function LessonsPage() {
   const [lessons, instructors, productsRaw] = await Promise.all([
     getAllLessons(),
     listInstructors(),
-    getAllProducts({ type: "SERVICE", isActive: true }),
+    getAllProducts({ category: "LESSONS", isActive: true }),
   ]);
 
   const serviceProducts: EditSheetServiceProduct[] = productsRaw.map((p) => ({
@@ -19,6 +19,9 @@ export default async function LessonsPage() {
     sku: p.sku,
     name: p.name,
     priceCents: p.priceCents,
+    category: p.category,
+    lessonType: p.lessonType,
+    referenceDurationMinutes: p.referenceDurationMinutes,
   }));
 
   const rows: SessionRow[] = lessons.map((s) => ({

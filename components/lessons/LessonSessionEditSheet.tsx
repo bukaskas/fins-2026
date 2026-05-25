@@ -11,6 +11,9 @@ import {
 } from "@/lib/actions/lessons.actions";
 import { searchUser } from "@/lib/actions/user.actions";
 import { LESSON_TYPE_SKU } from "@/lib/lesson-products";
+import LessonProductSearchField, {
+  type LessonProductSearchOption,
+} from "@/components/lessons/LessonProductSearchField";
 import {
   Sheet,
   SheetContent,
@@ -20,7 +23,7 @@ import {
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { format } from "date-fns";
-import { CommissionStatus, CommissionType, LessonType } from "@prisma/client";
+import { CommissionStatus, CommissionType, LessonType, ProductCategory } from "@prisma/client";
 import { CommissionCard, type CommissionCardData } from "@/components/commission/CommissionCard";
 
 export type EditSheetServiceProduct = {
@@ -28,6 +31,9 @@ export type EditSheetServiceProduct = {
   sku: string;
   name: string;
   priceCents: number;
+  category: ProductCategory | null;
+  lessonType: LessonType | null;
+  referenceDurationMinutes: number | null;
 };
 
 const apple = "-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', sans-serif";
@@ -157,8 +163,36 @@ export function LessonSessionEditSheet({
   const initialStartsAt = new Date(session.startsAt);
   const initialEndsAt = new Date(session.endsAt);
 
+  const lessonProducts = useMemo(
+    () =>
+      serviceProducts.filter(
+        (p) => p.category === ProductCategory.LESSONS || p.sku.startsWith("LESSON_"),
+      ),
+    [serviceProducts],
+  );
+
+  const searchableLessonProducts = useMemo<LessonProductSearchOption[]>(
+    () =>
+      lessonProducts
+        .filter((p) => p.lessonType != null)
+        .map((p) => ({
+          id: p.id,
+          name: p.name,
+          sku: p.sku,
+          priceCents: p.priceCents,
+          lessonType: p.lessonType!,
+          referenceDurationMinutes: p.referenceDurationMinutes,
+        })),
+    [lessonProducts],
+  );
+
+  const initialProductId = useMemo(() => {
+    const match = lessonProducts.find((p) => p.lessonType === session.lessonType);
+    return match?.id ?? "";
+  }, [lessonProducts, session.lessonType]);
+
   const [instructorId, setInstructorId] = useState(session.instructor?.id ?? "unassigned");
-  const [lessonType, setLessonType]     = useState(session.lessonType);
+  const [productId, setProductId]       = useState<string>(initialProductId);
   const [date, setDate]                 = useState<Date>(initialStartsAt);
   const [time, setTime]                 = useState(format(initialStartsAt, "HH:mm"));
   const [endTime, setEndTime]           = useState(format(initialEndsAt, "HH:mm"));
@@ -169,6 +203,13 @@ export function LessonSessionEditSheet({
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting]         = useState(false);
 
+  const selectedProduct = useMemo(
+    () => lessonProducts.find((p) => p.id === productId) ?? null,
+    [lessonProducts, productId],
+  );
+  const derivedLessonType: LessonType =
+    selectedProduct?.lessonType ?? (session.lessonType as LessonType);
+
   async function handleSave() {
     const [h, m]   = time.split(":").map(Number);
     const [eh, em] = endTime.split(":").map(Number);
@@ -176,9 +217,14 @@ export function LessonSessionEditSheet({
     const endsAt   = new Date(date); endsAt.setHours(eh, em, 0, 0);
     const capacity = parseInt(capacityInput, 10) || 1;
 
+    if (!productId) {
+      toast.error("Pick a lesson product.");
+      return;
+    }
+
     setSaving(true);
     const result = await updateLessonSession(session.id, {
-      lessonType: lessonType as any,
+      productId,
       instructorId: instructorId === "unassigned" ? null : instructorId,
       startsAt,
       endsAt,
@@ -188,12 +234,31 @@ export function LessonSessionEditSheet({
     setSaving(false);
 
     if (result.success) {
-      toast.success("Session updated");
+      const updated = result.repricing?.updated ?? 0;
+      const skipped = result.repricing?.skipped ?? [];
+      toast.success(
+        updated > 0
+          ? `Session updated · re-priced ${updated} guest order${updated === 1 ? "" : "s"}`
+          : "Session updated",
+      );
+      if (skipped.length > 0) {
+        const names = skipped.map((s) => s.guestName).join(", ");
+        toast.warning(
+          `Could not re-price ${skipped.length} guest order${skipped.length === 1 ? "" : "s"} (already paid/partial): ${names}. Settle the difference manually.`,
+        );
+      }
       const resolvedInstructor =
         instructorId === "unassigned"
           ? null
           : (instructors.find((i) => i.id === instructorId) ?? null);
-      onSaved({ startsAt: startsAt.toISOString(), endsAt: endsAt.toISOString(), lessonType, capacity, notes: notes.trim() || null, instructor: resolvedInstructor });
+      onSaved({
+        startsAt: startsAt.toISOString(),
+        endsAt: endsAt.toISOString(),
+        lessonType: derivedLessonType,
+        capacity,
+        notes: notes.trim() || null,
+        instructor: resolvedInstructor,
+      });
       onOpenChange(false);
     } else {
       toast.error(result.message ?? "Failed to update session");
@@ -243,14 +308,20 @@ export function LessonSessionEditSheet({
         {/* Scrollable form body */}
         <div style={{ flex: 1, overflowY: "auto", padding: "24px" }} className="flex flex-col gap-5">
 
-          {/* Lesson Type */}
+          {/* Product (drives lesson type) */}
           <div>
-            <label style={labelStyle}>Lesson Type</label>
-            <AppleSelect
-              value={lessonType}
-              onChange={setLessonType}
-              options={LESSON_TYPES}
+            <LessonProductSearchField
+              products={searchableLessonProducts}
+              initialProductId={initialProductId}
+              onSelect={setProductId}
+              name="editSheetProductId"
             />
+            <p style={{ fontFamily: apple, fontSize: "12px", color: "#6e6e73", marginTop: "6px" }}>
+              Lesson type:{" "}
+              <span style={{ fontWeight: 600, color: "#1d1d1f" }}>
+                {(LESSON_TYPES.find((t) => t.value === derivedLessonType)?.label) ?? derivedLessonType}
+              </span>
+            </p>
           </div>
 
           {/* Instructor */}
@@ -309,6 +380,9 @@ export function LessonSessionEditSheet({
               <label style={labelStyle}>End Time</label>
               <AppleSelect value={endTime} onChange={setEndTime} options={TIME_OPTIONS.map((t) => ({ value: t, label: t }))} />
             </div>
+            <p style={{ gridColumn: "1 / -1", fontFamily: apple, fontSize: "12px", color: "#6e6e73", lineHeight: 1.4, margin: 0 }}>
+              Any duration (incl. 1.25h or 1.5h) is allowed — guest orders are prorated from the lesson’s hourly rate when you save.
+            </p>
           </div>
 
           {/* Capacity */}
@@ -347,7 +421,7 @@ export function LessonSessionEditSheet({
           {/* Add guest + charge */}
           <AddGuestSection
             sessionId={session.id}
-            lessonType={lessonType}
+            lessonType={derivedLessonType}
             serviceProducts={serviceProducts}
           />
 
@@ -473,11 +547,34 @@ function AddGuestSection({
 }) {
   const router = useRouter();
 
+  const lessonProducts = useMemo(
+    () =>
+      serviceProducts.filter(
+        (p) => p.category === ProductCategory.LESSONS || p.sku.startsWith("LESSON_"),
+      ),
+    [serviceProducts],
+  );
+
+  const searchableLessonProducts = useMemo<LessonProductSearchOption[]>(
+    () =>
+      lessonProducts
+        .filter((p) => p.lessonType != null)
+        .map((p) => ({
+          id: p.id,
+          name: p.name,
+          sku: p.sku,
+          priceCents: p.priceCents,
+          lessonType: p.lessonType!,
+          referenceDurationMinutes: p.referenceDurationMinutes,
+        })),
+    [lessonProducts],
+  );
+
   const productBySku = useMemo(() => {
     const m = new Map<string, EditSheetServiceProduct>();
-    serviceProducts.forEach((p) => m.set(p.sku, p));
+    lessonProducts.forEach((p) => m.set(p.sku, p));
     return m;
-  }, [serviceProducts]);
+  }, [lessonProducts]);
 
   const defaultProductIdFor = useCallback(
     (lt: string) => {
@@ -608,23 +705,16 @@ function AddGuestSection({
         )}
 
         <div>
-          <label style={{ ...labelStyle, marginTop: "4px" }}>Product (charge)</label>
-          <select
-            value={productId}
-            onChange={(e) => setProductId(e.target.value)}
-            disabled={submitting}
-            style={selectStyle}
-          >
-            <option value="">— Select a product —</option>
-            {serviceProducts.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.name} — {(p.priceCents / 100).toLocaleString()} EGP
-              </option>
-            ))}
-          </select>
+          <LessonProductSearchField
+            key={`add-guest-product-${lessonType}`}
+            products={searchableLessonProducts}
+            initialProductId={productId}
+            onSelect={setProductId}
+            name="addGuestProductId"
+          />
           {!productId && (
             <p style={{ fontFamily: apple, fontSize: "12px", color: "#b45309", marginTop: "4px" }}>
-              No matching product for this lesson type. Add it in <code>/products</code> or pick one manually.
+              No lesson product matched this session’s lesson type. Pick one above or add one in <code>/products</code>.
             </p>
           )}
         </div>

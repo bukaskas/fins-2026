@@ -27,16 +27,6 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -46,17 +36,20 @@ import {
   Pencil,
   Plus,
   Save,
-  Trash2,
   Undo2,
 } from "lucide-react";
 import {
   batchUpdateSessionSchedule,
-  deleteLessonSession,
   getLessonSessionsByDate,
-  updateLessonSession,
 } from "@/lib/actions/lessons.actions";
-import { LessonType } from "@prisma/client";
-import NewLessonForm from "@/components/lessons/NewLessonForm";
+import { LessonType, ProductCategory } from "@prisma/client";
+import NewLessonForm, {
+  type LessonProductOption,
+} from "@/components/lessons/NewLessonForm";
+import {
+  LessonSessionEditSheet,
+  type SessionRow,
+} from "@/components/lessons/LessonSessionEditSheet";
 import { toast } from "sonner";
 
 // ---------- types ----------
@@ -92,6 +85,9 @@ export type ServiceProduct = {
   sku: string;
   name: string;
   priceCents: number;
+  category: ProductCategory | null;
+  lessonType: LessonType | null;
+  referenceDurationMinutes: number | null;
 };
 
 type Instructor = { id: string; name: string | null; email: string };
@@ -253,12 +249,14 @@ function DraggableSession({
   session,
   isChanged,
   instructors,
+  serviceProducts,
   onUpdated,
   onDeleted,
 }: {
   session: SessionWithBookings;
   isChanged: boolean;
   instructors: Instructor[];
+  serviceProducts: ServiceProduct[];
   onUpdated: (updated: SessionWithBookings) => void;
   onDeleted: (id: string) => void;
 }) {
@@ -269,6 +267,21 @@ function DraggableSession({
   const style = {
     transform: CSS.Translate.toString(transform),
     opacity: isDragging ? 0.3 : 1,
+  };
+
+  const sessionRow: SessionRow = {
+    id: session.id,
+    startsAt: new Date(session.startsAt).toISOString(),
+    endsAt: new Date(session.endsAt).toISOString(),
+    lessonType: session.lessonType,
+    capacity: session.capacity,
+    notes: session.notes,
+    instructor: session.instructor,
+    bookings: session.bookings.map((b) => ({
+      id: b.id,
+      status: b.status,
+      guest: b.guest,
+    })),
   };
 
   return (
@@ -287,14 +300,31 @@ function DraggableSession({
           setEditOpen(true);
         }}
       />
-      <SessionEditSheet
-        session={session}
+      <LessonSessionEditSheet
+        session={sessionRow}
         instructors={instructors}
+        serviceProducts={serviceProducts}
         open={editOpen}
         onOpenChange={setEditOpen}
-        onSaved={(updated) => {
-          onUpdated(updated);
-          setEditOpen(false);
+        onSaved={(partial) => {
+          const newInstructorId =
+            partial.instructor !== undefined
+              ? (partial.instructor?.id ?? null)
+              : session.instructorId;
+          const newInstructor = newInstructorId
+            ? (instructors.find((i) => i.id === newInstructorId) ?? null)
+            : null;
+          onUpdated({
+            ...session,
+            startsAt: partial.startsAt ?? session.startsAt,
+            endsAt: partial.endsAt ?? session.endsAt,
+            lessonType: partial.lessonType ?? session.lessonType,
+            capacity: partial.capacity ?? session.capacity,
+            notes:
+              partial.notes !== undefined ? partial.notes : session.notes,
+            instructorId: newInstructorId,
+            instructor: newInstructor,
+          });
         }}
         onDeleted={(id) => {
           onDeleted(id);
@@ -302,277 +332,6 @@ function DraggableSession({
         }}
       />
     </div>
-  );
-}
-
-// ---------- session edit sheet ----------
-
-function SessionEditSheet({
-  session,
-  instructors,
-  open,
-  onOpenChange,
-  onSaved,
-  onDeleted,
-}: {
-  session: SessionWithBookings;
-  instructors: Instructor[];
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  onSaved: (updated: SessionWithBookings) => void;
-  onDeleted: (id: string) => void;
-}) {
-  const startsAtDate = new Date(session.startsAt);
-  const durMs = new Date(session.endsAt).getTime() - startsAtDate.getTime();
-  const durMin = Math.round(durMs / 60000);
-
-  const [lessonType, setLessonType] = useState(session.lessonType);
-  const [instructorId, setInstructorId] = useState(
-    session.instructorId ?? "unassigned",
-  );
-  const [date, setDate] = useState<Date>(startsAtDate);
-  const [time, setTime] = useState(format(startsAtDate, "HH:mm"));
-  const [durationHours, setDurationHours] = useState(
-    String(Math.floor(durMin / 60)),
-  );
-  const [durationMinutes, setDurationMinutes] = useState(String(durMin % 60));
-  const [notes, setNotes] = useState(session.notes ?? "");
-  const [calOpen, setCalOpen] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [confirmDelete, setConfirmDelete] = useState(false);
-  const [deleting, setDeleting] = useState(false);
-
-  async function handleDelete() {
-    setDeleting(true);
-    const result = await deleteLessonSession(session.id);
-    setDeleting(false);
-    if (result.success) {
-      toast.success("Session deleted");
-      onDeleted(session.id);
-      onOpenChange(false);
-    } else {
-      toast.error(result.message || "Failed to delete session");
-    }
-  }
-
-  async function handleSave() {
-    const [h, m] = time.split(":").map(Number);
-    const startsAt = new Date(date);
-    startsAt.setHours(h, m, 0, 0);
-    const totalMin =
-      (parseInt(durationHours, 10) || 0) * 60 +
-      (parseInt(durationMinutes, 10) || 0);
-    if (totalMin <= 0) {
-      toast.error("Duration must be greater than 0");
-      return;
-    }
-    const endsAt = new Date(startsAt.getTime() + totalMin * 60 * 1000);
-    setSaving(true);
-    const result = await updateLessonSession(session.id, {
-      lessonType: lessonType as LessonType,
-      instructorId: instructorId === "unassigned" ? null : instructorId,
-      startsAt,
-      endsAt,
-      notes: notes.trim() || null,
-      capacity: session.capacity,
-    });
-    setSaving(false);
-    if (result.success && result.data) {
-      toast.success("Session updated");
-      onSaved(result.data as SessionWithBookings);
-    } else {
-      toast.error(result.message || "Failed to update session");
-    }
-  }
-
-  return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="overflow-y-auto">
-        <SheetHeader>
-          <SheetTitle>Edit Session</SheetTitle>
-        </SheetHeader>
-        <div className="space-y-4 mt-4 px-1">
-          {/* Lesson Type */}
-          <div className="space-y-1">
-            <Label>Lesson Type</Label>
-            <Select
-              value={lessonType}
-              onValueChange={setLessonType}
-              disabled={saving}
-            >
-              <SelectTrigger className="w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectGroup>
-                  {LESSON_TYPES.map((t) => (
-                    <SelectItem key={t.value} value={t.value}>
-                      {t.label}
-                    </SelectItem>
-                  ))}
-                </SelectGroup>
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Instructor */}
-          <div className="space-y-1">
-            <Label>Instructor</Label>
-            <Select
-              value={instructorId}
-              onValueChange={setInstructorId}
-              disabled={saving}
-            >
-              <SelectTrigger className="w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectGroup>
-                  <SelectItem value="unassigned">Unassigned</SelectItem>
-                  {instructors.map((i) => (
-                    <SelectItem key={i.id} value={i.id}>
-                      {i.name ?? "Unknown"}
-                    </SelectItem>
-                  ))}
-                </SelectGroup>
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Date */}
-          <div className="space-y-1">
-            <Label>Date</Label>
-            <Popover open={calOpen} onOpenChange={setCalOpen}>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  className="w-full justify-start font-normal"
-                >
-                  <CalendarIcon className="mr-2 size-4" />
-                  {format(date, "PPP")}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
-                <Calendar
-                  mode="single"
-                  selected={date}
-                  onSelect={(d) => {
-                    if (d) {
-                      setDate(d);
-                      setCalOpen(false);
-                    }
-                  }}
-                />
-              </PopoverContent>
-            </Popover>
-          </div>
-
-          {/* Time */}
-          <div className="space-y-1">
-            <Label>Time</Label>
-            <Select value={time} onValueChange={setTime} disabled={saving}>
-              <SelectTrigger className="w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectGroup>
-                  {TIME_SLOTS.map((t) => (
-                    <SelectItem key={t} value={t}>
-                      {t}
-                    </SelectItem>
-                  ))}
-                </SelectGroup>
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Duration */}
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1">
-              <Label>Hours</Label>
-              <Input
-                type="number"
-                min="0"
-                value={durationHours}
-                onChange={(e) => setDurationHours(e.target.value)}
-                disabled={saving}
-              />
-            </div>
-            <div className="space-y-1">
-              <Label>Minutes</Label>
-              <Select
-                value={durationMinutes}
-                onValueChange={setDurationMinutes}
-                disabled={saving}
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="0">00</SelectItem>
-                  <SelectItem value="15">15</SelectItem>
-                  <SelectItem value="30">30</SelectItem>
-                  <SelectItem value="45">45</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          {/* Notes */}
-          <div className="space-y-1">
-            <Label>Notes</Label>
-            <Input
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              placeholder="Optional notes"
-              disabled={saving}
-            />
-          </div>
-
-          <Button onClick={handleSave} className="w-full" disabled={saving || deleting}>
-            {saving ? "Saving..." : "Save"}
-          </Button>
-
-          <div className="pt-2 border-t">
-            {!confirmDelete ? (
-              <Button
-                variant="destructive"
-                className="w-full"
-                onClick={() => setConfirmDelete(true)}
-                disabled={saving || deleting}
-              >
-                <Trash2 className="size-4 mr-2" />
-                Delete session
-              </Button>
-            ) : (
-              <div className="space-y-2">
-                <p className="text-sm text-center text-muted-foreground">
-                  This will permanently delete the session and all its bookings.
-                </p>
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    className="flex-1"
-                    onClick={() => setConfirmDelete(false)}
-                    disabled={deleting}
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    variant="destructive"
-                    className="flex-1"
-                    onClick={handleDelete}
-                    disabled={deleting}
-                  >
-                    {deleting ? "Deleting..." : "Confirm delete"}
-                  </Button>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      </SheetContent>
-    </Sheet>
   );
 }
 
@@ -637,21 +396,12 @@ function ListView({
   );
 }
 
-const LESSON_TYPES: { value: string; label: string }[] = [
-  { value: "PRIVATE", label: "Private" },
-  { value: "GROUP", label: "Group" },
-  { value: "EXTRA_PRIVATE", label: "Extra Private" },
-  { value: "EXTRA_GROUP", label: "Extra Group" },
-  { value: "FOIL", label: "Foil" },
-  { value: "KIDS", label: "Kids" },
-];
-
 // ---------- create session sheet ----------
 
 function CreateSessionSheet({
   students,
   instructors,
-  bundleProducts,
+  lessonProducts,
   open,
   onOpenChange,
   initialStartsAt,
@@ -659,7 +409,7 @@ function CreateSessionSheet({
 }: {
   students: LessonFormStudent[];
   instructors: Instructor[];
-  bundleProducts: LessonBundleProduct[];
+  lessonProducts: LessonProductOption[];
   open: boolean;
   onOpenChange: (v: boolean) => void;
   initialStartsAt?: string;
@@ -680,7 +430,7 @@ function CreateSessionSheet({
             key={formKey}
             students={students}
             instructors={instructors}
-            bundleProducts={bundleProducts}
+            lessonProducts={lessonProducts}
             initialBalance={null}
             initialStartsAt={initialStartsAt}
             initialInstructorId={initialInstructorId}
@@ -700,29 +450,20 @@ type LessonFormStudent = {
   phone: string | null;
 };
 
-type LessonBundleProduct = {
-  id: string;
-  name: string;
-  sku: string;
-  priceCents: number;
-  creditUnits: number;
-  lessonType: LessonType | null;
-};
-
 export default function ScheduleBoard({
   instructors,
   initialSessions,
   initialDate,
   serviceProducts,
   students,
-  bundleProducts,
+  lessonProducts,
 }: {
   instructors: Instructor[];
   initialSessions: SessionWithBookings[];
   initialDate: string; // YYYY-MM-DD
   serviceProducts: ServiceProduct[];
   students: LessonFormStudent[];
-  bundleProducts: LessonBundleProduct[];
+  lessonProducts: LessonProductOption[];
 }) {
   const [selectedDate, setSelectedDate] = useState<Date>(
     new Date(initialDate + "T00:00:00"),
@@ -1007,7 +748,7 @@ export default function ScheduleBoard({
         <CreateSessionSheet
           students={students}
           instructors={instructors}
-          bundleProducts={bundleProducts}
+          lessonProducts={lessonProducts}
           open={newSessionOpen}
           onOpenChange={setNewSessionOpen}
           initialStartsAt={newSessionPrefill.startsAt}
@@ -1093,6 +834,7 @@ export default function ScheduleBoard({
                             session={session}
                             isChanged={changedIds.has(session.id)}
                             instructors={instructors}
+                            serviceProducts={serviceProducts}
                             onUpdated={handleSessionUpdated}
                             onDeleted={handleSessionDeleted}
                           />

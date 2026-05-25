@@ -104,7 +104,7 @@ export default async function RentalDetailPage({ params }: Props) {
                 <div className="flex items-center justify-between border-b bg-muted/30 px-3 py-2">
                   <div>
                     <span className="font-medium">
-                      {orderLine.qty}× {orderLine.product.name}
+                      {orderLine.qty.toString()}× {orderLine.product.name}
                     </span>
                     <span className="ml-2 text-xs text-muted-foreground font-mono">
                       {orderLine.product.sku}

@@ -1,5 +1,5 @@
 import { email, z } from "zod";
-import { BookingStatus, CommissionType, ExpenseType, LessonType } from "@prisma/client";
+import { BookingStatus, CommissionType, ExpenseType } from "@prisma/client";
 
 export const bookingFormSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters long"),
@@ -131,7 +131,7 @@ export const newLessonFormSchema = z
   .object({
     studentId: z.string().uuid({ message: "Student is required." }),
     instructorId: z.string().uuid({ message: "Instructor is required." }),
-    lessonType: z.nativeEnum(LessonType, { message: "Invalid lesson type." }),
+    productId: z.string().uuid({ message: "Product is required." }),
     startsAt: z.string().min(1, "Start date/time is required."),
     durationHours: z.coerce.number().int("Hours must be a whole number.").min(0),
     durationMinutesPart: z.coerce
@@ -139,10 +139,6 @@ export const newLessonFormSchema = z
       .refine((v) => [0, 15, 30, 45].includes(v), {
         message: "Minutes must be 00, 15, 30 or 45.",
       }),
-    bundleProductId: z
-      .union([z.string().uuid(), z.literal("")])
-      .optional()
-      .transform((v) => (v && v.length > 0 ? v : null)),
     notes: z.string().nullable().optional().transform((v) => (v && v.length > 0 ? v : null)),
   })
   .refine((d) => d.durationHours * 60 + d.durationMinutesPart > 0, {

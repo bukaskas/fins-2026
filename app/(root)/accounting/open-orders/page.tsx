@@ -26,7 +26,7 @@ export default async function OpenOrdersPage() {
           {grouped.map((g) => (
             <section key={g.user.id} className="rounded-md border">
               <div className="flex items-center justify-between border-b p-4">
-                <div>
+                <Link href={`/users/${g.user.id}`} className="hover:underline">
                   <div className="font-medium">
                     {g.user.name || "Unnamed guest"}
                   </div>
@@ -38,7 +38,7 @@ export default async function OpenOrdersPage() {
                       {g.user.phone}
                     </div>
                   ) : null}
-                </div>
+                </Link>
 
                 <div className="text-right">
                   <div className="text-xs text-muted-foreground">
