@@ -84,7 +84,7 @@ export function DayUseHero({
 
         {/* Tags */}
         {/* <div className="flex flex-wrap gap-2 mb-8">
-          {["9:00 AM – 11:00 PM", "From 1,200 EGP", "Pool · Lounge · Beach"].map((tag) => (
+          {["9:00 AM – 11:00 PM", "From 1,500 EGP", "Pool · Lounge · Beach"].map((tag) => (
             <span
               key={tag}
               className="px-3 py-[5px] border border-white/20 text-white/55 text-[0.58rem] tracking-[0.16em] uppercase font-[family-name:var(--font-raleway)] backdrop-blur-sm"

@@ -127,7 +127,7 @@ function HeroSection() {
         <div className="hero-tags flex flex-wrap gap-2 mb-8">
           {[
             "9:00 AM – 11:00 PM",
-            "From 1,200 EGP",
+            "From 1,500 EGP",
             "Pool · Lagoon · Lounge",
           ].map((tag) => (
             <span
@@ -318,7 +318,7 @@ function WhatsIncluded() {
           <div className="mb-6">
             <p className="text-white/40 text-[0.6rem] tracking-[0.2em] uppercase mb-1">Adults</p>
             <p className="text-white text-[clamp(2.5rem,5vw,4rem)] font-[800] leading-tight">
-              1,200 EGP
+              1,500 EGP
             </p>
           </div>
 

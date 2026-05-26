@@ -21,6 +21,7 @@ interface BookingEmailProps {
   numberOfPeople?: number;
   numberOfKids?: number;
   totalPriceCents?: number;
+  bookingUrl?: string;
 }
 
 const serviceContent: Record<
@@ -97,7 +98,7 @@ const DayUseDetails = ({ numberOfPeople, numberOfKids, totalPriceCents, bookingD
         </Text>
       </>
     ) : (
-      <Text className="text-sm font-semibold mb-1">💰 1,200 LE / per person</Text>
+      <Text className="text-sm font-semibold mb-1">💰 1,500 LE / per person</Text>
     )}
     <Text className="text-sm mb-0">⏰ 9:00 AM – 11:00 PM</Text>
 
@@ -129,7 +130,7 @@ const DayUseDetails = ({ numberOfPeople, numberOfKids, totalPriceCents, bookingD
   );
 };
 
-const BookingEmail = ({ username, date, bookingDateISO, bookingType, numberOfPeople, numberOfKids, totalPriceCents }: BookingEmailProps) => {
+const BookingEmail = ({ username, date, bookingDateISO, bookingType, numberOfPeople, numberOfKids, totalPriceCents, bookingUrl }: BookingEmailProps) => {
   const content =
     (bookingType ? serviceContent[bookingType] : null) ?? defaultContent;
   const body = content.body.replace("{date}", date ?? "your scheduled date");
@@ -155,7 +156,7 @@ const BookingEmail = ({ username, date, bookingDateISO, bookingType, numberOfPeo
                 bookingDateISO={bookingDateISO}
               />
             )}
-            <Section className="text-center mt-[32px] mb-[32px]">
+            <Section className="text-center mt-[32px] mb-[16px]">
               <Button
                 className="py-2.5 px-5 bg-green-500 rounded-md text-black text-sm font-semibold no-underline text-center"
                 href={`https://wa.me/201080500099?text=Hello%2C%0AI%20did%20reserve%20a%20spot.%20I%20have%20few%20questions`}
@@ -163,6 +164,16 @@ const BookingEmail = ({ username, date, bookingDateISO, bookingType, numberOfPeo
                 {content.cta}
               </Button>
             </Section>
+            {bookingUrl && (
+              <Section className="text-center mb-[32px]">
+                <Button
+                  className="py-2.5 px-5 bg-white border border-solid border-gray-300 rounded-md text-gray-800 text-sm font-semibold no-underline text-center"
+                  href={bookingUrl}
+                >
+                  View your booking
+                </Button>
+              </Section>
+            )}
             <Text className="text-start text-sm text-white">
               Cheers,
               <br />

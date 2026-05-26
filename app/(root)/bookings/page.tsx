@@ -4,12 +4,17 @@ import BookingComponent from "@/components/kitesurfing/BookingComponent";
 import { BookingsFilters } from "@/components/bookings/BookingsFilters";
 import { CopyGuestsButton } from "@/components/bookings/CopyGuestsButton";
 import { Button } from "@/components/ui/button";
-import { BookingStatus } from "@prisma/client";
+import { BookingStatus, Role } from "@prisma/client";
 import { format, addDays } from "date-fns";
 import Link from "next/link";
+import { getServerSession } from "next-auth/next";
+import { redirect } from "next/navigation";
+import { authOptions } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
+
+const STAFF_ROLES: Role[] = [Role.ADMIN, Role.STAFF, Role.OWNER];
 
 function dateKey(d: Date | string) {
   return format(new Date(d), "yyyy-MM-dd");
@@ -34,6 +39,15 @@ async function BookingsPage({
 }) {
   const { status, q, service, range = "upcoming", group = "date" } =
     await searchParams;
+
+  const session = await getServerSession(authOptions);
+  const role = (session?.user as { role?: Role } | undefined)?.role;
+  if (!session) {
+    redirect("/signin?callbackUrl=/bookings");
+  }
+  if (!role || !STAFF_ROLES.includes(role)) {
+    redirect("/");
+  }
 
   const [bookingsResult, allUsers] = await Promise.all([
     getAllBookings(),

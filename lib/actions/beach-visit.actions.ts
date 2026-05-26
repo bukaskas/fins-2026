@@ -6,7 +6,7 @@ import { Prisma, WalletLedgerReason, WalletType, WalletUnit } from "@prisma/clie
 
 
 const BEACH_USE_SKU = "BEACH_USE_DAY";
-const DAY_USE_PRICE_CENTS = 120000; // 1200 EGP
+const DAY_USE_PRICE_CENTS = 150000; // 1500 EGP
 const OWNER_DISCOUNT = 0.2;
 const HOLIDAY_PRICE_MULTIPLIER = 1.25; // 25% increase on holidays
 

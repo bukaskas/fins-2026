@@ -1,7 +1,7 @@
 import { Resend } from "resend";
 import BookingEmail from "@/emails/emailTemplate";
 const resend = new Resend(process.env.RESEND_API_KEY);
-import { APP_NAME, EMAIL_ADDRESS, STAFF_EMAILS } from "@/lib/constants";
+import { APP_NAME, EMAIL_ADDRESS, SERVER_URL, STAFF_EMAILS } from "@/lib/constants";
 import RegistrationEmail from "./registrationEmail";
 import StaffNotificationEmail from "./staffNotificationEmail";
 import PharaohAirstyleEmail from "./pharaohEmail";
@@ -14,6 +14,7 @@ export async function sendBookingEmail(
   numberOfPeople?: number,
   numberOfKids?: number,
   totalPriceCents?: number,
+  bookingId?: string,
 ) {
   if (bookingType === "pharaoh-airstyle") {
     await resend.emails.send({
@@ -24,6 +25,8 @@ export async function sendBookingEmail(
     });
     return;
   }
+
+  const bookingUrl = bookingId ? `${SERVER_URL}/bookings/${bookingId}` : undefined;
 
   await resend.emails.send({
     from: EMAIL_ADDRESS,
@@ -38,6 +41,7 @@ export async function sendBookingEmail(
         numberOfPeople={numberOfPeople}
         numberOfKids={numberOfKids}
         totalPriceCents={totalPriceCents}
+        bookingUrl={bookingUrl}
       />
     ),
   });

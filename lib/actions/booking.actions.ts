@@ -60,6 +60,7 @@ export async function createBooking(data: BookingFormData) {
       isDayUse ? validatedData.numberOfPeople : undefined,
       isDayUse ? (validatedData.numberOfKids ?? 0) : undefined,
       isDayUse ? (validatedData.totalPriceCents ?? undefined) : undefined,
+      booking.id,
     );
     await sendStaffNotificationEmail(
       validatedData.name,

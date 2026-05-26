@@ -3,7 +3,8 @@
 import { useState } from "react";
 import Link from "next/link";
 import { BookingStatus } from "@prisma/client";
-import { Users, Pencil, Phone, MoreHorizontal } from "lucide-react";
+import { Users, Pencil, Phone, MoreHorizontal, ExternalLink } from "lucide-react";
+import { SERVER_URL } from "@/lib/constants";
 import { toast } from "sonner";
 import {
   DropdownMenu,
@@ -125,8 +126,9 @@ function BookingComponent({ booking, allUsers }: { booking: BookingWithAgent; al
   const waData      = buildWaData(booking);
   const serviceMeta = SERVICE_META[booking.service ?? ""];
 
+  const bookingUrl = `${SERVER_URL}/bookings/${booking.id}`;
+
   function copyDetails() {
-    const phone = booking.phone.replace(/\D/g, "");
     const lines = [
       `Name: ${booking.name}`,
       `Date: ${day}/${month}`,
@@ -138,7 +140,7 @@ function BookingComponent({ booking, allUsers }: { booking: BookingWithAgent; al
       `Status: ${STATUS_LABEL[status]}`,
       amountPaid > 0 ? `Paid: ${amountPaid / 100} EGP` : `Paid: 0 EGP`,
       booking.instructor ? `Instructor: ${booking.instructor}` : null,
-      `https://www.finskitesurfing.com/bookings?q=${phone}`,
+      bookingUrl,
     ].filter(Boolean);
     navigator.clipboard.writeText(lines.join("\n"));
     toast.success("Booking details copied!");
@@ -340,6 +342,20 @@ function BookingComponent({ booking, allUsers }: { booking: BookingWithAgent; al
                       <WhatsAppIcon className="h-3.5 w-3.5 text-[#22c55e]" />
                       Open WhatsApp
                     </a>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href={`/bookings/${booking.id}`} className="flex items-center gap-2">
+                      <ExternalLink className="h-3.5 w-3.5 text-[#5BA6D6]" />
+                      View booking page
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onSelect={() => {
+                      navigator.clipboard.writeText(bookingUrl);
+                      toast.success("Booking link copied!");
+                    }}
+                  >
+                    Copy booking link
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
