@@ -1,7 +1,7 @@
 import pricingConfig from "@/lib/config/pricing.json";
 
 const ADULT_PRICE_CENTS = 150000;      // 1,500 EGP
-const HOLIDAY_SURCHARGE_CENTS = 40000; // +400 EGP flat on holiday
+const HOLIDAY_SURCHARGE_CENTS = 10000; // +100 EGP flat on holiday → 1,600 EGP total
 const DISCOUNT_MULTIPLIER = 0.75;      // -25%
 
 export type RateType = "standard" | "holiday" | "discounted";
