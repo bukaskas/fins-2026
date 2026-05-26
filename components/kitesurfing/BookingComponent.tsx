@@ -84,9 +84,12 @@ function buildWaData(booking: BookingWithAgent) {
   const phone = booking.phone.replace(/\D/g, "");
   const name = booking.name;
 
+  const bookingUrl = `${SERVER_URL}/bookings/${booking.id}`;
+
   const instagramText =
     `Hi ${name}! As part of our booking confirmation, could you please share the Instagram accounts of everyone in your group? ` +
-    `This helps us keep our Fins community the way we love it 🤍 If any profiles are private, a screenshot works just fine!`;
+    `This helps us keep our Fins community the way we love it 🤍 If any profiles are private, a screenshot works just fine!\n\n` +
+    `You can review your booking status here: ${bookingUrl}`;
 
   const paymentInfo =
     `💳 *To confirm your reservation:*\n` +
