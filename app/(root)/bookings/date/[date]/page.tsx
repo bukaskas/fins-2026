@@ -6,6 +6,7 @@ import { format } from "date-fns";
 import Link from "next/link";
 import { SearchInput } from "./SearchInput";
 import { CopySummaryButton } from "./CopySummaryButton";
+import { AgentFilter } from "./AgentFilter";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -17,6 +18,7 @@ const STATUS_FILTERS: {
 }[] = [
   { label: "All",               value: "all",       statuses: [] },
   { label: "Confirmed",         value: "confirmed", statuses: [BookingStatus.CONFIRMED, BookingStatus.ARRIVED] },
+  { label: "Waiting Payment",   value: "waiting",   statuses: [BookingStatus.WAITING_PAYMENT] },
   {
     label: "Pending",
     value: "pending",
@@ -24,7 +26,6 @@ const STATUS_FILTERS: {
       BookingStatus.PENDING,
       BookingStatus.REQUEST_SENT,
       BookingStatus.UNDER_REVIEW,
-      BookingStatus.WAITING_PAYMENT,
     ],
   },
   {
@@ -57,9 +58,9 @@ async function BookingsByDatePage({
   searchParams,
 }: {
   params: Promise<{ date: string }>;
-  searchParams: Promise<{ status?: string; q?: string }>;
+  searchParams: Promise<{ status?: string; q?: string; agent?: string }>;
 }) {
-  const [{ date }, { status = "all", q = "" }] = await Promise.all([
+  const [{ date }, { status = "all", q = "", agent = "all" }] = await Promise.all([
     params,
     searchParams,
   ]);
@@ -84,14 +85,22 @@ async function BookingsByDatePage({
 
   const query = q.trim().toLowerCase();
   const rawBookings = filteredResult.data as BookingWithAgent[];
-  const bookings = query
-    ? rawBookings.filter(
-        (b) =>
-          b.name?.toLowerCase().includes(query) ||
-          b.email?.toLowerCase().includes(query) ||
-          b.phone?.toLowerCase().includes(query),
-      )
-    : rawBookings;
+
+  const matchesAgent = (b: BookingWithAgent) => {
+    if (agent === "all") return true;
+    if (agent === "unassigned") return b.agentId == null;
+    return b.agentId === agent;
+  };
+
+  const bookings = rawBookings.filter((b) => {
+    if (!matchesAgent(b)) return false;
+    if (!query) return true;
+    return (
+      b.name?.toLowerCase().includes(query) ||
+      b.email?.toLowerCase().includes(query) ||
+      b.phone?.toLowerCase().includes(query)
+    );
+  });
 
   const confirmedBookings = allBookings.filter(
     (b) => b.bookingStatus === BookingStatus.CONFIRMED || b.bookingStatus === BookingStatus.ARRIVED,
@@ -124,12 +133,13 @@ async function BookingsByDatePage({
     {} as Record<string, BookingWithAgent[]>,
   );
 
-  // People count per status filter tab, derived from all bookings
+  // People count per status filter tab, derived from all bookings (respects agent filter)
+  const agentScopedAll = allBookings.filter(matchesAgent);
   const statusPeople = STATUS_FILTERS.map((f) => {
     const matched =
       f.statuses.length === 0
-        ? allBookings
-        : allBookings.filter((b) => f.statuses.includes(b.bookingStatus));
+        ? agentScopedAll
+        : agentScopedAll.filter((b) => f.statuses.includes(b.bookingStatus));
     return { value: f.value, people: matched.reduce((s, b) => s + b.numberOfPeople, 0) };
   });
 
@@ -186,16 +196,21 @@ async function BookingsByDatePage({
           </div>
 
           {/* ── Filter tabs ── */}
-          <div className="flex gap-0 mt-8 border-b border-[#ece8e3]">
+          <div className="flex gap-0 mt-8 border-b border-[#ece8e3] overflow-x-auto">
             {STATUS_FILTERS.map((f) => {
-              const href = `${baseHref}?status=${f.value === "all" ? "" : f.value}${q ? `&q=${encodeURIComponent(q)}` : ""}`.replace("status=&", "");
+              const params = new URLSearchParams();
+              if (f.value !== "all") params.set("status", f.value);
+              if (q) params.set("q", q);
+              if (agent !== "all") params.set("agent", agent);
+              const qs = params.toString();
+              const href = qs ? `${baseHref}?${qs}` : baseHref;
               const isActive = activeFilter.value === f.value;
               const people = statusPeople.find((s) => s.value === f.value)?.people ?? 0;
               return (
                 <Link
                   key={f.value}
-                  href={f.value === "all" ? (q ? `${baseHref}?q=${encodeURIComponent(q)}` : baseHref) : href}
-                  className="relative pb-3 mr-6 font-[family-name:var(--font-raleway)] text-[0.72rem] tracking-[0.1em] uppercase font-[600] transition-colors duration-150"
+                  href={href}
+                  className="relative pb-3 mr-6 whitespace-nowrap font-[family-name:var(--font-raleway)] text-[0.72rem] tracking-[0.1em] uppercase font-[600] transition-colors duration-150"
                   style={{ color: isActive ? "#1a1614" : "#8a8480" }}
                 >
                   <span>{f.label}</span>
@@ -213,8 +228,16 @@ async function BookingsByDatePage({
             })}
           </div>
 
-          {/* ── Search ── */}
-          <SearchInput defaultValue={q} />
+          {/* ── Search + Agent filter ── */}
+          <div className="md:flex md:items-end md:gap-3">
+            <div className="flex-1">
+              <SearchInput defaultValue={q} />
+            </div>
+            <AgentFilter
+              agents={allUsers.map((u) => ({ id: u.id, label: u.name ?? u.email }))}
+              value={agent}
+            />
+          </div>
         </div>
       </div>
 

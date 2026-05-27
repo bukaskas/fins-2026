@@ -14,6 +14,7 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { addClosedDate } from "./closedDate.actions";
 import { startOfDay } from "date-fns";
+import { computeBookingTotalCents } from "@/lib/pricing";
 
 const STAFF_ROLES: Role[] = [Role.ADMIN, Role.STAFF, Role.OWNER];
 
@@ -397,6 +398,12 @@ export async function getBookingsByDate(date: string, statuses?: BookingStatus[]
 export async function updateBooking(id: string, data: UpdateBookingData) {
   try {
     const validatedData = updateBookingSchema.parse(data);
+    const newTotalCents = computeBookingTotalCents(
+      validatedData.service,
+      validatedData.date,
+      validatedData.numberOfPeople,
+      validatedData.numberOfKids ?? 0,
+    );
     const updatedBooking = await prisma.booking.update({
       where: { id },
       data: {
@@ -410,6 +417,7 @@ export async function updateBooking(id: string, data: UpdateBookingData) {
         amountPaidCents: validatedData.amountPaidCents,
         instructor: validatedData.instructor ?? null,
         time: validatedData.time ?? null,
+        ...(newTotalCents !== null ? { totalPriceCents: newTotalCents } : {}),
       },
     });
 
@@ -470,6 +478,38 @@ export async function updateBookingStatus(id: string, status: BookingStatus) {
   } catch (error) {
     console.error('Status update error:', error);
     return { success: false, message: `Failed to update status. Error: ${error instanceof Error ? error.message : String(error)}` };
+  }
+}
+
+export async function updateBookingParty(id: string, adults: number, kids: number) {
+  try {
+    if (!Number.isInteger(adults) || adults < 1) {
+      return { success: false, message: "Adults must be a whole number ≥ 1." };
+    }
+    if (!Number.isInteger(kids) || kids < 0) {
+      return { success: false, message: "Kids must be a whole number ≥ 0." };
+    }
+    const existing = await prisma.booking.findUnique({
+      where: { id },
+      select: { service: true, date: true },
+    });
+    if (!existing) {
+      return { success: false, message: "Booking not found." };
+    }
+    const newTotalCents = computeBookingTotalCents(existing.service, existing.date, adults, kids);
+    await prisma.booking.update({
+      where: { id },
+      data: {
+        numberOfPeople: adults,
+        numberOfKids: kids,
+        ...(newTotalCents !== null ? { totalPriceCents: newTotalCents } : {}),
+      },
+    });
+    revalidatePath('/bookings', 'layout');
+    return { success: true };
+  } catch (error) {
+    console.error('Party update error:', error);
+    return { success: false, message: `Failed to update party. Error: ${error instanceof Error ? error.message : String(error)}` };
   }
 }
 

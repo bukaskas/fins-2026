@@ -19,11 +19,9 @@ import { toast } from "sonner";
 import { createBooking } from "@/lib/actions/booking.actions";
 import { BookingFormData, bookingFormSchema } from "@/lib/validators";
 import { PhoneInput } from "../phoneInput";
-import { formatEGP } from "@/lib/pricing";
+import { formatEGP, PHARAOH_ADULT_PRICE_CENTS, PHARAOH_KIDS_PRICE_CENTS } from "@/lib/pricing";
 
 const PHARAOH_DATE = new Date("2026-12-31"); // TBC — postponed due to weather
-const PHARAOH_ADULT_PRICE_CENTS = 120000; // 1,200 EGP
-const PHARAOH_KIDS_PRICE_CENTS = 60000;   // 600 EGP
 
 const EVENT_HIGHLIGHTS = [
   "🪁 Kite Show",

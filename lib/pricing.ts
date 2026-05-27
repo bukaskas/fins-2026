@@ -4,6 +4,9 @@ const ADULT_PRICE_CENTS = 150000;      // 1,500 EGP
 const HOLIDAY_SURCHARGE_CENTS = 10000; // +100 EGP flat on holiday → 1,600 EGP total
 const DISCOUNT_MULTIPLIER = 0.75;      // -25%
 
+export const PHARAOH_ADULT_PRICE_CENTS = 120000; // 1,200 EGP
+export const PHARAOH_KIDS_PRICE_CENTS = 60000;   // 600 EGP
+
 export type RateType = "standard" | "holiday" | "discounted";
 
 function toDateString(date: Date): string {
@@ -65,6 +68,21 @@ export function calculateDayUsePrice(
 
 export function formatEGP(cents: number): string {
   return `${(cents / 100).toLocaleString("en-EG")} EGP`;
+}
+
+export function computeBookingTotalCents(
+  service: string,
+  date: Date,
+  adults: number,
+  kids: number,
+): number | null {
+  if (service === "day-use") {
+    return calculateDayUsePrice(date, adults, kids).totalCents;
+  }
+  if (service === "pharaoh-airstyle") {
+    return adults * PHARAOH_ADULT_PRICE_CENTS + kids * PHARAOH_KIDS_PRICE_CENTS;
+  }
+  return null;
 }
 
 import { LessonType } from "@prisma/client";

@@ -7,6 +7,8 @@ import { BookingStatus, Role } from "@prisma/client";
 
 import { authOptions } from "@/lib/auth";
 import { getBookingById } from "@/lib/actions/booking.actions";
+import PartyEditDialog from "./PartyEditDialog";
+import StatusEditDialog from "./StatusEditDialog";
 
 const STAFF_ROLES: Role[] = [Role.ADMIN, Role.STAFF, Role.OWNER];
 
@@ -149,22 +151,30 @@ export default async function BookingDetailPage({
             </div>
 
             {/* status pill */}
-            <div
-              className="inline-flex items-center gap-2 rounded-full px-4 py-1.5 border"
-              style={{
-                background: status.bg,
-                borderColor: status.ring,
-                color: status.text,
-              }}
-            >
-              <span
-                className="h-1.5 w-1.5 rounded-full"
-                style={{ background: status.dot, boxShadow: `0 0 0 3px ${status.bg}, 0 0 0 4px ${status.dot}30` }}
+            {isStaff ? (
+              <StatusEditDialog
+                bookingId={booking.id}
+                status={booking.bookingStatus}
+                tones={STATUS_TONE}
               />
-              <span className="font-[family-name:var(--font-raleway)] text-[0.65rem] tracking-[0.2em] uppercase font-[700]">
-                {status.label}
-              </span>
-            </div>
+            ) : (
+              <div
+                className="inline-flex items-center gap-2 rounded-full px-4 py-1.5 border"
+                style={{
+                  background: status.bg,
+                  borderColor: status.ring,
+                  color: status.text,
+                }}
+              >
+                <span
+                  className="h-1.5 w-1.5 rounded-full"
+                  style={{ background: status.dot, boxShadow: `0 0 0 3px ${status.bg}, 0 0 0 4px ${status.dot}30` }}
+                />
+                <span className="font-[family-name:var(--font-raleway)] text-[0.65rem] tracking-[0.2em] uppercase font-[700]">
+                  {status.label}
+                </span>
+              </div>
+            )}
           </div>
         </header>
 
@@ -209,23 +219,29 @@ export default async function BookingDetailPage({
           {/* party */}
           <div>
             <SectionLabel>Party</SectionLabel>
-            <div className="flex items-baseline gap-2">
-              <span className="font-[family-name:var(--font-raleway)] text-[3.5rem] font-[100] leading-none tracking-[-0.03em] text-[#1a1614]">
-                {totalPeople}
-              </span>
-              <span className="font-[family-name:var(--font-raleway)] text-[0.78rem] font-[400] text-[#8a8480]">
-                {totalPeople === 1 ? "person" : "people"}
-              </span>
-            </div>
-            <div className="mt-3 font-[family-name:var(--font-raleway)] text-[0.78rem] text-[#5b5650] font-[400]">
-              {adults} {adults === 1 ? "adult" : "adults"}
-              {kids > 0 && (
-                <>
-                  <span className="mx-1.5 text-[#d6d0c8]">·</span>
-                  {kids} {kids === 1 ? "kid" : "kids"}
-                </>
-              )}
-            </div>
+            {isStaff ? (
+              <PartyEditDialog bookingId={booking.id} adults={adults} kids={kids} />
+            ) : (
+              <>
+                <div className="flex items-baseline gap-2">
+                  <span className="font-[family-name:var(--font-raleway)] text-[3.5rem] font-[100] leading-none tracking-[-0.03em] text-[#1a1614]">
+                    {totalPeople}
+                  </span>
+                  <span className="font-[family-name:var(--font-raleway)] text-[0.78rem] font-[400] text-[#8a8480]">
+                    {totalPeople === 1 ? "person" : "people"}
+                  </span>
+                </div>
+                <div className="mt-3 font-[family-name:var(--font-raleway)] text-[0.78rem] text-[#5b5650] font-[400]">
+                  {adults} {adults === 1 ? "adult" : "adults"}
+                  {kids > 0 && (
+                    <>
+                      <span className="mx-1.5 text-[#d6d0c8]">·</span>
+                      {kids} {kids === 1 ? "kid" : "kids"}
+                    </>
+                  )}
+                </div>
+              </>
+            )}
           </div>
 
           {/* deposit */}
