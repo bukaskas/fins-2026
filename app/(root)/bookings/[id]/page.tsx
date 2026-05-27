@@ -9,6 +9,7 @@ import { authOptions } from "@/lib/auth";
 import { getBookingById } from "@/lib/actions/booking.actions";
 import PartyEditDialog from "./PartyEditDialog";
 import StatusEditDialog from "./StatusEditDialog";
+import NextStepCard from "./NextStepCard";
 
 const STAFF_ROLES: Role[] = [Role.ADMIN, Role.STAFF, Role.OWNER];
 
@@ -328,6 +329,9 @@ export default async function BookingDetailPage({
             </div>
           )}
         </section>
+
+        {/* next step — conditional on status */}
+        <NextStepCard status={booking.bookingStatus} />
 
         {/* edit action — staff only */}
         {isStaff && (
