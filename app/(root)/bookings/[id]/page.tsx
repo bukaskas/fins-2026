@@ -220,7 +220,13 @@ export default async function BookingDetailPage({
           <div>
             <SectionLabel>Party</SectionLabel>
             {isStaff ? (
-              <PartyEditDialog bookingId={booking.id} adults={adults} kids={kids} />
+              <PartyEditDialog
+                bookingId={booking.id}
+                adults={adults}
+                kids={kids}
+                service={booking.service}
+                dateIso={date.toISOString()}
+              />
             ) : (
               <>
                 <div className="flex items-baseline gap-2">
