@@ -3,9 +3,9 @@ import { MessageCircle, Check } from "lucide-react";
 
 import { CopyButton } from "./CopyButton";
 
-const WHATSAPP_NUMBER = "201080500099";
+const WHATSAPP_NUMBER = "201152281222";
 const WHATSAPP_URL = `https://wa.me/${WHATSAPP_NUMBER}`;
-const WHATSAPP_DISPLAY = "+20 108 050 0099";
+const WHATSAPP_DISPLAY = "+20 115 228 1222";
 const ACCOUNT_NUMBER = "1105202510010201";
 const BANK_NAME = "Arab African International Bank";
 const ACCOUNT_NAME = "Fins Kite Surfing";
@@ -38,12 +38,16 @@ function fmtEGP(cents: number): string {
 export default function NextStepCard({
   status,
   totalPriceCents = 0,
+  amountPaidCents = 0,
 }: {
   status: BookingStatus;
   totalPriceCents?: number;
+  amountPaidCents?: number;
 }) {
   const variant = getVariant(status);
   if (!variant) return null;
+
+  const remainingCents = Math.max(0, totalPriceCents - amountPaidCents);
 
   return (
     <section className="mt-8">
@@ -66,7 +70,9 @@ export default function NextStepCard({
         <div className="relative px-6 py-6 md:px-8 md:py-7">
           {variant === "screenshots" && <ScreenshotsBody />}
           {variant === "payment" && <PaymentBody totalCents={totalPriceCents} />}
-          {variant === "confirmed" && <ConfirmedBody />}
+          {variant === "confirmed" && (
+            <ConfirmedBody remainingCents={remainingCents} />
+          )}
         </div>
       </div>
     </section>
@@ -138,7 +144,7 @@ function HairlineDivider() {
   );
 }
 
-function ConfirmedBody() {
+function ConfirmedBody({ remainingCents }: { remainingCents: number }) {
   return (
     <div className="flex items-start gap-4">
       <span
@@ -151,6 +157,22 @@ function ConfirmedBody() {
         <Eyebrow>Confirmed</Eyebrow>
         <Heading>Thank you for booking at Fins</Heading>
         <Body>Please show this reservation page on arrival.</Body>
+
+        {remainingCents > 0 && (
+          <div className="mt-5 inline-flex items-baseline gap-2 rounded-2xl bg-white/70 ring-1 ring-[#ece8e3] px-4 py-3">
+            <div>
+              <MicroLabel>Pay on arrival</MicroLabel>
+              <div className="mt-1.5 flex items-baseline gap-1">
+                <span className="font-[family-name:var(--font-raleway)] text-[1.6rem] font-[200] leading-none tracking-[-0.02em] text-[#1a1614]">
+                  {fmtEGP(remainingCents)}
+                </span>
+                <span className="font-[family-name:var(--font-raleway)] text-[0.7rem] font-[400] text-[#8a8480]">
+                  EGP
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -179,9 +179,7 @@ function DayUseBookingForm() {
         const result = await createBooking(normalizedValue);
         if (result.success && result.bookingId && result.date) {
           toast(result.message);
-          router.push(
-            `/day-use/booking/success?bookingId=${result.bookingId}&date=${result.date.toISOString()}&type=${result.bookingType}`,
-          );
+          router.push(`/bookings/${result.bookingId}`);
         } else {
           toast(result.message || "Failed to create booking");
           setIsSubmitting(false);

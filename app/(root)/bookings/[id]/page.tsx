@@ -183,6 +183,7 @@ export default async function BookingDetailPage({
         <NextStepCard
           status={booking.bookingStatus}
           totalPriceCents={total}
+          amountPaidCents={paid}
         />
 
         {/* hairline */}
