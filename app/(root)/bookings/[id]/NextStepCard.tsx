@@ -3,9 +3,9 @@ import { MessageCircle, Check } from "lucide-react";
 
 import { CopyButton } from "./CopyButton";
 
-const WHATSAPP_NUMBER = "201152281222";
+const WHATSAPP_NUMBER = "201222144388";
 const WHATSAPP_URL = `https://wa.me/${WHATSAPP_NUMBER}`;
-const WHATSAPP_DISPLAY = "+20 115 228 1222";
+const WHATSAPP_DISPLAY = "+20 122 214 4388";
 const ACCOUNT_NUMBER = "1105202510010201";
 const BANK_NAME = "Arab African International Bank";
 const ACCOUNT_NAME = "Fins Kite Surfing";
@@ -69,7 +69,9 @@ export default function NextStepCard({
 
         <div className="relative px-6 py-6 md:px-8 md:py-7">
           {variant === "screenshots" && <ScreenshotsBody />}
-          {variant === "payment" && <PaymentBody totalCents={totalPriceCents} />}
+          {variant === "payment" && (
+            <PaymentBody totalCents={totalPriceCents} />
+          )}
           {variant === "confirmed" && (
             <ConfirmedBody remainingCents={remainingCents} />
           )}
@@ -89,9 +91,7 @@ function Eyebrow({ children }: { children: React.ReactNode }) {
 
 function Heading({ children }: { children: React.ReactNode }) {
   return (
-    <h2
-      className="mt-3 font-[family-name:var(--font-raleway)] text-[1.75rem] md:text-[2rem] font-[200] tracking-[-0.015em] text-[#1a1614] leading-[1.1]"
-    >
+    <h2 className="mt-3 font-[family-name:var(--font-raleway)] text-[1.75rem] md:text-[2rem] font-[200] tracking-[-0.015em] text-[#1a1614] leading-[1.1]">
       {children}
     </h2>
   );
@@ -184,8 +184,9 @@ function ScreenshotsBody() {
       <Eyebrow>Next step</Eyebrow>
       <Heading>Send the guests&rsquo; Instagram handles</Heading>
       <Body>
-        We&rsquo;re reviewing your booking. Please send us screenshots of the Instagram accounts
-        of the guests joining you, so we can confirm your reservation.
+        We&rsquo;re reviewing your booking. Please send us screenshots of the
+        Instagram accounts of the guests joining you, so we can confirm your
+        reservation.
       </Body>
       <div className="mt-7">
         <WhatsAppButton caption="Send on WhatsApp" />
@@ -204,7 +205,8 @@ function PaymentBody({ totalCents }: { totalCents: number }) {
       <Heading>Send a 50% deposit to confirm</Heading>
       <Body>
         Your reservation is on hold pending payment. The deposit is{" "}
-        <span className="text-[#1a1614] font-[500]">non-refundable</span> and reservations{" "}
+        <span className="text-[#1a1614] font-[500]">non-refundable</span> and
+        reservations{" "}
         <span className="text-[#1a1614] font-[500]">cannot be postponed</span>.
       </Body>
 
@@ -260,7 +262,10 @@ function PaymentBody({ totalCents }: { totalCents: number }) {
         <div>
           <MicroLabel>Account number</MicroLabel>
           <div className="mt-2">
-            <CopyButton value={ACCOUNT_NUMBER} toastLabel="Account number copied" />
+            <CopyButton
+              value={ACCOUNT_NUMBER}
+              toastLabel="Account number copied"
+            />
           </div>
         </div>
 
