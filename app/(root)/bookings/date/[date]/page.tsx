@@ -7,6 +7,7 @@ import Link from "next/link";
 import { SearchInput } from "./SearchInput";
 import { CopySummaryButton } from "./CopySummaryButton";
 import { AgentFilter } from "./AgentFilter";
+import { SendFullyBookedButton } from "./SendFullyBookedButton";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -102,6 +103,10 @@ async function BookingsByDatePage({
     );
   });
 
+  const pendingCount = allBookings.filter(
+    (b) => b.bookingStatus === BookingStatus.PENDING,
+  ).length;
+
   const confirmedBookings = allBookings.filter(
     (b) => b.bookingStatus === BookingStatus.CONFIRMED || b.bookingStatus === BookingStatus.ARRIVED,
   );
@@ -185,6 +190,11 @@ async function BookingsByDatePage({
             </div>
 
             <div className="flex items-center gap-2 shrink-0">
+              <SendFullyBookedButton
+                date={date}
+                dateLabel={`${dateLabel}, ${yearLabel}`}
+                pendingCount={pendingCount}
+              />
               <CopySummaryButton text={summaryText} />
               <Link
                 href="/bookings/day-use/new"

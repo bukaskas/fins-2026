@@ -92,9 +92,9 @@ export default async function BookingDetailPage({
         }}
       />
 
-      <div className="mx-auto max-w-3xl px-6 pt-10 pb-24">
+      <div className="mx-auto max-w-3xl px-5 pt-7 pb-20 sm:px-6 sm:pt-10">
         {/* top utility bar */}
-        <div className="flex items-center justify-between mb-12">
+        <div className="flex items-center justify-between mb-8 sm:mb-10">
           {isStaff ? (
             <Link
               href="/bookings"
@@ -117,28 +117,28 @@ export default async function BookingDetailPage({
         </div>
 
         {/* hero: date + status */}
-        <header className="mb-14">
+        <header className="mb-8">
           <span className="font-[family-name:var(--font-raleway)] text-[0.62rem] tracking-[0.28em] uppercase font-[600] text-[#b0a89f]">
             Reservation
           </span>
 
-          <div className="mt-5 flex items-end justify-between gap-6 flex-wrap">
+          <div className="mt-4 flex items-end justify-between gap-4 flex-wrap">
             <div>
-              <div className="font-[family-name:var(--font-raleway)] text-[1.05rem] font-[300] tracking-[0.04em] text-[#5b5650] mb-1">
+              <div className="font-[family-name:var(--font-raleway)] text-[0.95rem] font-[300] tracking-[0.04em] text-[#5b5650] mb-0.5">
                 {dayName}
               </div>
-              <div className="flex items-end gap-4">
+              <div className="flex items-end gap-3">
                 <span
                   className="font-[family-name:var(--font-raleway)] font-[100] leading-[0.85] tracking-[-0.04em] text-[#1a1614]"
-                  style={{ fontSize: "clamp(5rem, 14vw, 9rem)" }}
+                  style={{ fontSize: "clamp(3.75rem, 12vw, 7rem)" }}
                 >
                   {dayNum}
                 </span>
-                <span className="pb-2 font-[family-name:var(--font-raleway)] text-[1.05rem] font-[200] tracking-[0.04em] text-[#5b5650]">
+                <span className="pb-1.5 font-[family-name:var(--font-raleway)] text-[0.95rem] font-[200] tracking-[0.04em] text-[#5b5650]">
                   {monthYear}
                 </span>
               </div>
-              <div className="mt-3 flex items-center gap-2 font-[family-name:var(--font-raleway)] text-[0.78rem] font-[400] text-[#5b5650]">
+              <div className="mt-2.5 flex items-center gap-2 font-[family-name:var(--font-raleway)] text-[0.78rem] font-[400] text-[#5b5650]">
                 <span>{service}</span>
                 {booking.time && (
                   <>
@@ -179,19 +179,25 @@ export default async function BookingDetailPage({
           </div>
         </header>
 
+        {/* next step — conditional on status, sits right under the date */}
+        <NextStepCard
+          status={booking.bookingStatus}
+          totalPriceCents={total}
+        />
+
         {/* hairline */}
-        <div className="h-px bg-gradient-to-r from-transparent via-[#ece8e3] to-transparent mb-12" />
+        <div className="h-px bg-gradient-to-r from-transparent via-[#ece8e3] to-transparent mb-8" />
 
         {/* grid: guest + party + deposit */}
-        <section className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-12">
+        <section className="grid grid-cols-2 gap-x-8 gap-y-9">
           {/* customer */}
-          <div className="md:col-span-2">
+          <div className="col-span-2">
             <SectionLabel>Guest</SectionLabel>
-            <h2 className="font-[family-name:var(--font-raleway)] text-[2rem] font-[200] tracking-[-0.01em] text-[#1a1614] leading-tight">
+            <h2 className="font-[family-name:var(--font-raleway)] text-[1.6rem] sm:text-[2rem] font-[200] tracking-[-0.01em] text-[#1a1614] leading-tight">
               {booking.name}
             </h2>
 
-            <div className="mt-5 flex flex-wrap gap-2">
+            <div className="mt-4 flex flex-wrap gap-2">
               {phoneDigits && (
                 <ContactLink
                   href={`tel:${phoneDigits}`}
@@ -231,7 +237,7 @@ export default async function BookingDetailPage({
             ) : (
               <>
                 <div className="flex items-baseline gap-2">
-                  <span className="font-[family-name:var(--font-raleway)] text-[3.5rem] font-[100] leading-none tracking-[-0.03em] text-[#1a1614]">
+                  <span className="font-[family-name:var(--font-raleway)] text-[2.75rem] sm:text-[3.5rem] font-[100] leading-none tracking-[-0.03em] text-[#1a1614]">
                     {totalPeople}
                   </span>
                   <span className="font-[family-name:var(--font-raleway)] text-[0.78rem] font-[400] text-[#8a8480]">
@@ -309,7 +315,7 @@ export default async function BookingDetailPage({
 
           {/* assignment (only if relevant) */}
           {(booking.agent || booking.instructor) && (
-            <div className="md:col-span-2 pt-6 border-t border-[#ece8e3] grid grid-cols-2 gap-12">
+            <div className="col-span-2 pt-6 border-t border-[#ece8e3] grid grid-cols-2 gap-8">
               {booking.instructor && (
                 <div>
                   <SectionLabel>Instructor</SectionLabel>
@@ -330,12 +336,9 @@ export default async function BookingDetailPage({
           )}
         </section>
 
-        {/* next step — conditional on status */}
-        <NextStepCard status={booking.bookingStatus} />
-
         {/* edit action — staff only */}
         {isStaff && (
-          <div className="mt-16 flex justify-end">
+          <div className="mt-12 flex justify-end">
             <Link
               href={`/bookings/${booking.id}/edit`}
               className="group inline-flex items-center gap-2 rounded-full bg-[#1a1614] px-6 py-3 text-white font-[family-name:var(--font-raleway)] text-[0.72rem] tracking-[0.18em] uppercase font-[600] transition-transform hover:-translate-y-px hover:bg-[#2a2522]"
@@ -347,7 +350,7 @@ export default async function BookingDetailPage({
         )}
 
         {/* footer mono detail */}
-        <div className="mt-16 flex items-center justify-center gap-2">
+        <div className="mt-12 flex items-center justify-center gap-2">
           <span className="h-px w-8 bg-[#ece8e3]" />
           <span className="font-[family-name:var(--font-roboto-mono)] text-[0.6rem] tracking-[0.2em] uppercase text-[#b0a89f]">
             Booked {format(new Date(booking.createdAt), "d MMM yyyy")}

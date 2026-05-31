@@ -4,7 +4,7 @@ import { prisma } from "@/db/prisma";
 import { isRedirectError } from "next/dist/client/components/redirect-error";
 import { revalidatePath } from "next/cache";
 import { BookingFormData, bookingFormSchema, UpdateBookingData, updateBookingSchema } from "../validators";
-import { sendBookingEmail, sendStaffNotificationEmail } from "@/emails/index";
+import { sendBookingEmail, sendStaffNotificationEmail, sendFullyBookedEmail } from "@/emails/index";
 import { Booking, BookingStatus, Role } from "@prisma/client";
 
 export type BookingWithAgent = Booking & {
@@ -392,6 +392,67 @@ export async function getBookingsByDate(date: string, statuses?: BookingStatus[]
   } catch (error) {
     console.error('Error fetching bookings by date:', error);
     return { success: false, message: `Failed to fetch bookings. Error: ${error instanceof Error ? error.message : String(error)}` };
+  }
+}
+
+export async function sendFullyBookedEmails(date: string) {
+  try {
+    const session = await getServerSession(authOptions);
+    const userRole = (session?.user as { role?: Role } | undefined)?.role;
+    if (!userRole || !STAFF_ROLES.includes(userRole)) {
+      return { success: false, message: "Not authorized." };
+    }
+
+    const startUTC = new Date(`${date}T00:00:00.000Z`);
+    const endUTC = new Date(`${date}T23:59:59.999Z`);
+    if (isNaN(startUTC.getTime())) {
+      return { success: false, message: "Invalid date." };
+    }
+
+    const pending = await prisma.booking.findMany({
+      where: {
+        date: { gte: startUTC, lte: endUTC },
+        bookingStatus: BookingStatus.PENDING,
+      },
+      select: { id: true, name: true, email: true, date: true },
+    });
+
+    const sentIds: string[] = [];
+    let skippedNoEmail = 0;
+    let failed = 0;
+
+    for (const b of pending) {
+      if (!b.email) {
+        skippedNoEmail += 1;
+        continue;
+      }
+      try {
+        await sendFullyBookedEmail(b.email, b.name, b.date);
+        sentIds.push(b.id);
+      } catch (e) {
+        console.error(`Fully-booked email failed for booking ${b.id}:`, e);
+        failed += 1;
+      }
+    }
+
+    if (sentIds.length > 0) {
+      await prisma.booking.updateMany({
+        where: { id: { in: sentIds } },
+        data: { bookingStatus: BookingStatus.CANCELED },
+      });
+      revalidatePath('/bookings', 'layout');
+    }
+
+    return {
+      success: true,
+      sent: sentIds.length,
+      skippedNoEmail,
+      failed,
+      totalPending: pending.length,
+    };
+  } catch (error) {
+    console.error('Fully-booked batch error:', error);
+    return { success: false, message: `Failed to send emails. Error: ${error instanceof Error ? error.message : String(error)}` };
   }
 }
 

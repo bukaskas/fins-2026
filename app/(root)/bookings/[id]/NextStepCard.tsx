@@ -1,5 +1,5 @@
 import { BookingStatus } from "@prisma/client";
-import { MessageCircle } from "lucide-react";
+import { MessageCircle, Check } from "lucide-react";
 
 import { CopyButton } from "./CopyButton";
 
@@ -16,25 +16,39 @@ const SCREENSHOT_STATUSES: BookingStatus[] = [
   BookingStatus.UNDER_REVIEW,
 ];
 
-type Variant = "screenshots" | "payment";
+type Variant = "screenshots" | "payment" | "confirmed";
+
+const TINT: Record<Variant, string> = {
+  payment: "rgba(237, 230, 248, 0.55)",
+  screenshots: "rgba(252, 230, 213, 0.55)",
+  confirmed: "rgba(226, 240, 230, 0.6)",
+};
 
 function getVariant(status: BookingStatus): Variant | null {
   if (SCREENSHOT_STATUSES.includes(status)) return "screenshots";
   if (status === BookingStatus.WAITING_PAYMENT) return "payment";
+  if (status === BookingStatus.CONFIRMED) return "confirmed";
   return null;
 }
 
-export default function NextStepCard({ status }: { status: BookingStatus }) {
+function fmtEGP(cents: number): string {
+  return new Intl.NumberFormat("en-EG").format(Math.round(cents / 100));
+}
+
+export default function NextStepCard({
+  status,
+  totalPriceCents = 0,
+}: {
+  status: BookingStatus;
+  totalPriceCents?: number;
+}) {
   const variant = getVariant(status);
   if (!variant) return null;
 
-  const tintColor =
-    variant === "payment" ? "rgba(237, 230, 248, 0.55)" : "rgba(252, 230, 213, 0.55)";
-
   return (
-    <section className="mt-14">
+    <section className="mt-8">
       <div
-        className="relative overflow-hidden rounded-[28px] ring-1 ring-white/60"
+        className="relative overflow-hidden rounded-[24px] ring-1 ring-white/60"
         style={{
           background: "linear-gradient(180deg, #FDFBF7 0%, #F4EFE6 100%)",
           boxShadow:
@@ -45,12 +59,14 @@ export default function NextStepCard({ status }: { status: BookingStatus }) {
           aria-hidden
           className="pointer-events-none absolute inset-0"
           style={{
-            background: `radial-gradient(40rem 22rem at 50% -20%, ${tintColor} 0%, transparent 60%)`,
+            background: `radial-gradient(40rem 22rem at 50% -20%, ${TINT[variant]} 0%, transparent 60%)`,
           }}
         />
 
-        <div className="relative px-7 pt-7 pb-7 md:px-10 md:pt-10 md:pb-10">
-          {variant === "screenshots" ? <ScreenshotsBody /> : <PaymentBody />}
+        <div className="relative px-6 py-6 md:px-8 md:py-7">
+          {variant === "screenshots" && <ScreenshotsBody />}
+          {variant === "payment" && <PaymentBody totalCents={totalPriceCents} />}
+          {variant === "confirmed" && <ConfirmedBody />}
         </div>
       </div>
     </section>
@@ -122,6 +138,24 @@ function HairlineDivider() {
   );
 }
 
+function ConfirmedBody() {
+  return (
+    <div className="flex items-start gap-4">
+      <span
+        className="mt-0.5 grid h-11 w-11 shrink-0 place-items-center rounded-full text-white shadow-[0_8px_20px_-8px_rgba(31,91,54,0.6)]"
+        style={{ background: "linear-gradient(180deg, #62B07F, #4FAEA6)" }}
+      >
+        <Check className="h-5 w-5" strokeWidth={2.25} />
+      </span>
+      <div className="min-w-0">
+        <Eyebrow>Confirmed</Eyebrow>
+        <Heading>Thank you for booking at Fins</Heading>
+        <Body>Please show this reservation page on arrival.</Body>
+      </div>
+    </div>
+  );
+}
+
 function ScreenshotsBody() {
   return (
     <>
@@ -138,7 +172,10 @@ function ScreenshotsBody() {
   );
 }
 
-function PaymentBody() {
+function PaymentBody({ totalCents }: { totalCents: number }) {
+  const depositCents = Math.round(totalCents / 2);
+  const remainingCents = totalCents - depositCents;
+
   return (
     <>
       <Eyebrow>Complete your booking</Eyebrow>
@@ -148,6 +185,45 @@ function PaymentBody() {
         <span className="text-[#1a1614] font-[500]">non-refundable</span> and reservations{" "}
         <span className="text-[#1a1614] font-[500]">cannot be postponed</span>.
       </Body>
+
+      {totalCents > 0 && (
+        <div className="mt-6 grid grid-cols-2 gap-3">
+          <div className="rounded-2xl bg-white/70 ring-1 ring-[#ece8e3] px-4 py-3.5">
+            <MicroLabel>Pay now</MicroLabel>
+            <div className="mt-1.5 flex items-baseline gap-1">
+              <span className="font-[family-name:var(--font-raleway)] text-[1.6rem] font-[200] leading-none tracking-[-0.02em] text-[#1a1614]">
+                {fmtEGP(depositCents)}
+              </span>
+              <span className="font-[family-name:var(--font-raleway)] text-[0.7rem] font-[400] text-[#8a8480]">
+                EGP
+              </span>
+            </div>
+            <div className="mt-1 font-[family-name:var(--font-raleway)] text-[0.68rem] font-[400] text-[#8a8480]">
+              50% deposit
+            </div>
+          </div>
+
+          <div className="rounded-2xl bg-white/40 ring-1 ring-[#ece8e3] px-4 py-3.5">
+            <MicroLabel>On arrival</MicroLabel>
+            <div className="mt-1.5 flex items-baseline gap-1">
+              <span className="font-[family-name:var(--font-raleway)] text-[1.6rem] font-[200] leading-none tracking-[-0.02em] text-[#1a1614]">
+                {fmtEGP(remainingCents)}
+              </span>
+              <span className="font-[family-name:var(--font-raleway)] text-[0.7rem] font-[400] text-[#8a8480]">
+                EGP
+              </span>
+            </div>
+            <div className="mt-1 font-[family-name:var(--font-raleway)] text-[0.68rem] font-[400] text-[#8a8480]">
+              Remaining balance
+            </div>
+          </div>
+        </div>
+      )}
+
+      <p className="mt-4 font-[family-name:var(--font-raleway)] text-[0.82rem] font-[400] text-[#5b5650] leading-[1.55]">
+        The full remaining amount is due{" "}
+        <span className="text-[#1a1614] font-[500]">in cash on arrival</span>.
+      </p>
 
       <HairlineDivider />
 

@@ -5,6 +5,7 @@ import { APP_NAME, EMAIL_ADDRESS, SERVER_URL, STAFF_EMAILS } from "@/lib/constan
 import RegistrationEmail from "./registrationEmail";
 import StaffNotificationEmail from "./staffNotificationEmail";
 import PharaohAirstyleEmail from "./pharaohEmail";
+import FullyBookedEmail from "./fullyBookedEmail";
 
 export async function sendBookingEmail(
   to: string,
@@ -88,6 +89,15 @@ export async function sendStaffNotificationEmail(
         totalPriceCents={totalPriceCents}
       />
     ),
+  });
+}
+
+export async function sendFullyBookedEmail(to: string, name: string, date: Date) {
+  await resend.emails.send({
+    from: EMAIL_ADDRESS,
+    to,
+    subject: `Update on your booking — ${date.toDateString()}`,
+    react: <FullyBookedEmail username={name} date={date.toDateString()} />,
   });
 }
 
