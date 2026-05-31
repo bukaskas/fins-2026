@@ -197,6 +197,12 @@ async function BookingsByDatePage({
               />
               <CopySummaryButton text={summaryText} />
               <Link
+                href={`/bookings/bulkemail?date=${date}`}
+                className="inline-flex items-center gap-2 border border-[#d6d0c8] text-[#5b5650] text-[0.72rem] font-[600] tracking-[0.14em] uppercase px-4 py-2.5 font-[family-name:var(--font-raleway)] transition-colors duration-200 hover:border-[#8a8480] hover:text-[#1a1614]"
+              >
+                Bulk email
+              </Link>
+              <Link
                 href="/bookings/day-use/new"
                 className="inline-flex items-center gap-2 bg-[#1a1614] text-white text-[0.72rem] font-[700] tracking-[0.14em] uppercase px-5 py-2.5 font-[family-name:var(--font-raleway)] hover:bg-[#2a2420] transition-colors duration-200"
               >

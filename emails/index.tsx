@@ -6,6 +6,7 @@ import RegistrationEmail from "./registrationEmail";
 import StaffNotificationEmail from "./staffNotificationEmail";
 import PharaohAirstyleEmail from "./pharaohEmail";
 import FullyBookedEmail from "./fullyBookedEmail";
+import BulkEmail from "./bulkEmail";
 
 export async function sendBookingEmail(
   to: string,
@@ -98,6 +99,20 @@ export async function sendFullyBookedEmail(to: string, name: string, date: Date)
     to,
     subject: `Update on your booking — ${date.toDateString()}`,
     react: <FullyBookedEmail username={name} date={date.toDateString()} />,
+  });
+}
+
+export async function sendBulkEmail(
+  to: string,
+  name: string,
+  subject: string,
+  message: string,
+) {
+  await resend.emails.send({
+    from: EMAIL_ADDRESS,
+    to,
+    subject,
+    react: <BulkEmail username={name} message={message} />,
   });
 }
 

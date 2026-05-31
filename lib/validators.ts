@@ -229,3 +229,13 @@ export const updateInventoryItemSchema = z.object({
 });
 
 export type UpdateInventoryItemData = z.infer<typeof updateInventoryItemSchema>;
+export const bulkEmailSchema = z.object({
+  date: z.string().min(1, "Date is required"),
+  statuses: z
+    .array(z.nativeEnum(BookingStatus))
+    .min(1, "Select at least one status"),
+  subject: z.string().trim().min(1, "Subject is required"),
+  message: z.string().trim().min(1, "Message is required"),
+});
+
+export type BulkEmailData = z.infer<typeof bulkEmailSchema>;

@@ -3,8 +3,8 @@
 import { prisma } from "@/db/prisma";
 import { isRedirectError } from "next/dist/client/components/redirect-error";
 import { revalidatePath } from "next/cache";
-import { BookingFormData, bookingFormSchema, UpdateBookingData, updateBookingSchema } from "../validators";
-import { sendBookingEmail, sendStaffNotificationEmail, sendFullyBookedEmail } from "@/emails/index";
+import { BookingFormData, bookingFormSchema, bulkEmailSchema, UpdateBookingData, updateBookingSchema } from "../validators";
+import { sendBookingEmail, sendStaffNotificationEmail, sendFullyBookedEmail, sendBulkEmail } from "@/emails/index";
 import { Booking, BookingStatus, Role } from "@prisma/client";
 
 export type BookingWithAgent = Booking & {
@@ -452,6 +452,70 @@ export async function sendFullyBookedEmails(date: string) {
     };
   } catch (error) {
     console.error('Fully-booked batch error:', error);
+    return { success: false, message: `Failed to send emails. Error: ${error instanceof Error ? error.message : String(error)}` };
+  }
+}
+
+export async function sendBulkEmails(
+  date: string,
+  statuses: BookingStatus[],
+  subject: string,
+  message: string,
+) {
+  try {
+    const session = await getServerSession(authOptions);
+    const userRole = (session?.user as { role?: Role } | undefined)?.role;
+    if (!userRole || !STAFF_ROLES.includes(userRole)) {
+      return { success: false, message: "Not authorized." };
+    }
+
+    const parsed = bulkEmailSchema.safeParse({ date, statuses, subject, message });
+    if (!parsed.success) {
+      return { success: false, message: parsed.error.issues[0]?.message ?? "Invalid input." };
+    }
+
+    const startUTC = new Date(`${parsed.data.date}T00:00:00.000Z`);
+    const endUTC = new Date(`${parsed.data.date}T23:59:59.999Z`);
+    if (isNaN(startUTC.getTime())) {
+      return { success: false, message: "Invalid date." };
+    }
+
+    const recipients = await prisma.booking.findMany({
+      where: {
+        date: { gte: startUTC, lte: endUTC },
+        bookingStatus: { in: parsed.data.statuses },
+      },
+      select: { id: true, name: true, email: true },
+    });
+
+    let sent = 0;
+    let skippedNoEmail = 0;
+    let failed = 0;
+
+    for (const b of recipients) {
+      if (!b.email) {
+        skippedNoEmail += 1;
+        continue;
+      }
+      try {
+        await sendBulkEmail(b.email, b.name, parsed.data.subject, parsed.data.message);
+        sent += 1;
+      } catch (e) {
+        console.error(`Bulk email failed for booking ${b.id}:`, e);
+        failed += 1;
+      }
+    }
+
+    // Note: this action intentionally does NOT mutate any booking status.
+    return {
+      success: true,
+      sent,
+      skippedNoEmail,
+      failed,
+      totalMatched: recipients.length,
+    };
+  } catch (error) {
+    console.error('Bulk email batch error:', error);
     return { success: false, message: `Failed to send emails. Error: ${error instanceof Error ? error.message : String(error)}` };
   }
 }
