@@ -31,22 +31,22 @@ const serviceContent: Record<
   "kitesurfing-course": {
     heading: "Your kitesurfing booking is confirmed!",
     body: "We are excited to welcome you on {date}. We will follow the forecast and update you with the exact time a day before, because the weather can be difficult to predict. Please let us know if you have a preferred time.",
-    cta: "Contact us on WhatsApp",
+    cta: "Message us on Instagram",
   },
   "day-use": {
     heading: "We've received your day-use request! 🌊",
     body: "Thanks for reaching out! We've received your request for {date}. Our team will review your profile and be in touch shortly to confirm your spot.",
-    cta: "Contact us on WhatsApp",
+    cta: "Message us on Instagram",
   },
   restaurant: {
     heading: "Your restaurant reservation is confirmed!",
     body: "We look forward to welcoming you on {date}. Our team will make sure you have a wonderful dining experience. Please don't hesitate to contact us if you have any dietary requirements or special requests.",
-    cta: "Contact us on WhatsApp",
+    cta: "Message us on Instagram",
   },
   "pharaoh-airstyle": {
     heading: "Your Pharaoh Airstyle booking is confirmed!",
     body: "We are excited to welcome you on {date}. Get ready for an unforgettable experience at the Pharaoh Airstyle event and celebration of 4 years of Fins. A full day of activities and entertainment awaits you. Sukun will offer yoga and wellness sessions, while Il Campo will host beach activities for both children and adults. There will also be music throughout the day to keep the energy high. If you have any questions or special requests, feel free to reach out.",
-    cta: "Contact us on WhatsApp",
+    cta: "Message us on Instagram",
   },
 };
 
@@ -158,8 +158,8 @@ const BookingEmail = ({ username, date, bookingDateISO, bookingType, numberOfPeo
             )}
             <Section className="text-center mt-[32px] mb-[16px]">
               <Button
-                className="py-2.5 px-5 bg-green-500 rounded-md text-black text-sm font-semibold no-underline text-center"
-                href={`https://wa.me/201080500099?text=Hello%2C%0AI%20did%20reserve%20a%20spot.%20I%20have%20few%20questions`}
+                className="py-2.5 px-5 bg-[#1a1614] rounded-md text-white text-sm font-semibold no-underline text-center"
+                href="https://ig.me/m/finskitesurfing"
               >
                 {content.cta}
               </Button>
