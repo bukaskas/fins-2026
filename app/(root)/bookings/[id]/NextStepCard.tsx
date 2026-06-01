@@ -1,11 +1,10 @@
 import { BookingStatus } from "@prisma/client";
-import { MessageCircle, Check } from "lucide-react";
+import { Instagram, Check } from "lucide-react";
 
 import { CopyButton } from "./CopyButton";
 
-const WHATSAPP_NUMBER = "201222144388";
-const WHATSAPP_URL = `https://wa.me/${WHATSAPP_NUMBER}`;
-const WHATSAPP_DISPLAY = "+20 122 214 4388";
+const INSTAGRAM_URL = "https://ig.me/m/finskitesurfing";
+const INSTAGRAM_DISPLAY = "@finskitesurfing";
 const ACCOUNT_NUMBER = "1105202510010201";
 const BANK_NAME = "Arab African International Bank";
 const ACCOUNT_NAME = "Fins Kite Surfing";
@@ -113,23 +112,23 @@ function MicroLabel({ children }: { children: React.ReactNode }) {
   );
 }
 
-function WhatsAppButton({ caption }: { caption: string }) {
+function InstagramButton({ caption }: { caption: string }) {
   return (
     <a
-      href={WHATSAPP_URL}
+      href={INSTAGRAM_URL}
       target="_blank"
       rel="noopener noreferrer"
       className="group flex items-center gap-4 rounded-2xl bg-[#1a1614] px-5 py-4 text-white transition-all duration-150 ease-out hover:bg-[#2a2522] active:scale-[0.99] shadow-[0_8px_24px_-10px_rgba(26,22,20,0.5)]"
     >
       <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-white/10 ring-1 ring-white/15 transition-colors group-hover:bg-white/15">
-        <MessageCircle className="h-4 w-4" strokeWidth={1.6} />
+        <Instagram className="h-4 w-4" strokeWidth={1.6} />
       </span>
       <span className="flex flex-col items-start leading-tight">
         <span className="font-[family-name:var(--font-raleway)] text-[0.6rem] tracking-[0.22em] uppercase font-[600] text-white/55">
           {caption}
         </span>
         <span className="mt-0.5 font-[family-name:var(--font-roboto-mono)] text-[0.95rem] tracking-[0.04em]">
-          {WHATSAPP_DISPLAY}
+          {INSTAGRAM_DISPLAY}
         </span>
       </span>
     </a>
@@ -189,7 +188,7 @@ function ScreenshotsBody() {
         reservation.
       </Body>
       <div className="mt-7">
-        <WhatsAppButton caption="Send on WhatsApp" />
+        <InstagramButton caption="Send on Instagram" />
       </div>
     </>
   );
@@ -283,7 +282,7 @@ function PaymentBody({ totalCents }: { totalCents: number }) {
         After payment, send a screenshot of the transaction with full details:
       </p>
       <div className="mt-4">
-        <WhatsAppButton caption="Send screenshot on WhatsApp" />
+        <InstagramButton caption="Send screenshot on Instagram" />
       </div>
     </>
   );

@@ -1,7 +1,8 @@
 import Link from "next/link";
-import { InventoryCategory, ItemCondition } from "@prisma/client";
+import { InventoryCategory } from "@prisma/client";
 
 import { getAllInventoryItems } from "@/lib/actions/inventory.actions";
+import InventoryItemsTable from "./InventoryItemsTable";
 
 type InventoryItem = Awaited<
   ReturnType<typeof getAllInventoryItems>
@@ -29,17 +30,6 @@ const CATEGORY_META: Record<
   WETSUIT:   { label: "Wetsuits",    accent: "#ff2d55" },
   ACCESSORY: { label: "Accessories", accent: "#32ade6" },
   OTHER:     { label: "Other",       accent: "#8e8e93" },
-};
-
-const CONDITION_META: Record<
-  ItemCondition,
-  { label: string; bg: string; text: string }
-> = {
-  NEW:      { label: "New",      bg: "#e3f7e8", text: "#1d7a37" },
-  GOOD:     { label: "Good",     bg: "#eef0f3", text: "#3a3a3c" },
-  FAIR:     { label: "Fair",     bg: "#fff3e0", text: "#92600a" },
-  DAMAGED:  { label: "Damaged",  bg: "#ffeceb", text: "#c0271f" },
-  RETIRED:  { label: "Retired",  bg: "#f0f0f2", text: "#86868b" },
 };
 
 const nf = new Intl.NumberFormat("en-US");
@@ -251,74 +241,8 @@ function CategoryCard({
         </div>
       )}
 
-      {/* items table */}
-      <div className="overflow-x-auto">
-        <table className="min-w-full border-collapse">
-          <thead>
-            <tr className="border-t border-black/[0.05] text-[0.66rem] font-semibold uppercase tracking-[0.1em] text-[#86868b]">
-              <th className="px-6 py-2.5 text-left font-semibold">SKU</th>
-              <th className="px-3 py-2.5 text-left font-semibold">Item</th>
-              <th className="px-3 py-2.5 text-left font-semibold">Size</th>
-              <th className="px-3 py-2.5 text-right font-semibold">Total</th>
-              <th className="px-3 py-2.5 text-right font-semibold">Avail.</th>
-              <th className="px-3 py-2.5 text-left font-semibold">Condition</th>
-              <th className="px-6 py-2.5 text-right font-semibold"></th>
-            </tr>
-          </thead>
-          <tbody>
-            {items.map((item) => {
-              const out = item.availableQty === 0;
-              const cond = CONDITION_META[item.condition];
-              return (
-                <tr
-                  key={item.id}
-                  className="group border-t border-black/[0.05] transition-colors hover:bg-[#f5f5f7]"
-                >
-                  <td className="px-6 py-3 font-[family-name:var(--font-roboto-mono)] text-[0.74rem] text-[#86868b]">
-                    {item.sku}
-                  </td>
-                  <td className="px-3 py-3 text-[0.9rem] font-medium text-[#1d1d1f]">
-                    {item.name}
-                  </td>
-                  <td className="px-3 py-3 text-[0.85rem] text-[#6e6e73]">
-                    {item.size || "—"}
-                  </td>
-                  <td className="px-3 py-3 text-right font-[family-name:var(--font-roboto-mono)] text-[0.85rem] tabular-nums text-[#1d1d1f]">
-                    {item.totalQty}
-                  </td>
-                  <td className="px-3 py-3 text-right">
-                    <span className="inline-flex items-center gap-1.5 font-[family-name:var(--font-roboto-mono)] text-[0.85rem] tabular-nums">
-                      <span
-                        className="h-1.5 w-1.5 rounded-full"
-                        style={{ background: out ? "#ff3b30" : "#34c759" }}
-                      />
-                      <span style={{ color: out ? "#c0271f" : "#1d1d1f" }}>
-                        {item.availableQty}
-                      </span>
-                    </span>
-                  </td>
-                  <td className="px-3 py-3">
-                    <span
-                      className="inline-flex rounded-full px-2.5 py-0.5 text-[0.7rem] font-medium"
-                      style={{ background: cond.bg, color: cond.text }}
-                    >
-                      {cond.label}
-                    </span>
-                  </td>
-                  <td className="px-6 py-3 text-right">
-                    <Link
-                      href={`/inventory/${item.id}`}
-                      className="text-[0.83rem] font-medium text-[#0071e3] opacity-70 transition-opacity hover:opacity-100 group-hover:opacity-100"
-                    >
-                      View
-                    </Link>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
+      {/* items table (client-side sortable by size) */}
+      <InventoryItemsTable items={items} />
     </section>
   );
 }
