@@ -245,7 +245,10 @@ function PaymentBody({ totalCents }: { totalCents: number }) {
 
       <p className="mt-4 font-[family-name:var(--font-raleway)] text-[0.82rem] font-[400] text-[#5b5650] leading-[1.55]">
         The full remaining amount is due{" "}
-        <span className="text-[#1a1614] font-[500]">in cash on arrival</span>.
+        <span className="text-[#1a1614] font-[500]">
+          in cash or visa on arrival
+        </span>
+        .
       </p>
 
       <HairlineDivider />
