@@ -6,13 +6,13 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
 gsap.registerPlugin(useGSAP, ScrollTrigger);
 
 const rentalItems = [
-  { item: "Full equipment",          halfDay: "3,500",  fullDay: "5,200" },
-  { item: "2 days full equipment",   halfDay: "6,000",  fullDay: "9,000" },
-  { item: "Kite & bar",              halfDay: "3,000",  fullDay: "4,000" },
-  { item: "Board only",              halfDay: "1,000",  fullDay: "1,700" },
-  { item: "Bar only",                halfDay: "1,000",  fullDay: "1,700" },
-  { item: "Wetsuit / Harness",       halfDay: "500",    fullDay: "600"   },
-  { item: "Leash / Helmet",          halfDay: "250",    fullDay: "350"   },
+  { item: "Full equipment", halfDay: "4,000", fullDay: "5,700" },
+  { item: "2 days full equipment", halfDay: "7,000", fullDay: "9,000" },
+  { item: "Kite & bar", halfDay: "3,300", fullDay: "4,500" },
+  { item: "Board only", halfDay: "1,200", fullDay: "1,700" },
+  { item: "Bar only", halfDay: "1,200", fullDay: "1,700" },
+  { item: "Wetsuit / Harness", halfDay: "500", fullDay: "600" },
+  { item: "Leash / Helmet", halfDay: "250", fullDay: "350" },
 ];
 
 function KitesurfingRentalSection() {
@@ -34,7 +34,6 @@ function KitesurfingRentalSection() {
   return (
     <section id="rental" style={{ background: "#f0f9ff" }}>
       <div className="max-w-7xl mx-auto px-8 md:px-14 lg:px-20 py-20 md:py-24">
-
         {/* Header */}
         <div className="flex items-center gap-3 mb-8">
           <span className="h-px w-7 flex-shrink-0 bg-[#38bdf8]" />
