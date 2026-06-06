@@ -39,13 +39,15 @@ const StaffNotificationEmail = ({
   const fmt = (cents: number) => `${(cents / 100).toLocaleString("en-EG")} EGP`;
 
   const waPhone = customerPhone.replace(/[^\d+]/g, "");
+  const bookingsLink = `https://www.finskitesurfing.com/bookings?q=${customerPhone.replace(/\D/g, "")}`;
   const waMessage = isDayUse
     ? encodeURIComponent(
         `Hi! We've received your day-use request at Fins 🌊 As a small community space, we like to get to know our guests before confirming. Could you share the Instagram accounts of everyone in your group? If any profiles are private, a quick screenshot works just fine. Once we've had a look, we'll send over your confirmation. Thanks! 🤍`
       )
-    : encodeURIComponent(`Hi ${customerName}, this is Fins regarding your booking.`);
+    : encodeURIComponent(
+        `Hello,\nThank you for booking with Fins Kitesurfing & Beach Club! We're excited to have you with us.\nTo complete your first booking, could you please share your Instagram account?\nYou can track the status of your booking anytime here: ${bookingsLink}\nLooking forward to seeing you on the water! 🪁\nThe Fins Team`
+      );
   const waLink = `https://wa.me/${waPhone}?text=${waMessage}`;
-  const bookingsLink = `https://www.finskitesurfing.com/bookings?q=${customerPhone.replace(/\D/g, "")}`;
   const scheduleLink = "https://www.finskitesurfing.com/bookings/schedule";
 
   return (
