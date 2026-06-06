@@ -3,7 +3,8 @@
 import { useState } from "react";
 import Link from "next/link";
 import { BookingStatus } from "@prisma/client";
-import { Users, Pencil, Phone, MoreHorizontal, ExternalLink } from "lucide-react";
+import { Users, Pencil, Phone, MoreHorizontal, ExternalLink, Clock } from "lucide-react";
+import { format } from "date-fns";
 import { SERVER_URL } from "@/lib/constants";
 import { toast } from "sonner";
 import {
@@ -244,6 +245,16 @@ function BookingComponent({ booking, allUsers }: { booking: BookingWithAgent; al
                 </>
               )}
             </div>
+
+            {/* Booked-on timestamp */}
+            {booking.createdAt && (
+              <div className="flex items-center gap-1 text-[#b0a89f]">
+                <Clock className="h-2.5 w-2.5 shrink-0" />
+                <span className="font-[family-name:var(--font-roboto)] text-[0.66rem] tabular-nums">
+                  Booked {format(new Date(booking.createdAt), "d MMM, HH:mm")}
+                </span>
+              </div>
+            )}
           </div>
 
           {/* Right: status + amount + actions */}

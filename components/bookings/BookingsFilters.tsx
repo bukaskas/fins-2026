@@ -3,7 +3,7 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import { useRef, useTransition } from "react";
 import { BookingStatus } from "@prisma/client";
-import { Search, X, CalendarDays, Layers } from "lucide-react";
+import { Search, X, CalendarDays, Layers, ArrowDownWideNarrow } from "lucide-react";
 
 const STATUS_OPTIONS: { value: string; label: string }[] = [
   { value: "all",                              label: "All statuses" },
@@ -31,6 +31,16 @@ const RANGE_OPTIONS = [
   { value: "all",      label: "All" },
 ];
 
+const SORT_OPTIONS = [
+  { value: "date",    label: "Visit date" },
+  { value: "created", label: "Booked date" },
+];
+
+const DIR_OPTIONS = [
+  { value: "desc", label: "Newest" },
+  { value: "asc",  label: "Oldest" },
+];
+
 export function BookingsFilters({ total }: { total: number }) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -42,11 +52,13 @@ export function BookingsFilters({ total }: { total: number }) {
   const service = searchParams.get("service") ?? "all";
   const range   = searchParams.get("range")   ?? "upcoming";
   const group   = searchParams.get("group")   ?? "date";
+  const sort    = searchParams.get("sort")    ?? "date";
+  const dir     = searchParams.get("dir")     ?? "desc";
 
   function push(updates: Record<string, string>) {
     const params = new URLSearchParams(searchParams.toString());
     for (const [key, val] of Object.entries(updates)) {
-      const defaults: Record<string, string> = { range: "upcoming", group: "date" };
+      const defaults: Record<string, string> = { range: "upcoming", group: "date", sort: "date", dir: "desc" };
       if (val && val !== (defaults[key] ?? "all")) {
         params.set(key, val);
       } else {
@@ -130,6 +142,49 @@ export function BookingsFilters({ total }: { total: number }) {
             );
           })}
         </div>
+
+        {/* Sort toggle */}
+        <div className="flex items-center gap-1 border border-[#ece8e3] rounded-full p-0.5 bg-white">
+          <ArrowDownWideNarrow className="h-3 w-3 text-[#b0a89f] ml-2 shrink-0" />
+          {SORT_OPTIONS.map((o) => {
+            const active = sort === o.value;
+            return (
+              <button
+                key={o.value}
+                onClick={() => push({ sort: o.value })}
+                className={`px-3 py-1 rounded-full text-[0.65rem] font-[family-name:var(--font-raleway)] font-[600] tracking-[0.06em] transition-colors ${
+                  active
+                    ? "bg-[#1a1614] text-white"
+                    : "text-[#8a8480] hover:text-[#1a1614]"
+                }`}
+              >
+                {o.label}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Direction toggle — only relevant when sorting by booked date */}
+        {sort === "created" && (
+          <div className="flex items-center gap-1 border border-[#ece8e3] rounded-full p-0.5 bg-white">
+            {DIR_OPTIONS.map((o) => {
+              const active = dir === o.value;
+              return (
+                <button
+                  key={o.value}
+                  onClick={() => push({ dir: o.value })}
+                  className={`px-3 py-1 rounded-full text-[0.65rem] font-[family-name:var(--font-raleway)] font-[600] tracking-[0.06em] transition-colors ${
+                    active
+                      ? "bg-[#1a1614] text-white"
+                      : "text-[#8a8480] hover:text-[#1a1614]"
+                  }`}
+                >
+                  {o.label}
+                </button>
+              );
+            })}
+          </div>
+        )}
 
         {/* Group toggle */}
         <div className="flex items-center gap-1 border border-[#ece8e3] rounded-full p-0.5 bg-white ml-auto">

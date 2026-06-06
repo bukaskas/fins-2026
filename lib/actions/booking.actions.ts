@@ -13,7 +13,7 @@ export type BookingWithAgent = Booking & {
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { addClosedDate } from "./closedDate.actions";
-import { startOfDay } from "date-fns";
+import { startOfDay, startOfMonth, endOfMonth, getDaysInMonth } from "date-fns";
 import { computeBookingTotalCents } from "@/lib/pricing";
 
 const STAFF_ROLES: Role[] = [Role.ADMIN, Role.STAFF, Role.OWNER];
@@ -115,6 +115,86 @@ export async function getBookingsByService(service: string) {
   } catch (error) {
     console.error('Error fetching bookings by service:', error);
     return { success: false, message: `Failed to fetch bookings. Error: ${error instanceof Error ? error.message : String(error)}` };
+  }
+}
+
+export type DayUseMonthlyReport = {
+  totals: {
+    confirmedBookings: number;
+    confirmedPeople: number;
+    appliedBookings: number;
+    appliedPeople: number;
+    declinedBookings: number;
+  };
+  perDay: { day: number; confirmedPeople: number }[];
+};
+
+export async function getDayUseMonthlyReport(opts: {
+  year: number;
+  month: number; // 1-12
+  agentId?: string | null; // undefined / "all" => all agents
+}): Promise<
+  { success: true; data: DayUseMonthlyReport } | { success: false; message: string }
+> {
+  try {
+    const { year, month, agentId } = opts;
+    const monthStart = startOfMonth(new Date(year, month - 1, 1));
+    const monthEnd = endOfMonth(monthStart);
+    const daysInMonth = getDaysInMonth(monthStart);
+
+    const bookings = await prisma.booking.findMany({
+      where: {
+        service: "day-use",
+        date: { gte: monthStart, lte: monthEnd },
+        ...(agentId && agentId !== "all" ? { agentId } : {}),
+      },
+      select: {
+        date: true,
+        bookingStatus: true,
+        numberOfPeople: true,
+        numberOfKids: true,
+      },
+    });
+
+    const perDay = Array.from({ length: daysInMonth }, (_, i) => ({
+      day: i + 1,
+      confirmedPeople: 0,
+    }));
+
+    const totals = {
+      confirmedBookings: 0,
+      confirmedPeople: 0,
+      appliedBookings: 0,
+      appliedPeople: 0,
+      declinedBookings: 0,
+    };
+
+    for (const b of bookings) {
+      const people = b.numberOfPeople + (b.numberOfKids ?? 0);
+      const isConfirmed = CONFIRMED_STATUSES.includes(b.bookingStatus);
+      const isDeclined = DECLINED_STATUSES.includes(b.bookingStatus);
+      const dayIndex = new Date(b.date).getDate() - 1;
+      const bucket = perDay[dayIndex];
+
+      totals.appliedBookings += 1;
+      totals.appliedPeople += people;
+
+      if (isConfirmed) {
+        totals.confirmedBookings += 1;
+        totals.confirmedPeople += people;
+        if (bucket) bucket.confirmedPeople += people;
+      } else if (isDeclined) {
+        totals.declinedBookings += 1;
+      }
+    }
+
+    return { success: true, data: { totals, perDay } };
+  } catch (error) {
+    console.error("Error fetching day-use monthly report:", error);
+    return {
+      success: false,
+      message: `Failed to fetch day-use report. Error: ${error instanceof Error ? error.message : String(error)}`,
+    };
   }
 }
 

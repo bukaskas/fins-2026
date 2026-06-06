@@ -35,9 +35,11 @@ async function BookingsPage({
     service?: string;
     range?: string;
     group?: string;
+    sort?: string;
+    dir?: string;
   }>;
 }) {
-  const { status, q, service, range = "upcoming", group = "date" } =
+  const { status, q, service, range = "upcoming", group = "date", sort = "date", dir = "desc" } =
     await searchParams;
 
   const session = await getServerSession(authOptions);
@@ -106,15 +108,24 @@ async function BookingsPage({
   // range === "all" → no date restriction
 
   // ── Sort ────────────────────────────────────────────────────────────────
-  bookings = [...bookings].sort((a, b) => {
-    const da = new Date(a.date).getTime();
-    const db = new Date(b.date).getTime();
-    if (da !== db) return da - db;
-    if (a.time && b.time) return a.time.localeCompare(b.time);
-    if (a.time) return -1;
-    if (b.time) return 1;
-    return 0;
-  });
+  if (sort === "created") {
+    // By booking-made date — newest first (desc) or oldest first (asc)
+    const factor = dir === "asc" ? 1 : -1;
+    bookings = [...bookings].sort(
+      (a, b) =>
+        factor * (new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()),
+    );
+  } else {
+    bookings = [...bookings].sort((a, b) => {
+      const da = new Date(a.date).getTime();
+      const db = new Date(b.date).getTime();
+      if (da !== db) return da - db;
+      if (a.time && b.time) return a.time.localeCompare(b.time);
+      if (a.time) return -1;
+      if (b.time) return 1;
+      return 0;
+    });
+  }
 
   // ── Group ───────────────────────────────────────────────────────────────
   type DateGroup   = Record<string, BookingWithAgent[]>;
@@ -219,6 +230,19 @@ async function BookingsPage({
         <p className="text-[#8a8480] text-sm py-10 text-center font-[family-name:var(--font-raleway)]">
           No bookings match your filters.
         </p>
+      ) : sort === "created" ? (
+        // ── Flat list, newest booking first ─────────────────────────────
+        <div>
+          <div className="flex items-center gap-3 mb-2">
+            <span className="font-[family-name:var(--font-raleway)] text-[0.72rem] font-[700] tracking-[0.1em] uppercase text-[#1a1614]">
+              {dir === "asc" ? "Oldest booked first" : "Recently booked"}
+            </span>
+            <span className="flex-1 h-px bg-[#ece8e3]" />
+          </div>
+          <div className="space-y-1.5">
+            {bookings.map((b) => <BookingComponent key={b.id} booking={b} allUsers={allUsers} />)}
+          </div>
+        </div>
       ) : group === "service" ? (
         // ── Service → Instructor grouping ───────────────────────────────
         Object.entries(byService).map(([svc, byInstructor]) => (
