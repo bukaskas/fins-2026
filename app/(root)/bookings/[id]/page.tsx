@@ -2,10 +2,11 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { format } from "date-fns";
 import { getServerSession } from "next-auth/next";
-import { ArrowLeft, Pencil, Phone, Mail, MessageCircle } from "lucide-react";
+import { ArrowLeft, Pencil, Phone, Mail, MessageCircle, Instagram } from "lucide-react";
 import { BookingStatus, Role } from "@prisma/client";
 
 import { authOptions } from "@/lib/auth";
+import { instagramHref } from "@/lib/utils";
 import { getBookingById } from "@/lib/actions/booking.actions";
 import PartyEditDialog from "./PartyEditDialog";
 import StatusEditDialog from "./StatusEditDialog";
@@ -116,66 +117,107 @@ export default async function BookingDetailPage({
           </span>
         </div>
 
-        {/* hero: date + status */}
+        {/* hero: guest is the headline — date sits compact to the right */}
         <header className="mb-8">
-          <span className="font-[family-name:var(--font-raleway)] text-[0.62rem] tracking-[0.28em] uppercase font-[600] text-[#b0a89f]">
-            Reservation
-          </span>
+          <div className="flex items-start justify-between gap-5 flex-wrap-reverse">
+            {/* left: guest identity + contacts */}
+            <div className="min-w-0 flex-1">
+              <span className="font-[family-name:var(--font-raleway)] text-[0.62rem] tracking-[0.28em] uppercase font-[600] text-[#b0a89f]">
+                Guest
+              </span>
+              <h1
+                className="mt-2 font-[family-name:var(--font-raleway)] font-[200] tracking-[-0.015em] text-[#1a1614] leading-[1.04]"
+                style={{ fontSize: "clamp(2.1rem, 7vw, 3.25rem)" }}
+              >
+                {booking.name}
+              </h1>
 
-          <div className="mt-4 flex items-end justify-between gap-4 flex-wrap">
-            <div>
-              <div className="font-[family-name:var(--font-raleway)] text-[0.95rem] font-[300] tracking-[0.04em] text-[#5b5650] mb-0.5">
-                {dayName}
-              </div>
-              <div className="flex items-end gap-3">
-                <span
-                  className="font-[family-name:var(--font-raleway)] font-[100] leading-[0.85] tracking-[-0.04em] text-[#1a1614]"
-                  style={{ fontSize: "clamp(3.75rem, 12vw, 7rem)" }}
-                >
-                  {dayNum}
-                </span>
-                <span className="pb-1.5 font-[family-name:var(--font-raleway)] text-[0.95rem] font-[200] tracking-[0.04em] text-[#5b5650]">
-                  {monthYear}
-                </span>
-              </div>
-              <div className="mt-2.5 flex items-center gap-2 font-[family-name:var(--font-raleway)] text-[0.78rem] font-[400] text-[#5b5650]">
-                <span>{service}</span>
-                {booking.time && (
-                  <>
-                    <span className="h-1 w-1 rounded-full bg-[#d6d0c8]" />
-                    <span className="font-[family-name:var(--font-roboto-mono)] text-[0.72rem] tracking-[0.04em]">
-                      {booking.time}
-                    </span>
-                  </>
+              <div className="mt-4 flex flex-wrap gap-2">
+                {phoneDigits && (
+                  <ContactLink
+                    href={`tel:${phoneDigits}`}
+                    icon={<Phone className="size-3" strokeWidth={1.5} />}
+                    label={booking.phone}
+                  />
+                )}
+                {phoneDigits && (
+                  <ContactLink
+                    href={`https://wa.me/${phoneDigits}`}
+                    icon={<MessageCircle className="size-3" strokeWidth={1.5} />}
+                    label="WhatsApp"
+                    external
+                  />
+                )}
+                {booking.email && (
+                  <ContactLink
+                    href={`mailto:${booking.email}`}
+                    icon={<Mail className="size-3" strokeWidth={1.5} />}
+                    label={booking.email}
+                  />
+                )}
+                {booking.instagram && (
+                  <ContactLink
+                    href={instagramHref(booking.instagram)}
+                    icon={<Instagram className="size-3" strokeWidth={1.5} />}
+                    label={booking.instagram}
+                    external
+                  />
                 )}
               </div>
             </div>
 
-            {/* status pill */}
-            {isStaff ? (
-              <StatusEditDialog
-                bookingId={booking.id}
-                status={booking.bookingStatus}
-                tones={STATUS_TONE}
-              />
-            ) : (
-              <div
-                className="inline-flex items-center gap-2 rounded-full px-4 py-1.5 border"
-                style={{
-                  background: status.bg,
-                  borderColor: status.ring,
-                  color: status.text,
-                }}
-              >
-                <span
-                  className="h-1.5 w-1.5 rounded-full"
-                  style={{ background: status.dot, boxShadow: `0 0 0 3px ${status.bg}, 0 0 0 4px ${status.dot}30` }}
+            {/* right: status + compact date card */}
+            <div className="flex flex-col items-end gap-3 shrink-0">
+              {isStaff ? (
+                <StatusEditDialog
+                  bookingId={booking.id}
+                  status={booking.bookingStatus}
+                  tones={STATUS_TONE}
                 />
-                <span className="font-[family-name:var(--font-raleway)] text-[0.65rem] tracking-[0.2em] uppercase font-[700]">
-                  {status.label}
-                </span>
+              ) : (
+                <div
+                  className="inline-flex items-center gap-2 rounded-full px-4 py-1.5 border"
+                  style={{
+                    background: status.bg,
+                    borderColor: status.ring,
+                    color: status.text,
+                  }}
+                >
+                  <span
+                    className="h-1.5 w-1.5 rounded-full"
+                    style={{ background: status.dot, boxShadow: `0 0 0 3px ${status.bg}, 0 0 0 4px ${status.dot}30` }}
+                  />
+                  <span className="font-[family-name:var(--font-raleway)] text-[0.65rem] tracking-[0.2em] uppercase font-[700]">
+                    {status.label}
+                  </span>
+                </div>
+              )}
+
+              <div className="text-right">
+                <div className="font-[family-name:var(--font-raleway)] text-[0.68rem] tracking-[0.18em] uppercase font-[600] text-[#b0a89f]">
+                  {dayName}
+                </div>
+                <div className="mt-0.5 flex items-baseline justify-end gap-1.5">
+                  <span className="font-[family-name:var(--font-raleway)] text-[2.1rem] font-[100] leading-none tracking-[-0.03em] text-[#1a1614]">
+                    {dayNum}
+                  </span>
+                  <span className="font-[family-name:var(--font-raleway)] text-[0.85rem] font-[300] tracking-[0.02em] text-[#5b5650]">
+                    {monthYear}
+                  </span>
+                </div>
+                <div className="mt-1.5 flex items-center justify-end gap-2 font-[family-name:var(--font-raleway)] text-[0.72rem] font-[400] text-[#5b5650]">
+                  <span>{service}</span>
+                  {booking.time && (
+                    <>
+                      <span className="h-1 w-1 rounded-full bg-[#d6d0c8]" />
+                      <span className="font-[family-name:var(--font-roboto-mono)] text-[0.68rem] tracking-[0.04em]">
+                        {booking.time}
+                      </span>
+                    </>
+                  )}
+                </div>
               </div>
-            )}
+            </div>
           </div>
         </header>
 
@@ -189,41 +231,8 @@ export default async function BookingDetailPage({
         {/* hairline */}
         <div className="h-px bg-gradient-to-r from-transparent via-[#ece8e3] to-transparent mb-8" />
 
-        {/* grid: guest + party + deposit */}
+        {/* grid: party + deposit */}
         <section className="grid grid-cols-2 gap-x-8 gap-y-9">
-          {/* customer */}
-          <div className="col-span-2">
-            <SectionLabel>Guest</SectionLabel>
-            <h2 className="font-[family-name:var(--font-raleway)] text-[1.6rem] sm:text-[2rem] font-[200] tracking-[-0.01em] text-[#1a1614] leading-tight">
-              {booking.name}
-            </h2>
-
-            <div className="mt-4 flex flex-wrap gap-2">
-              {phoneDigits && (
-                <ContactLink
-                  href={`tel:${phoneDigits}`}
-                  icon={<Phone className="size-3" strokeWidth={1.5} />}
-                  label={booking.phone}
-                />
-              )}
-              {phoneDigits && (
-                <ContactLink
-                  href={`https://wa.me/${phoneDigits}`}
-                  icon={<MessageCircle className="size-3" strokeWidth={1.5} />}
-                  label="WhatsApp"
-                  external
-                />
-              )}
-              {booking.email && (
-                <ContactLink
-                  href={`mailto:${booking.email}`}
-                  icon={<Mail className="size-3" strokeWidth={1.5} />}
-                  label={booking.email}
-                />
-              )}
-            </div>
-          </div>
-
           {/* party */}
           <div>
             <SectionLabel>Party</SectionLabel>

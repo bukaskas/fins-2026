@@ -35,7 +35,7 @@ const serviceContent: Record<
   },
   "day-use": {
     heading: "We've received your day-use request! 🌊",
-    body: "Thanks for reaching out! We've received your request for {date}. Our team will review your profile and be in touch shortly to confirm your spot.",
+    body: "Thanks for reaching out! We've received your request for {date}. Our team will review it and get back to you as soon as possible. Follow the link below to check the status of your request anytime.",
     cta: "Message us on Instagram",
   },
   restaurant: {
@@ -170,7 +170,7 @@ const BookingEmail = ({ username, date, bookingDateISO, bookingType, numberOfPeo
                   className="py-2.5 px-5 bg-white border border-solid border-gray-300 rounded-md text-gray-800 text-sm font-semibold no-underline text-center"
                   href={bookingUrl}
                 >
-                  View your booking
+                  {bookingType === "day-use" ? "View request status" : "View your booking"}
                 </Button>
               </Section>
             )}

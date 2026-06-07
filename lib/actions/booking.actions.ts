@@ -47,6 +47,7 @@ export async function createBooking(data: BookingFormData) {
         numberOfPeople: validatedData.numberOfPeople,
         numberOfKids: validatedData.numberOfKids ?? 0,
         totalPriceCents: validatedData.totalPriceCents ?? null,
+        instagram: validatedData.instagram?.trim() || null,
       },
     });
 

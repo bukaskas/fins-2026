@@ -3,8 +3,9 @@
 import { useState } from "react";
 import Link from "next/link";
 import { BookingStatus } from "@prisma/client";
-import { Users, Pencil, Phone, MoreHorizontal, ExternalLink, Clock } from "lucide-react";
+import { Users, Pencil, Phone, MoreHorizontal, ExternalLink, Clock, Instagram } from "lucide-react";
 import { format } from "date-fns";
+import { instagramHref } from "@/lib/utils";
 import { SERVER_URL } from "@/lib/constants";
 import { toast } from "sonner";
 import {
@@ -83,14 +84,16 @@ type UserStub = { id: string; name: string | null; email: string };
 
 function buildWaData(booking: BookingWithAgent) {
   const phone = booking.phone.replace(/\D/g, "");
-  const name = booking.name;
 
   const bookingUrl = `${SERVER_URL}/bookings/${booking.id}`;
 
   const instagramText =
-    `Hi ${name}! As part of our booking confirmation, could you please share the Instagram accounts of everyone in your group? ` +
-    `This helps us keep our Fins community the way we love it 🤍 If any profiles are private, a screenshot works just fine!\n\n` +
-    `You can review your booking status here: ${bookingUrl}`;
+    `Hello,\n` +
+    `Thank you for booking with Fins Kitesurfing & Beach Club! We're excited to have you with us.\n` +
+    `To complete your first booking, could you please share your Instagram account?\n` +
+    `You can track the status of your booking anytime here: ${bookingUrl}\n` +
+    `Looking forward to seeing you on the water! 🪁\n` +
+    `The Fins Team`;
 
   const paymentInfo =
     `💳 *To confirm your reservation:*\n` +
@@ -246,15 +249,30 @@ function BookingComponent({ booking, allUsers }: { booking: BookingWithAgent; al
               )}
             </div>
 
-            {/* Booked-on timestamp */}
-            {booking.createdAt && (
-              <div className="flex items-center gap-1 text-[#b0a89f]">
-                <Clock className="h-2.5 w-2.5 shrink-0" />
-                <span className="font-[family-name:var(--font-roboto)] text-[0.66rem] tabular-nums">
-                  Booked {format(new Date(booking.createdAt), "d MMM, HH:mm")}
-                </span>
-              </div>
-            )}
+            {/* Booked-on timestamp + Instagram */}
+            <div className="flex items-center gap-3 flex-wrap">
+              {booking.createdAt && (
+                <div className="flex items-center gap-1 text-[#b0a89f]">
+                  <Clock className="h-2.5 w-2.5 shrink-0" />
+                  <span className="font-[family-name:var(--font-roboto)] text-[0.66rem] tabular-nums">
+                    Booked {format(new Date(booking.createdAt), "d MMM, HH:mm")}
+                  </span>
+                </div>
+              )}
+              {booking.instagram && (
+                <a
+                  href={instagramHref(booking.instagram)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1 text-[#c13584] hover:text-[#a02c6d] transition-colors"
+                >
+                  <Instagram className="h-2.5 w-2.5 shrink-0" />
+                  <span className="font-[family-name:var(--font-raleway)] text-[0.66rem] font-[500] truncate max-w-[140px]">
+                    {booking.instagram}
+                  </span>
+                </a>
+              )}
+            </div>
           </div>
 
           {/* Right: status + amount + actions */}

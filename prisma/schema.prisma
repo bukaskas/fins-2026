@@ -148,6 +148,7 @@ model Booking {
   time            String?
   bookingStatus   BookingStatus @default(PENDING)
   amountPaidCents Int           @default(0)
+  instagram       String?
   agentId         String?       @db.Uuid
   agent           User?         @relation("BookingAgent", fields: [agentId], references: [id], onDelete: SetNull)
 }

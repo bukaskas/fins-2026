@@ -5,6 +5,13 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
+/** Normalize an Instagram handle or URL into a clickable profile link. */
+export function instagramHref(v: string): string {
+  const value = v.trim();
+  if (/^https?:\/\//i.test(value)) return value;
+  return `https://instagram.com/${value.replace(/^@/, "")}`;
+}
+
 export function formatElapsed(from: Date | string, to: Date | string = new Date()): string {
   const start = from instanceof Date ? from : new Date(from);
   const end = to instanceof Date ? to : new Date(to);

@@ -148,6 +148,7 @@ function DayUseBookingForm() {
       totalPriceCents: null,
       time: null,
       instructor: null,
+      instagram: "",
     } as BookingFormData,
     validators: {
       onSubmit: ({ value }) => {
@@ -175,6 +176,7 @@ function DayUseBookingForm() {
           instructor: null,
           time: value.time ?? null,
           totalPriceCents: breakdown.totalCents,
+          instagram: value.instagram?.trim() || null,
         };
         const result = await createBooking(normalizedValue);
         if (result.success && result.bookingId && result.date) {
@@ -531,6 +533,44 @@ function DayUseBookingForm() {
                               aria-invalid={isInvalid}
                               defaultCountry="EG"
                               disabled={isSubmitting}
+                            />
+                            {isInvalid && (
+                              <FieldError errors={field.state.meta.errors} />
+                            )}
+                          </Field>
+                        );
+                      }}
+                    />
+                    <form.Field
+                      name="instagram"
+                      validators={{
+                        onSubmit: ({ value }) =>
+                          !value || !value.trim()
+                            ? "Instagram is required"
+                            : undefined,
+                      }}
+                      children={(field) => {
+                        const isInvalid =
+                          field.state.meta.isTouched &&
+                          !field.state.meta.isValid;
+                        return (
+                          <Field data-invalid={isInvalid}>
+                            <FieldLabel htmlFor={field.name}>
+                              Instagram
+                            </FieldLabel>
+                            <Input
+                              id={field.name}
+                              type="text"
+                              value={field.state.value ?? ""}
+                              onBlur={field.handleBlur}
+                              onChange={(e) =>
+                                field.handleChange(e.target.value)
+                              }
+                              aria-invalid={isInvalid}
+                              placeholder="@yourhandle or profile link"
+                              autoComplete="off"
+                              disabled={isSubmitting}
+                              className="rounded-full"
                             />
                             {isInvalid && (
                               <FieldError errors={field.state.meta.errors} />

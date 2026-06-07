@@ -42,6 +42,7 @@ export const bookingFormSchema = z.object({
   totalPriceCents: z.number().int().min(0).nullable().default(null),
   time: z.string().nullable().default(null),
   instructor: z.string().nullable().default(null),
+  instagram: z.string().trim().nullish(),
   bookingStatus: z.nativeEnum(BookingStatus).default(BookingStatus.PENDING),
   amountPaidCents: z.number().int().min(0).default(0),
 });
