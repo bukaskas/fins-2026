@@ -543,12 +543,6 @@ function DayUseBookingForm() {
                     />
                     <form.Field
                       name="instagram"
-                      validators={{
-                        onSubmit: ({ value }) =>
-                          !value || !value.trim()
-                            ? "Instagram is required"
-                            : undefined,
-                      }}
                       children={(field) => {
                         const isInvalid =
                           field.state.meta.isTouched &&
@@ -556,7 +550,7 @@ function DayUseBookingForm() {
                         return (
                           <Field data-invalid={isInvalid}>
                             <FieldLabel htmlFor={field.name}>
-                              Instagram
+                              Instagram (optional)
                             </FieldLabel>
                             <Input
                               id={field.name}
