@@ -11,6 +11,7 @@ import { getBookingById } from "@/lib/actions/booking.actions";
 import PartyEditDialog from "./PartyEditDialog";
 import StatusEditDialog from "./StatusEditDialog";
 import NextStepCard from "./NextStepCard";
+import PayDepositDialog from "@/components/bookings/PayDepositDialog";
 
 const STAFF_ROLES: Role[] = [Role.ADMIN, Role.STAFF, Role.OWNER];
 
@@ -320,6 +321,22 @@ export default async function BookingDetailPage({
               <div className="mt-3 font-[family-name:var(--font-raleway)] text-[0.78rem] text-[#8a8480]">
                 Total price not set
               </div>
+            )}
+
+            {isStaff && (
+              <PayDepositDialog
+                bookingId={booking.id}
+                totalPriceCents={total || null}
+                amountPaidCents={paid}
+                trigger={
+                  <button
+                    type="button"
+                    className="mt-5 inline-flex items-center gap-2 rounded-full bg-[#1a1614] px-5 py-2.5 text-white font-[family-name:var(--font-raleway)] text-[0.68rem] tracking-[0.18em] uppercase font-[600] transition-all hover:-translate-y-px hover:bg-[#2a2522]"
+                  >
+                    Pay deposit
+                  </button>
+                }
+              />
             )}
           </div>
 

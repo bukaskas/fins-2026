@@ -3,7 +3,7 @@
 import { prisma } from "@/db/prisma";
 import { isRedirectError } from "next/dist/client/components/redirect-error";
 import { revalidatePath } from "next/cache";
-import { BookingFormData, bookingFormSchema, bulkEmailSchema, UpdateBookingData, updateBookingSchema } from "../validators";
+import { BookingDepositData, bookingDepositSchema, BookingFormData, bookingFormSchema, bulkEmailSchema, UpdateBookingData, updateBookingSchema } from "../validators";
 import { sendBookingEmail, sendStaffNotificationEmail, sendFullyBookedEmail, sendBulkEmail } from "@/emails/index";
 import { Booking, BookingStatus, Role } from "@prisma/client";
 
@@ -716,6 +716,52 @@ export async function updateBookingParty(id: string, adults: number, kids: numbe
   } catch (error) {
     console.error('Party update error:', error);
     return { success: false, message: `Failed to update party. Error: ${error instanceof Error ? error.message : String(error)}` };
+  }
+}
+
+export async function payBookingDeposit(bookingId: string, data: BookingDepositData) {
+  try {
+    const session = await getServerSession(authOptions);
+    const user = session?.user as { id?: string; role?: Role } | undefined;
+    if (!user?.role || !STAFF_ROLES.includes(user.role)) {
+      return { success: false, message: "Not authorized." };
+    }
+
+    const validated = bookingDepositSchema.parse(data);
+
+    const amountPaidCents = await prisma.$transaction(async (tx) => {
+      await tx.bookingPayment.create({
+        data: {
+          bookingId,
+          amountCents: validated.amountCents,
+          method: validated.method,
+          reference: validated.reference ?? null,
+          actorId: user.id ?? null,
+        },
+      });
+
+      const { _sum } = await tx.bookingPayment.aggregate({
+        where: { bookingId },
+        _sum: { amountCents: true },
+      });
+      const total = _sum.amountCents ?? 0;
+
+      await tx.booking.update({
+        where: { id: bookingId },
+        data: { amountPaidCents: total },
+      });
+
+      return total;
+    });
+
+    // Reuse the CONFIRMED side-effects (agent assignment, revalidation, 80-person auto-close).
+    await updateBookingStatus(bookingId, BookingStatus.CONFIRMED);
+    revalidatePath(`/bookings/${bookingId}`);
+
+    return { success: true, amountPaidCents };
+  } catch (error) {
+    console.error('Booking deposit error:', error);
+    return { success: false, message: `Failed to record deposit. Error: ${error instanceof Error ? error.message : String(error)}` };
   }
 }
 

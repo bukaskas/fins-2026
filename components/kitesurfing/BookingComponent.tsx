@@ -19,14 +19,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import type { BookingWithAgent } from "@/lib/actions/booking.actions";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
-import { updateBookingStatus, updateBookingAmountPaid, assignBookingAgent } from "@/lib/actions/booking.actions";
+import PayDepositDialog from "@/components/bookings/PayDepositDialog";
+import { updateBookingStatus, assignBookingAgent } from "@/lib/actions/booking.actions";
 
 function WhatsAppIcon({ className }: { className?: string }) {
   return (
@@ -120,10 +114,8 @@ function BookingComponent({ booking, allUsers }: { booking: BookingWithAgent; al
   const [isPending, setIsPending]     = useState(false);
   const [amountPaid, setAmountPaid]   = useState(booking.amountPaidCents);
   const [agent, setAgent]             = useState<UserStub | null>(booking.agent);
-  const [depositSaving, setDepositSaving]       = useState(false);
   const [dropdownOpen, setDropdownOpen]         = useState(false);
-  const [depositDialogOpen, setDepositDialogOpen] = useState(false);
-  const [depositVal, setDepositVal]             = useState(amountPaid > 0 ? String(amountPaid / 100) : "");
+  const [payDepositOpen, setPayDepositOpen]     = useState(false);
 
   const dateObj = new Date(booking.date);
   const day     = dateObj.getUTCDate();
@@ -151,20 +143,6 @@ function BookingComponent({ booking, allUsers }: { booking: BookingWithAgent; al
     ].filter(Boolean);
     navigator.clipboard.writeText(lines.join("\n"));
     toast.success("Booking details copied!");
-  }
-
-  async function handleSaveDeposit() {
-    const cents = Math.round(parseFloat(depositVal || "0") * 100);
-    setDepositSaving(true);
-    const result = await updateBookingAmountPaid(booking.id, cents);
-    setDepositSaving(false);
-    if (result.success) {
-      setAmountPaid(cents);
-      setDepositDialogOpen(false);
-      toast.success("Deposit saved");
-    } else {
-      toast.error("Failed to save deposit");
-    }
   }
 
   async function handleStatusChange(next: BookingStatus) {
@@ -412,11 +390,11 @@ function BookingComponent({ booking, allUsers }: { booking: BookingWithAgent; al
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
                     onSelect={() => {
-                      setDepositVal(amountPaid > 0 ? String(amountPaid / 100) : "");
-                      setDepositDialogOpen(true);
+                      // defer opening until the dropdown has fully closed to avoid focus conflicts
+                      setTimeout(() => setPayDepositOpen(true), 0);
                     }}
                   >
-                    Edit amount paid
+                    Pay deposit
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuSub>
@@ -464,57 +442,18 @@ function BookingComponent({ booking, allUsers }: { booking: BookingWithAgent; al
       </div>
     </div>
 
-    {/* ── Deposit dialog ── */}
-    <Dialog open={depositDialogOpen} onOpenChange={setDepositDialogOpen}>
-      <DialogContent
-        showCloseButton={false}
-        className="sm:max-w-xs rounded-2xl bg-white border border-[#ece8e3] shadow-xl p-0"
-      >
-        <DialogHeader className="border-[#ece8e3] px-6 pt-6 pb-4">
-          <DialogTitle className="text-[1.1rem] font-[700] text-[#1a1614] tracking-normal">
-            Amount Paid
-          </DialogTitle>
-          <p className="font-[family-name:var(--font-raleway)] text-[0.8rem] text-[#8a8480] mt-0.5">
-            {booking.name}
-          </p>
-        </DialogHeader>
-
-        <div className="px-6 py-4 space-y-1.5">
-          <label className="font-[family-name:var(--font-raleway)] text-[0.65rem] tracking-[0.12em] uppercase font-[600] text-[#8a8480]">
-            Amount (EGP)
-          </label>
-          <input
-            type="number"
-            min="0"
-            step="1"
-            value={depositVal}
-            onChange={(e) => setDepositVal(e.target.value)}
-            onKeyDown={(e) => { if (e.key === "Enter") handleSaveDeposit(); }}
-            placeholder="0"
-            autoFocus
-            className="w-full border border-[#ece8e3] rounded-xl px-3.5 py-2.5 text-[1rem] text-[#1a1614] font-[family-name:var(--font-roboto)] bg-white focus:outline-none focus:border-[#1a1614] transition-colors"
-          />
-        </div>
-
-        <DialogFooter className="border-[#ece8e3] px-6 pb-6 pt-4 flex-row gap-2 sm:flex-row">
-          <button
-            type="button"
-            onClick={() => setDepositDialogOpen(false)}
-            className="flex-1 border border-[#ece8e3] text-[#8a8480] font-[family-name:var(--font-raleway)] text-[0.72rem] tracking-[0.1em] uppercase font-[600] py-2.5 rounded-xl hover:bg-[#f5f2ef] transition-colors"
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            onClick={handleSaveDeposit}
-            disabled={depositSaving}
-            className="flex-1 bg-[#1a1614] text-white font-[family-name:var(--font-raleway)] text-[0.72rem] tracking-[0.1em] uppercase font-[700] py-2.5 rounded-xl hover:bg-[#2a2420] transition-colors disabled:opacity-50"
-          >
-            {depositSaving ? "Saving…" : "Save"}
-          </button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+    {/* ── Pay deposit dialog ── */}
+    <PayDepositDialog
+      bookingId={booking.id}
+      totalPriceCents={booking.totalPriceCents}
+      amountPaidCents={amountPaid}
+      open={payDepositOpen}
+      onOpenChange={setPayDepositOpen}
+      onPaid={(newPaid) => {
+        setAmountPaid(newPaid);
+        setStatus(BookingStatus.CONFIRMED);
+      }}
+    />
     </>
   );
 }

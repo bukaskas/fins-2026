@@ -1,5 +1,5 @@
 import { email, z } from "zod";
-import { BookingStatus, CommissionType, ExpenseType } from "@prisma/client";
+import { BookingStatus, CommissionType, ExpenseType, PaymentMethod } from "@prisma/client";
 import { isValidPhoneNumber } from "libphonenumber-js";
 
 // E.164 phone validator. isValidPhoneNumber enforces the per-country
@@ -64,6 +64,13 @@ export const updateBookingSchema = z.object({
   time:             z.string().nullable().default(null),
 });
 export type UpdateBookingData = z.infer<typeof updateBookingSchema>;
+
+export const bookingDepositSchema = z.object({
+  amountCents: z.number().int().positive("Amount must be greater than 0"),
+  method: z.nativeEnum(PaymentMethod),
+  reference: z.string().trim().nullish(),
+});
+export type BookingDepositData = z.infer<typeof bookingDepositSchema>;
 
 export const signUpFormSchema = z.object({
   name: z.string().nullable(),

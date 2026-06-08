@@ -151,6 +151,20 @@ model Booking {
   instagram       String?
   agentId         String?       @db.Uuid
   agent           User?         @relation("BookingAgent", fields: [agentId], references: [id], onDelete: SetNull)
+  payments        BookingPayment[]
+}
+
+model BookingPayment {
+  id          String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  bookingId   String        @db.Uuid
+  booking     Booking       @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  amountCents Int
+  method      PaymentMethod
+  reference   String?
+  actorId     String?       @db.Uuid
+  createdAt   DateTime      @default(now()) @db.Timestamp(6)
+
+  @@index([bookingId, createdAt])
 }
 
 model ClosedDate {
