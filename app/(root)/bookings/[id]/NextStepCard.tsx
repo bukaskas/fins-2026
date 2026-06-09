@@ -1,5 +1,5 @@
 import { BookingStatus } from "@prisma/client";
-import { Instagram, Check } from "lucide-react";
+import { Instagram, Check, MessageCircle } from "lucide-react";
 
 import { CopyButton } from "./CopyButton";
 
@@ -8,22 +8,25 @@ const INSTAGRAM_DISPLAY = "@finskitesurfing";
 const ACCOUNT_NUMBER = "1105202510010201";
 const BANK_NAME = "Arab African International Bank";
 const ACCOUNT_NAME = "Fins Kite Surfing";
+const WHATSAPP_NUMBER = "+201080500099";
+const WHATSAPP_URL = "https://wa.me/201080500099";
 
 const SCREENSHOT_STATUSES: BookingStatus[] = [
-  BookingStatus.PENDING,
   BookingStatus.REQUEST_SENT,
   BookingStatus.UNDER_REVIEW,
 ];
 
-type Variant = "screenshots" | "payment" | "confirmed";
+type Variant = "pending" | "screenshots" | "payment" | "confirmed";
 
 const TINT: Record<Variant, string> = {
+  pending: "rgba(214, 234, 248, 0.55)",
   payment: "rgba(237, 230, 248, 0.55)",
   screenshots: "rgba(252, 230, 213, 0.55)",
   confirmed: "rgba(226, 240, 230, 0.6)",
 };
 
 function getVariant(status: BookingStatus): Variant | null {
+  if (status === BookingStatus.PENDING) return "pending";
   if (SCREENSHOT_STATUSES.includes(status)) return "screenshots";
   if (status === BookingStatus.WAITING_PAYMENT) return "payment";
   if (status === BookingStatus.CONFIRMED) return "confirmed";
@@ -67,6 +70,7 @@ export default function NextStepCard({
         />
 
         <div className="relative px-6 py-6 md:px-8 md:py-7">
+          {variant === "pending" && <PendingBody />}
           {variant === "screenshots" && <ScreenshotsBody />}
           {variant === "payment" && (
             <PaymentBody totalCents={totalPriceCents} />
@@ -135,6 +139,29 @@ function InstagramButton({ caption }: { caption: string }) {
   );
 }
 
+function WhatsAppButton({ caption }: { caption: string }) {
+  return (
+    <a
+      href={WHATSAPP_URL}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="group flex items-center gap-4 rounded-2xl bg-[#1a1614] px-5 py-4 text-white transition-all duration-150 ease-out hover:bg-[#2a2522] active:scale-[0.99] shadow-[0_8px_24px_-10px_rgba(26,22,20,0.5)]"
+    >
+      <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-white/10 ring-1 ring-white/15 transition-colors group-hover:bg-white/15">
+        <MessageCircle className="h-4 w-4" strokeWidth={1.6} />
+      </span>
+      <span className="flex flex-col items-start leading-tight">
+        <span className="font-[family-name:var(--font-raleway)] text-[0.6rem] tracking-[0.22em] uppercase font-[600] text-white/55">
+          {caption}
+        </span>
+        <span className="mt-0.5 font-[family-name:var(--font-roboto-mono)] text-[0.95rem] tracking-[0.04em]">
+          {WHATSAPP_NUMBER}
+        </span>
+      </span>
+    </a>
+  );
+}
+
 function HairlineDivider() {
   return (
     <div className="my-6 flex items-center gap-3">
@@ -174,6 +201,22 @@ function ConfirmedBody({ remainingCents }: { remainingCents: number }) {
         )}
       </div>
     </div>
+  );
+}
+
+function PendingBody() {
+  return (
+    <>
+      <Eyebrow>Booking request received</Eyebrow>
+      <Heading>Thank you for your booking request</Heading>
+      <Body>
+        Please let us check the availability and we&rsquo;ll get back to you as
+        soon as possible.
+      </Body>
+      <div className="mt-7">
+        <WhatsAppButton caption="Contact us on WhatsApp" />
+      </div>
+    </>
   );
 }
 
