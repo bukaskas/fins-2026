@@ -70,10 +70,6 @@ const SERVICE_META: Record<string, { dot: string; label: string }> = {
   "pharaoh-airstyle":   { dot: "#e879f9", label: "Pharaoh" },
 };
 
-function fmtEGP(cents: number): string {
-  return `${(cents / 100).toLocaleString("en-EG")} EGP`;
-}
-
 type UserStub = { id: string; name: string | null; email: string };
 
 function buildWaData(booking: BookingWithAgent) {
@@ -89,22 +85,10 @@ function buildWaData(booking: BookingWithAgent) {
     `Looking forward to seeing you on the water! 🪁\n` +
     `The Fins Team`;
 
-  const paymentInfo =
-    `💳 *To confirm your reservation:*\n` +
-    `Please send a *50% deposit*\n\n` +
-    `⚠️ Deposit is *non-refundable* and reservations *cannot be postponed.*\n\n` +
-    `🏦 *Bank:* Arab African International Bank\n` +
-    `🔢 *Account No:* 1105202510010201\n` +
-    `👤 *Account Name:* Fins Kite Surfing\n\n` +
-    `After payment, please send a *screenshot of the transaction* with full details. Thank you`;
-
-  const amountLines =
-    booking.totalPriceCents != null
-      ? `Total: ${fmtEGP(booking.totalPriceCents)}\n` +
-        `Deposit amount: ${fmtEGP(Math.round(booking.totalPriceCents / 2))}\n\n`
-      : "";
-
-  const depositText = `${amountLines}Payment info:\n${paymentInfo}`;
+  const depositText =
+    `Hello ${booking.name},\n` +
+    `To confirm your booking, please follow this link to complete your deposit payment: ${bookingUrl}\n` +
+    `Thank you! 🪁 The Fins Team`;
 
   return { instagramText, depositText, plainWa: `https://wa.me/${phone}` };
 }

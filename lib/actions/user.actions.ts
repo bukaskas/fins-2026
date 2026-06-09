@@ -286,7 +286,7 @@ export async function deleteUser(id: string) {
   }
 }
 
-export async function listUsers(query?: string) {
+function buildUserWhere(query?: string, role?: Role): Prisma.UserWhereInput | undefined {
   const q = (query ?? "").trim();
   const qUpper = q.toUpperCase();
 
@@ -302,8 +302,16 @@ export async function listUsers(query?: string) {
     orFilters.push({ role: { equals: qUpper as Role } });
   }
 
+  const and: Prisma.UserWhereInput[] = [];
+  if (orFilters.length) and.push({ OR: orFilters });
+  if (role) and.push({ role });
+
+  return and.length ? { AND: and } : undefined;
+}
+
+export async function listUsers(query?: string, role?: Role) {
   return prisma.user.findMany({
-    where: orFilters.length ? { OR: orFilters } : undefined,
+    where: buildUserWhere(query, role),
     select: {
       id: true,
       name: true,
@@ -314,6 +322,19 @@ export async function listUsers(query?: string) {
     },
     orderBy: [{ createdAt: "desc" }],
     take: 100,
+  });
+}
+
+export async function listUsersForExport(query?: string, role?: Role) {
+  return prisma.user.findMany({
+    where: buildUserWhere(query, role),
+    select: {
+      name: true,
+      email: true,
+      phone: true,
+      role: true,
+    },
+    orderBy: [{ name: "asc" }],
   });
 }
 

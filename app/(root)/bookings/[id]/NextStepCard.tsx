@@ -328,7 +328,7 @@ function PaymentBody({ totalCents }: { totalCents: number }) {
         After payment, send a screenshot of the transaction with full details:
       </p>
       <div className="mt-4">
-        <InstagramButton caption="Send screenshot on Instagram" />
+        <WhatsAppButton caption="Send screenshot on WhatsApp" />
       </div>
     </>
   );

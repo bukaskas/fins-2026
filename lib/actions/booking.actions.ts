@@ -37,6 +37,19 @@ export async function createBooking(data: BookingFormData) {
       }
     }
 
+    // Returning customers (matched by email or phone) skip the availability
+    // review and go straight to payment.
+    const existingUser = await prisma.user.findFirst({
+      where: {
+        OR: [
+          { email: { equals: validatedData.email, mode: "insensitive" } },
+          { phone: validatedData.phone },
+        ],
+      },
+      select: { id: true },
+    });
+    const isExisting = !!existingUser;
+
     const booking = await prisma.booking.create({
       data: {
         name: validatedData.name,
@@ -48,22 +61,29 @@ export async function createBooking(data: BookingFormData) {
         numberOfKids: validatedData.numberOfKids ?? 0,
         totalPriceCents: validatedData.totalPriceCents ?? null,
         instagram: validatedData.instagram?.trim() || null,
+        bookingStatus: isExisting
+          ? BookingStatus.WAITING_PAYMENT
+          : BookingStatus.PENDING,
       },
     });
 
     const isDayUse = validatedData.service === "day-use";
     const isPharaoh = validatedData.service === "pharaoh-airstyle";
     const includeTickets = isDayUse || isPharaoh;
-    await sendBookingEmail(
-      validatedData.email,
-      validatedData.name,
-      validatedData.date,
-      validatedData.service,
-      isDayUse ? validatedData.numberOfPeople : undefined,
-      isDayUse ? (validatedData.numberOfKids ?? 0) : undefined,
-      isDayUse ? (validatedData.totalPriceCents ?? undefined) : undefined,
-      booking.id,
-    );
+    // Existing users land on the payment page directly, so skip the
+    // "booking request received" guest email for them.
+    if (!isExisting) {
+      await sendBookingEmail(
+        validatedData.email,
+        validatedData.name,
+        validatedData.date,
+        validatedData.service,
+        isDayUse ? validatedData.numberOfPeople : undefined,
+        isDayUse ? (validatedData.numberOfKids ?? 0) : undefined,
+        isDayUse ? (validatedData.totalPriceCents ?? undefined) : undefined,
+        booking.id,
+      );
+    }
     await sendStaffNotificationEmail(
       validatedData.name,
       validatedData.email,
