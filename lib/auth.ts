@@ -4,7 +4,7 @@ import { PrismaAdapter } from "@next-auth/prisma-adapter";
 
 
 import { prisma } from "@/db/prisma";
-import { verifyPassword } from "@/lib/actions/user.actions";
+import { verifyPassword } from "@/lib/password";
 
 export const authOptions: AuthOptions = {
   adapter: PrismaAdapter(prisma),

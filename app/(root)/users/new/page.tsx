@@ -1,7 +1,9 @@
 import Link from "next/link";
 import UserCreateForm from "./UserCreateForm";
+import { ADMIN_ROLES, requireRolePage } from "@/lib/auth-guard";
 
-export default function NewUserPage() {
+export default async function NewUserPage() {
+  await requireRolePage(ADMIN_ROLES);
   return (
     <main className="mx-auto max-w-2xl p-6">
       <Link href="/users" className="text-sm text-muted-foreground hover:underline">

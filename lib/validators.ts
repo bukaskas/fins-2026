@@ -80,6 +80,25 @@ export const signUpFormSchema = z.object({
 });
 export type SignUpFormData = z.infer<typeof signUpFormSchema>;
 
+export const forgotPasswordSchema = z.object({
+  email: z.string().email("Invalid email address"),
+});
+export type ForgotPasswordData = z.infer<typeof forgotPasswordSchema>;
+
+export const resetPasswordSchema = z
+  .object({
+    token: z.string().min(1, "Missing reset token"),
+    password: z
+      .string()
+      .min(8, "Password must be at least 8 characters long"),
+    confirm: z.string(),
+  })
+  .refine((data) => data.password === data.confirm, {
+    message: "Passwords do not match",
+    path: ["confirm"],
+  });
+export type ResetPasswordData = z.infer<typeof resetPasswordSchema>;
+
 import { Role } from "@prisma/client";
 
 const rateCentsField = z.coerce

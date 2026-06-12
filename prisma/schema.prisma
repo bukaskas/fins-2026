@@ -217,6 +217,19 @@ model User {
   instructorProfile       InstructorProfile?
   commissionsAsInstructor InstructorCommission[] @relation("CommissionInstructor")
   expensesAsPayee         Expense[]              @relation("ExpensePayee")
+  passwordResetTokens     PasswordResetToken[]
+}
+
+model PasswordResetToken {
+  id        String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId    String    @db.Uuid
+  tokenHash String    @unique
+  expires   DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }
 
 model Account {

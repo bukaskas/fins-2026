@@ -1,9 +1,5 @@
 "use client";
-import { useGSAP } from "@gsap/react";
-import gsap from "gsap";
-import { ScrollTrigger } from "gsap/ScrollTrigger";
-
-gsap.registerPlugin(useGSAP, ScrollTrigger);
+import Reveal from "@/components/kitesurfing/Reveal";
 
 const rentalItems = [
   { item: "Full equipment", halfDay: "4,000", fullDay: "5,700" },
@@ -16,24 +12,10 @@ const rentalItems = [
 ];
 
 function KitesurfingRentalSection() {
-  useGSAP(() => {
-    gsap.from("#rental", {
-      scrollTrigger: {
-        trigger: "#rental",
-        toggleActions: "restart none none none",
-        end: "top 75%",
-        scrub: 1,
-      },
-      opacity: 0,
-      y: 40,
-      duration: 4,
-      ease: "power2.out",
-    });
-  });
-
   return (
-    <section id="rental" style={{ background: "#f0f9ff" }}>
+    <section id="rental" className="scroll-mt-16" style={{ background: "#f0f9ff" }}>
       <div className="max-w-7xl mx-auto px-8 md:px-14 lg:px-20 py-20 md:py-24">
+        <Reveal>
         {/* Header */}
         <div className="flex items-center gap-3 mb-8">
           <span className="h-px w-7 flex-shrink-0 bg-[#38bdf8]" />
@@ -56,7 +38,9 @@ function KitesurfingRentalSection() {
             half-day (up to 4 hrs) or full-day (up to 8 hrs) hire.
           </p>
         </div>
+        </Reveal>
 
+        <Reveal delay={0.1}>
         {/* Column headers */}
         <div
           className="grid gap-x-6 pb-3 mb-1"
@@ -101,6 +85,7 @@ function KitesurfingRentalSection() {
         <p className="text-[0.7rem] text-[#94a3b8] font-[family-name:var(--font-raleway)] font-[300] mt-5">
           All prices in EGP.
         </p>
+        </Reveal>
       </div>
     </section>
   );

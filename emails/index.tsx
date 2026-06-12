@@ -7,6 +7,8 @@ import StaffNotificationEmail from "./staffNotificationEmail";
 import PharaohAirstyleEmail from "./pharaohEmail";
 import FullyBookedEmail from "./fullyBookedEmail";
 import BulkEmail from "./bulkEmail";
+import PasswordResetEmail from "./passwordResetEmail";
+import VerifyEmail from "./verifyEmail";
 
 export async function sendBookingEmail(
   to: string,
@@ -65,6 +67,7 @@ export async function sendStaffNotificationEmail(
   numberOfPeople: number,
   numberOfKids?: number,
   totalPriceCents?: number,
+  bookingId?: string,
 ) {
   const staffEmails = serviceToStaffEmails[service];
   if (!staffEmails?.length) return;
@@ -88,6 +91,7 @@ export async function sendStaffNotificationEmail(
         numberOfPeople={numberOfPeople}
         numberOfKids={numberOfKids}
         totalPriceCents={totalPriceCents}
+        bookingId={bookingId}
       />
     ),
   });
@@ -122,5 +126,31 @@ export async function sendRegistrationEmail(to: string, name: string) {
     to,
     subject: `Welcome to ${APP_NAME}!`,
     react: <RegistrationEmail username={name} />,
+  });
+}
+
+export async function sendPasswordResetEmail(
+  to: string,
+  name: string,
+  resetUrl: string,
+) {
+  await resend.emails.send({
+    from: EMAIL_ADDRESS,
+    to,
+    subject: `Reset your ${APP_NAME} password`,
+    react: <PasswordResetEmail username={name} resetUrl={resetUrl} />,
+  });
+}
+
+export async function sendVerificationEmail(
+  to: string,
+  name: string,
+  verifyUrl: string,
+) {
+  await resend.emails.send({
+    from: EMAIL_ADDRESS,
+    to,
+    subject: `Verify your ${APP_NAME} email`,
+    react: <VerifyEmail username={name} verifyUrl={verifyUrl} />,
   });
 }

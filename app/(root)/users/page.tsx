@@ -3,6 +3,7 @@ import { Plus, Search } from "lucide-react";
 import { Role } from "@prisma/client";
 
 import { listUsers } from "@/lib/actions/user.actions";
+import { ADMIN_ROLES, requireRolePage } from "@/lib/auth-guard";
 import { DeleteUserButton } from "@/components/users/DeleteUserButton";
 import { ExportUsersButton } from "@/components/users/ExportUsersButton";
 
@@ -25,6 +26,7 @@ function buildHref(role: string | null, q: string): string {
 }
 
 export default async function UsersPage({ searchParams }: Props) {
+  await requireRolePage(ADMIN_ROLES);
   const params = await searchParams;
   const q = params.q?.trim() ?? "";
   const activeRole = ROLE_VALUES.includes(params.role as Role)

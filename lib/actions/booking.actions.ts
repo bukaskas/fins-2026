@@ -93,6 +93,7 @@ export async function createBooking(data: BookingFormData) {
       validatedData.numberOfPeople,
       includeTickets ? (validatedData.numberOfKids ?? 0) : undefined,
       includeTickets ? (validatedData.totalPriceCents ?? undefined) : undefined,
+      booking.id,
     );
 
     return ({

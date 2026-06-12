@@ -7,6 +7,8 @@ import { Prisma, Role } from "@prisma/client";
 import { sendRegistrationEmail } from "@/emails";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
+import { ADMIN_ROLES, STAFF_ROLES, hasRole, requireRole } from "@/lib/auth-guard";
+import { issueEmailVerificationForUser } from "@/lib/actions/auth.actions";
 
 // ...existing code...
 
@@ -47,6 +49,9 @@ export async function createUser(data: SignUpFormData) {
       console.error("[createUser] registration email failed:", emailError);
     }
 
+    // Send an email-verification link (non-blocking; failures are logged).
+    await issueEmailVerificationForUser(result.id);
+
     return {
       success: true,
       message: "Account created successfully!",
@@ -69,6 +74,7 @@ export async function createUser(data: SignUpFormData) {
 }
 
 export async function getUserById(id: string) {
+  await requireRole(ADMIN_ROLES);
   try {
     const user = await prisma.user.findUnique({
       where: { id },
@@ -99,6 +105,9 @@ export async function getUserById(id: string) {
 }
 
 export async function updateUser(id: string, data: UserEditFormData) {
+  if (!(await hasRole(ADMIN_ROLES))) {
+    return { success: false, message: "Not authorized." };
+  }
   try {
     const passwordData =
       data.password && data.password.length > 0
@@ -149,11 +158,8 @@ export async function updateUser(id: string, data: UserEditFormData) {
   }
 }
 
-export async function verifyPassword(plainPassword: string, hashedPassword: string) {
-  return await bcryptjs.compare(plainPassword, hashedPassword);
-}
-
 export async function searchUser(query: string) {
+  await requireRole(STAFF_ROLES);
   const q = query.trim();
   if (!q) return [];
 
@@ -179,6 +185,7 @@ export async function searchUser(query: string) {
 
 
 export async function listInstructors() {
+  await requireRole(STAFF_ROLES);
   return prisma.user.findMany({
     where: { OR: [{ role: Role.INSTRUCTOR }, { isInstructor: true }] },
     select: { id: true, name: true, email: true },
@@ -187,6 +194,7 @@ export async function listInstructors() {
 }
 
 export async function listAgents() {
+  await requireRole(STAFF_ROLES);
   return prisma.user.findMany({
     where: { role: { in: [Role.ADMIN, Role.STAFF] } },
     select: { id: true, name: true, email: true },
@@ -202,6 +210,9 @@ export async function createUserAsAdmin(data: {
   password: string;
   isInstructor?: boolean;
 }) {
+  if (!(await hasRole(ADMIN_ROLES))) {
+    return { success: false, message: "Not authorized." };
+  }
   try {
     const hashedPassword = await bcryptjs.hash(data.password, 10);
     const user = await prisma.$transaction(async (tx) => {
@@ -213,6 +224,8 @@ export async function createUserAsAdmin(data: {
           role: data.role,
           isInstructor: data.isInstructor ?? false,
           password: hashedPassword,
+          // Admin-created accounts are trusted, so skip the verification nag.
+          emailVerified: new Date(),
         },
         select: { id: true },
       });
@@ -232,6 +245,7 @@ export async function createUserAsAdmin(data: {
 }
 
 export async function createStudent(formData: FormData) {
+  await requireRole(STAFF_ROLES);
   const name = String(formData.get("name") ?? "").trim();
   const email = String(formData.get("email") ?? "").trim();
   const phone = String(formData.get("phone") ?? "").trim() || null;
@@ -250,6 +264,9 @@ export async function createStudent(formData: FormData) {
 }
 
 export async function createGuest(data: { name: string; email: string; phone: string | null }) {
+  if (!(await hasRole(STAFF_ROLES))) {
+    return { success: false as const, message: "Not authorized." };
+  }
   try {
     const hashedPassword = await bcryptjs.hash(crypto.randomUUID(), 10);
     const user = await prisma.user.create({
@@ -267,6 +284,9 @@ export async function createGuest(data: { name: string; email: string; phone: st
 }
 
 export async function deleteUser(id: string) {
+  if (!(await hasRole(ADMIN_ROLES))) {
+    return { success: false as const, message: "Not authorized." };
+  }
   try {
     await prisma.user.delete({ where: { id } });
     revalidatePath("/users");
@@ -310,6 +330,7 @@ function buildUserWhere(query?: string, role?: Role): Prisma.UserWhereInput | un
 }
 
 export async function listUsers(query?: string, role?: Role) {
+  await requireRole(STAFF_ROLES);
   return prisma.user.findMany({
     where: buildUserWhere(query, role),
     select: {
@@ -326,6 +347,7 @@ export async function listUsers(query?: string, role?: Role) {
 }
 
 export async function listUsersForExport(query?: string, role?: Role) {
+  await requireRole(ADMIN_ROLES);
   return prisma.user.findMany({
     where: buildUserWhere(query, role),
     select: {

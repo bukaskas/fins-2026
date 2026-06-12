@@ -20,6 +20,7 @@ interface StaffNotificationEmailProps {
   numberOfPeople: number;
   numberOfKids?: number;
   totalPriceCents?: number;
+  bookingId?: string;
 }
 
 const StaffNotificationEmail = ({
@@ -31,6 +32,7 @@ const StaffNotificationEmail = ({
   numberOfPeople,
   numberOfKids,
   totalPriceCents,
+  bookingId,
 }: StaffNotificationEmailProps) => {
   const isDayUse = service === "day-use";
   const isPharaoh = service === "pharaoh-airstyle";
@@ -39,7 +41,9 @@ const StaffNotificationEmail = ({
   const fmt = (cents: number) => `${(cents / 100).toLocaleString("en-EG")} EGP`;
 
   const waPhone = customerPhone.replace(/[^\d+]/g, "");
-  const bookingsLink = `https://www.finskitesurfing.com/bookings?q=${customerPhone.replace(/\D/g, "")}`;
+  const bookingsLink = bookingId
+    ? `https://www.finskitesurfing.com/bookings/${bookingId}`
+    : `https://www.finskitesurfing.com/bookings?q=${customerPhone.replace(/\D/g, "")}`;
   const waMessage = encodeURIComponent(
     `Hello,\nThank you for booking with Fins Kitesurfing & Beach Club! We're excited to have you with us.\nTo complete your first booking, could you please share your Instagram account?\nYou can track the status of your booking anytime here: ${bookingsLink}\nLooking forward to seeing you on the water! 🪁\nThe Fins Team`
   );
@@ -91,7 +95,7 @@ const StaffNotificationEmail = ({
                 href={bookingsLink}
                 className="py-2.5 px-5 bg-orange-500 rounded-md text-white text-sm font-semibold no-underline text-center"
               >
-                View All Bookings
+                {bookingId ? "View Booking" : "View All Bookings"}
               </Button>
             </Section>
             {isKitesurfingCourse && (

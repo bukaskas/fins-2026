@@ -1,10 +1,6 @@
 "use client";
 import Link from "next/link";
-import { useGSAP } from "@gsap/react";
-import gsap from "gsap";
-import { ScrollTrigger } from "gsap/ScrollTrigger";
-
-gsap.registerPlugin(useGSAP, ScrollTrigger);
+import Reveal from "@/components/kitesurfing/Reveal";
 
 const accent = "#38bdf8";
 
@@ -36,25 +32,15 @@ const tiers = [
 ];
 
 function MembershipSections() {
-  useGSAP(() => {
-    gsap.from("#member", {
-      scrollTrigger: {
-        trigger: "#member",
-        toggleActions: "restart none none none",
-        end: "top 75%",
-        scrub: 1,
-      },
-      opacity: 0,
-      y: 40,
-      duration: 4,
-      ease: "power2.out",
-    });
-  });
-
   return (
-    <section id="member" style={{ background: "#0c1a2e" }}>
+    <section
+      id="member"
+      className="scroll-mt-16 rounded-t-[2.5rem] md:rounded-t-[4rem]"
+      style={{ background: "#0c1a2e" }}
+    >
       <div className="max-w-7xl mx-auto px-8 md:px-14 lg:px-20 py-20 md:py-28">
 
+        <Reveal>
         {/* Header */}
         <div className="flex items-center gap-3 mb-8">
           <span className="h-px w-7 flex-shrink-0" style={{ background: accent }} />
@@ -83,13 +69,14 @@ function MembershipSections() {
             rentals and storage, and priority booking.
           </p>
         </div>
+        </Reveal>
 
         {/* Tier cards */}
         <div className="grid md:grid-cols-3 gap-4">
-          {tiers.map(({ name, price, period, description, features, featured }) => (
+          {tiers.map(({ name, price, period, description, features, featured }, i) => (
+            <Reveal key={name} delay={i * 0.1} className="flex">
             <div
-              key={name}
-              className="flex flex-col p-8 transition-transform duration-300 hover:-translate-y-1"
+              className="flex flex-col flex-1 p-8 transition-transform duration-300 hover:-translate-y-1"
               style={{
                 background: featured ? accent : "rgba(255,255,255,0.05)",
                 border:     featured ? "none" : "1px solid rgba(255,255,255,0.08)",
@@ -162,6 +149,7 @@ function MembershipSections() {
                 </Link>
               </div>
             </div>
+            </Reveal>
           ))}
         </div>
       </div>

@@ -1,96 +1,166 @@
 import {
+  APP_NAME,
   EMAIL_ADDRESS,
   FACEBOOK_URL,
   INSTAGRAM_URL,
   LOCATION_ADDRESS,
   WHATSAPP_PHONE,
 } from "@/lib/constants";
-import { Mail, Map } from "lucide-react";
+import { Mail, MapPin } from "lucide-react";
 import Link from "next/link";
-import { FaInstagram, FaWhatsapp } from "react-icons/fa";
+import { FaInstagram, FaFacebook, FaWhatsapp } from "react-icons/fa";
 import Image from "next/image";
 import white_logo from "@/public/images/fins-white-logo.svg";
 
-import { TiSocialFacebookCircular } from "react-icons/ti";
+const accent = "#38bdf8";
+
+const linkColumns = [
+  {
+    title: "Kitesurfing",
+    links: [
+      { label: "Courses",      href: "/kitesurfing#courses" },
+      { label: "Gear Rental",  href: "/kitesurfing#rental" },
+      { label: "Storage",      href: "/kitesurfing#storage" },
+      { label: "Book a session", href: "/kitesurfing/booking" },
+    ],
+  },
+  {
+    title: "Day Use",
+    links: [
+      { label: "Beach & Lagoon", href: "/day-use" },
+      { label: "Reservations",   href: "/day-use/booking" },
+      { label: "Memberships",    href: "/kitesurfing#member" },
+    ],
+  },
+  {
+    title: "Explore",
+    links: [
+      { label: "Restaurant", href: "/restaurant" },
+      { label: "About us",   href: "/about" },
+    ],
+  },
+];
+
+const footerLinkClass =
+  "text-[0.8rem] font-[family-name:var(--font-raleway)] font-[300] text-white/55 hover:text-white transition-colors duration-200";
+
+function ColumnTitle({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="flex items-center gap-3 mb-5">
+      <span className="h-px w-5 flex-shrink-0" style={{ background: accent }} />
+      <span
+        className="text-[0.58rem] tracking-[0.35em] uppercase font-[family-name:var(--font-raleway)] font-[500]"
+        style={{ color: accent }}
+      >
+        {children}
+      </span>
+    </div>
+  );
+}
+
 function Footer() {
   return (
-    <footer className="bg-gray-800 text-white mt-auto bg-gray-800 text-white z-50">
-      {/* First row */}
-      <div className="grid grid-cols-3 md:mx-28 gap-4 p-4 ">
-        <Image src={white_logo} alt="Fins Logo" width={150} height={150} />
+    <footer className="mt-auto text-white" style={{ background: "#0c1a2e" }}>
+      <div className="max-w-7xl mx-auto px-8 md:px-14 lg:px-20 pt-16 pb-10">
 
-        <div className="flex flex-col gap-2">
-          <div className="font-semibold">Contact us</div>
-          <div className="flex flex-row gap-2 items-center">
-            <FaWhatsapp className="text-base" size={22} />
-            <Link
-              href={`https://wa.me/20${WHATSAPP_PHONE.substring(1)}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="hover:underline hover:text-gray-300"
-            >
-              {WHATSAPP_PHONE}
+        {/* Top: logo + tagline / link columns / contact */}
+        <div className="grid grid-cols-2 md:grid-cols-[1.2fr_1fr_1fr_1fr_1.2fr] gap-x-8 gap-y-12 pb-14">
+
+          {/* Brand */}
+          <div className="col-span-2 md:col-span-1 flex flex-col gap-5">
+            <Link href="/" className="w-fit">
+              <Image src={white_logo} alt={APP_NAME} width={130} height={130} />
             </Link>
+            <p className="text-[0.78rem] font-[family-name:var(--font-raleway)] font-[300] leading-relaxed text-white/45 max-w-[16rem]">
+              IKO certified kite centre on the Red Sea — courses, rental, beach
+              and restaurant in Sokhna.
+            </p>
           </div>
 
-          <div>
-            <Link
-              href={`${LOCATION_ADDRESS}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex flex-row gap-2 items-center hover:underline hover:text-gray-300 flex flex-row items-center italic"
-            >
-              <Map /> Click here
-            </Link>
-          </div>
+          {/* Link columns */}
+          {linkColumns.map(({ title, links }) => (
+            <nav key={title} aria-label={title}>
+              <ColumnTitle>{title}</ColumnTitle>
+              <ul className="flex flex-col gap-2.5">
+                {links.map(({ label, href }) => (
+                  <li key={label}>
+                    <Link href={href} className={footerLinkClass}>
+                      {label}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </nav>
+          ))}
 
-          <Link
-            href={`mailto:${EMAIL_ADDRESS}`}
-            className="hover:underline hover:text-gray-300 flex flex-row gap-2 items-center italic"
-          >
-            <Mail size={25} className="shrink-0" />
-            {EMAIL_ADDRESS}
-          </Link>
+          {/* Contact */}
+          <div className="col-span-2 md:col-span-1">
+            <ColumnTitle>Contact</ColumnTitle>
+            <ul className="flex flex-col gap-3">
+              <li>
+                <Link
+                  href={`https://wa.me/20${WHATSAPP_PHONE.substring(1)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={`${footerLinkClass} flex items-center gap-2.5`}
+                >
+                  <FaWhatsapp size={17} className="shrink-0" style={{ color: accent }} />
+                  {WHATSAPP_PHONE}
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href={`mailto:${EMAIL_ADDRESS}`}
+                  className={`${footerLinkClass} flex items-center gap-2.5`}
+                >
+                  <Mail size={17} className="shrink-0" style={{ color: accent }} />
+                  {EMAIL_ADDRESS}
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href={LOCATION_ADDRESS}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={`${footerLinkClass} flex items-center gap-2.5`}
+                >
+                  <MapPin size={17} className="shrink-0" style={{ color: accent }} />
+                  Location
+                </Link>
+              </li>
+            </ul>
+          </div>
         </div>
-        <div>
-          <div className="flex flex-col gap-2">
-            <div className="font-semibold">Socials</div>
+
+        {/* Bottom bar */}
+        <div
+          className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-7"
+          style={{ borderTop: "1px solid rgba(255,255,255,0.08)" }}
+        >
+          <p className="text-[0.68rem] font-[family-name:var(--font-raleway)] font-[300] tracking-[0.08em] text-white/35">
+            © {new Date().getFullYear()} {APP_NAME}. All rights reserved.
+          </p>
+
+          <div className="flex items-center gap-5">
             <Link
               href={INSTAGRAM_URL}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex gap-2"
+              aria-label="Instagram"
+              className="text-white/45 hover:text-white transition-colors duration-200"
             >
-              <FaInstagram size={25} />
+              <FaInstagram size={19} />
             </Link>
             <Link
               href={FACEBOOK_URL}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex gap-2 font-semibold"
+              aria-label="Facebook"
+              className="text-white/45 hover:text-white transition-colors duration-200"
             >
-              <TiSocialFacebookCircular size={25} />
+              <FaFacebook size={18} />
             </Link>
           </div>
-        </div>
-      </div>
-      <div className="grid grid-cols-3 md:mx-28 gap-4 p-4 ">
-        {/* Second row */}
-        <div>
-          <div className="font-semibold">Kite</div>
-          <div>Lessons</div>
-          <div>Rental</div>
-          <div>Storage</div>
-        </div>
-        <div>
-          <div className="font-semibold">Day use</div>
-          <div>Info</div>
-          <div>Reservations</div>
-        </div>
-        <div>
-          <div className="font-semibold">Restaurant</div>
-          <div>Menu</div>
-          <div>Photos</div>
         </div>
       </div>
     </footer>
