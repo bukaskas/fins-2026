@@ -250,7 +250,7 @@ function RestaurantPage() {
               </span>
             </Link>
             <Link
-              href="https://drive.google.com/file/d/1ucvNArsKuwd_Em9CXWguJKIIshlh-dG0/view?usp=sharing"
+              href="https://drive.google.com/file/d/1qpcb2GbQISgk6uTCDn0KcJzagvJV1DxG/view?usp=sharing"
               target="_blank"
               rel="noopener noreferrer"
               className="group inline-flex items-center gap-2.5 text-[0.72rem] font-[400] tracking-[0.14em] uppercase px-7 py-3.5 font-[family-name:var(--font-raleway)] transition-colors duration-200"
