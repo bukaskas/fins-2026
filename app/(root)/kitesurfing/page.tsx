@@ -50,10 +50,10 @@ function Hero() {
         <Reveal delay={0.1}>
           <h1 className="font-[family-name:var(--font-raleway)] leading-none mb-6">
             <span className="block text-[clamp(2.8rem,7vw,6rem)] font-[100] tracking-[-0.02em] text-white leading-[0.92]">
-              Ride the
+              Master the
             </span>
             <span className="block text-[clamp(2.8rem,7vw,6rem)] font-[800] tracking-[-0.02em] text-[#38bdf8] leading-[0.92]">
-              Red Sea.
+              Wind.
             </span>
           </h1>
         </Reveal>

@@ -42,8 +42,8 @@ function DayUsePage() {
           eyebrow="02 · Restaurant"
           title="Restaurant"
           subtitle="Fresh food, sea views"
-          body="Our beach kitchen is open all day, serving hand-crafted burgers, stone-baked pizza, crisp salads, and freshly squeezed juices. Wind down with a shisha as the sun sets over the Red Sea."
-          tags={["Burgers", "Pizza", "Salads", "Fresh Juice", "Shisha"]}
+          body="Our beach kitchen is open all day, serving hand-crafted burgers, stone-baked pizza, crisp salads, and freshly squeezed juices as the sun sets over the Red Sea."
+          tags={["Burgers", "Pizza", "Salads", "Fresh Juice"]}
           imageLeft={false}
           tinted
         />
