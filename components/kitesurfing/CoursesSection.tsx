@@ -197,41 +197,9 @@ const courses: CourseCardProps[] = [
     title: "Refresher Course",
     subtitle: "Finished the beginner course? Polish your skills to ride solo",
     duration: "2 hours",
-    price: "From 5,000 EGP",
+    price: "From 5,500 EGP",
     image: refresher,
-    dialogTitle: "Refresher Course",
-    dialogContent: (
-      <div className="text-left space-y-4">
-        <p className="text-sm text-white/55 font-[family-name:var(--font-raleway)] font-[300] leading-relaxed">
-          Designed for those who completed a course before but want to refresh
-          and improve their skills to reach an independent level.
-        </p>
-        <p className="text-sm text-white/55 font-[family-name:var(--font-raleway)] font-[300] leading-relaxed">
-          We check your current skills and work on what you need to ride safely
-          on your own.
-        </p>
-        <p className="text-sm text-white/55 font-[family-name:var(--font-raleway)] font-[300] leading-relaxed">
-          Duration:{" "}
-          <strong className="text-white/80 font-[500]">2-hour session</strong>
-        </p>
-        <div className="space-y-2 pt-2">
-          <div
-            className="text-[0.6rem] tracking-[0.28em] uppercase font-[family-name:var(--font-raleway)] font-[600]"
-            style={{ color: accent }}
-          >
-            Pricing
-          </div>
-          <div className="text-sm text-white/70 font-[family-name:var(--font-raleway)] font-[300]">
-            Private: <span className="text-white font-[500]">7,500 EGP</span>
-          </div>
-          <div className="text-sm text-white/70 font-[family-name:var(--font-raleway)] font-[300]">
-            Group: <span className="text-white font-[500]">5,000 EGP</span> per
-            person (2–4 persons)
-          </div>
-        </div>
-        {bookBtn}
-      </div>
-    ),
+    moreInfoHref: "/kitesurfing/refresher-course",
   },
   {
     index: "04",
