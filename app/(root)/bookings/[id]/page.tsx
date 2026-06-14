@@ -133,6 +133,7 @@ export default async function BookingDetailPage({
                 {booking.name}
               </h1>
 
+              {isStaff && (
               <div className="mt-4 flex flex-wrap gap-2">
                 {phoneDigits && (
                   <ContactLink

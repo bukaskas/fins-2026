@@ -20,6 +20,12 @@ const STAFF_PREFIXES = [
 ];
 const AUTH_PREFIXES = ["/my-schedule"];
 
+// Public booking detail page: /bookings/<uuid> (no trailing path). Lets a guest
+// check their own booking status from a shared link without signing in. The edit
+// route /bookings/<uuid>/edit has a trailing segment and stays staff-only.
+const PUBLIC_BOOKING_DETAIL =
+  /^\/bookings\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\/?$/i;
+
 function matches(pathname: string, prefixes: string[]): boolean {
   return prefixes.some(
     (p) => pathname === p || pathname.startsWith(`${p}/`),
@@ -28,6 +34,9 @@ function matches(pathname: string, prefixes: string[]): boolean {
 
 export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
+
+  // Public, unauthenticated booking detail page.
+  if (PUBLIC_BOOKING_DETAIL.test(pathname)) return NextResponse.next();
 
   // Determine the required tier for this path.
   let required: "admin" | "staff" | "auth" | null = null;
