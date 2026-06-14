@@ -166,6 +166,7 @@ export default async function BookingDetailPage({
                   />
                 )}
               </div>
+              )}
             </div>
 
             {/* right: status + compact date card */}
