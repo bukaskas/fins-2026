@@ -15,7 +15,7 @@ import { authOptions } from "@/lib/auth";
 import { addClosedDate } from "./closedDate.actions";
 import { startOfDay, startOfMonth, endOfMonth, getDaysInMonth } from "date-fns";
 import { computeBookingTotalCents } from "@/lib/pricing";
-import { createPaymentOrder } from "@/lib/flash";
+import { createPaymentOrder, getFlashOrder } from "@/lib/flash";
 
 const STAFF_ROLES: Role[] = [Role.ADMIN, Role.STAFF, Role.OWNER];
 
@@ -814,15 +814,6 @@ export async function recordFlashPayment(payload: Record<string, unknown>) {
       return { success: true, ignored: true as const };
     }
 
-    // Idempotency: a retried/duplicate webhook for the same transaction is a no-op.
-    const existing = await prisma.bookingPayment.findUnique({
-      where: { flashTransactionId: transactionId },
-      select: { id: true },
-    });
-    if (existing) {
-      return { success: true, duplicate: true as const };
-    }
-
     const booking = await prisma.booking.findUnique({
       where: { id: aggregatorOrderId },
       select: { id: true },
@@ -840,40 +831,114 @@ export async function recordFlashPayment(payload: Record<string, unknown>) {
       return { success: true, ignored: true as const };
     }
 
-    // Mirror payBookingDeposit: record the payment, re-aggregate, update booking.
-    await prisma.$transaction(async (tx) => {
-      await tx.bookingPayment.create({
-        data: {
-          bookingId: booking.id,
-          amountCents: paidAmountCents,
-          method: PaymentMethod.CARD,
-          reference: transactionId,
-          flashTransactionId: transactionId,
-        },
-      });
-
-      const { _sum } = await tx.bookingPayment.aggregate({
-        where: { bookingId: booking.id },
-        _sum: { amountCents: true },
-      });
-
-      await tx.booking.update({
-        where: { id: booking.id },
-        data: { amountPaidCents: _sum.amountCents ?? 0 },
-      });
+    const applied = await applyFlashPayment({
+      bookingId: booking.id,
+      amountCents: paidAmountCents,
+      idempotencyKey: transactionId,
     });
-
-    // Reuse CONFIRMED side-effects (revalidation, 80-person auto-close).
-    await updateBookingStatus(booking.id, BookingStatus.CONFIRMED);
-    revalidatePath(`/bookings/${booking.id}`);
-
-    return { success: true, confirmed: true as const };
+    return { success: true, ...applied };
   } catch (error) {
     console.error("Flash webhook processing error:", error);
     // Unexpected error — let Flash retry.
     return {
       success: false,
       retry: true as const,
+      message: error instanceof Error ? error.message : String(error),
+    };
+  }
+}
+
+/**
+ * Record a Flash payment against a booking and confirm it. Shared by the
+ * webhook and the manual status-check so the two paths can't double-record:
+ *  - same idempotency key (DB unique) → no-op
+ *  - booking already has any Flash-originated payment → no-op
+ *    (the link is always for the full outstanding balance, so one per booking)
+ */
+async function applyFlashPayment(opts: {
+  bookingId: string;
+  amountCents: number;
+  idempotencyKey: string;
+}) {
+  const { bookingId, amountCents, idempotencyKey } = opts;
+
+  const sameKey = await prisma.bookingPayment.findUnique({
+    where: { flashTransactionId: idempotencyKey },
+    select: { id: true },
+  });
+  if (sameKey) return { duplicate: true as const };
+
+  const existingFlash = await prisma.bookingPayment.findFirst({
+    where: { bookingId, flashTransactionId: { not: null } },
+    select: { id: true },
+  });
+  if (existingFlash) return { duplicate: true as const };
+
+  // Mirror payBookingDeposit: record the payment, re-aggregate, update booking.
+  await prisma.$transaction(async (tx) => {
+    await tx.bookingPayment.create({
+      data: {
+        bookingId,
+        amountCents,
+        method: PaymentMethod.CARD,
+        reference: idempotencyKey,
+        flashTransactionId: idempotencyKey,
+      },
+    });
+
+    const { _sum } = await tx.bookingPayment.aggregate({
+      where: { bookingId },
+      _sum: { amountCents: true },
+    });
+
+    await tx.booking.update({
+      where: { id: bookingId },
+      data: { amountPaidCents: _sum.amountCents ?? 0 },
+    });
+  });
+
+  // Reuse CONFIRMED side-effects (revalidation, 80-person auto-close).
+  await updateBookingStatus(bookingId, BookingStatus.CONFIRMED);
+  revalidatePath(`/bookings/${bookingId}`);
+
+  return { confirmed: true as const };
+}
+
+/**
+ * Pull the live order status from Flash and, if paid, confirm the booking.
+ * A webhook-free fallback/reconciliation path (idempotent with the webhook).
+ */
+export async function checkBookingPaymentStatus(bookingId: string) {
+  try {
+    const booking = await prisma.booking.findUnique({
+      where: { id: bookingId },
+      select: { id: true },
+    });
+    if (!booking) return { success: false, message: "Booking not found." };
+
+    const order = await getFlashOrder(bookingId);
+    const status = order.status ?? "unknown";
+
+    if (status !== "succeeded") {
+      return { success: true as const, status, confirmed: false as const };
+    }
+
+    const amountCents = order.amountCents ?? 0;
+    if (amountCents <= 0) {
+      return { success: false, message: "Flash returned no amount for this order." };
+    }
+
+    const applied = await applyFlashPayment({
+      bookingId,
+      amountCents,
+      idempotencyKey: order.id ?? `flash-order-${bookingId}`,
+    });
+
+    return { success: true as const, status, confirmed: true as const, ...applied };
+  } catch (error) {
+    console.error("Check payment status error:", error);
+    return {
+      success: false,
       message: error instanceof Error ? error.message : String(error),
     };
   }

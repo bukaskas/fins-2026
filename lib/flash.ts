@@ -189,6 +189,65 @@ export async function createPaymentOrder(
 }
 
 // ---------------------------------------------------------------------------
+// Retrieve order status (reconciliation / webhook fallback)
+// ---------------------------------------------------------------------------
+
+export type FlashOrder = {
+  id?: string;
+  aggregatorOrderId?: string;
+  amountCents?: number;
+  currency?: string;
+  status?: string;
+  raw: unknown;
+};
+
+/** GET /v1/orders/aggregator/{aggregatorOrderId} — live order status from Flash. */
+export async function getFlashOrder(
+  aggregatorOrderId: string
+): Promise<FlashOrder> {
+  const cfg = getConfig();
+  const token = await getAccessToken();
+
+  const res = await fetch(
+    `${cfg.baseUrl}/v1/orders/aggregator/${encodeURIComponent(
+      aggregatorOrderId
+    )}`,
+    {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+    }
+  );
+
+  const data = (await res.json().catch(() => ({}))) as {
+    id?: string;
+    aggregatorOrderId?: string;
+    amountCents?: number;
+    currency?: string;
+    status?: string;
+    error?: { code?: string; message?: string };
+  };
+
+  if (!res.ok) {
+    throw new FlashError(
+      data.error?.message || `Failed to fetch Flash order (HTTP ${res.status}).`,
+      { code: data.error?.code, status: res.status }
+    );
+  }
+
+  return {
+    id: data.id,
+    aggregatorOrderId: data.aggregatorOrderId,
+    amountCents: data.amountCents,
+    currency: data.currency,
+    status: data.status,
+    raw: data,
+  };
+}
+
+// ---------------------------------------------------------------------------
 // Webhook signature verification (HMAC-SHA256)
 // ---------------------------------------------------------------------------
 
