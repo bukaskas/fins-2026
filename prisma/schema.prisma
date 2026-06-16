@@ -152,6 +152,11 @@ model Booking {
   agentId         String?       @db.Uuid
   agent           User?         @relation("BookingAgent", fields: [agentId], references: [id], onDelete: SetNull)
   payments        BookingPayment[]
+
+  // Flash payment link integration
+  flashOrderId         String?
+  paymentLink          String?
+  paymentLinkExpiresAt DateTime?
 }
 
 model BookingPayment {
@@ -163,6 +168,9 @@ model BookingPayment {
   reference   String?
   actorId     String?       @db.Uuid
   createdAt   DateTime      @default(now()) @db.Timestamp(6)
+
+  // Flash transaction id — unique so a retried/duplicate webhook can't double-insert
+  flashTransactionId String? @unique
 
   @@index([bookingId, createdAt])
 }

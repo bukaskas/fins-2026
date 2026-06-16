@@ -11,6 +11,7 @@ import { getBookingById } from "@/lib/actions/booking.actions";
 import PartyEditDialog from "./PartyEditDialog";
 import StatusEditDialog from "./StatusEditDialog";
 import NextStepCard from "./NextStepCard";
+import PaymentLinkCard from "./PaymentLinkCard";
 import PayDepositDialog from "@/components/bookings/PayDepositDialog";
 
 const STAFF_ROLES: Role[] = [Role.ADMIN, Role.STAFF, Role.OWNER];
@@ -341,6 +342,16 @@ export default async function BookingDetailPage({
               />
             )}
           </div>
+
+          {/* payment link — staff only, when awaiting payment or a link already exists */}
+          {isStaff &&
+            (booking.bookingStatus === BookingStatus.WAITING_PAYMENT ||
+              booking.paymentLink) && (
+              <PaymentLinkCard
+                bookingId={booking.id}
+                paymentLink={booking.paymentLink}
+              />
+            )}
 
           {/* assignment (only if relevant) */}
           {(booking.agent || booking.instructor) && (

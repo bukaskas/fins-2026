@@ -5,7 +5,7 @@ import { isRedirectError } from "next/dist/client/components/redirect-error";
 import { revalidatePath } from "next/cache";
 import { BookingDepositData, bookingDepositSchema, BookingFormData, bookingFormSchema, bulkEmailSchema, UpdateBookingData, updateBookingSchema } from "../validators";
 import { sendBookingEmail, sendStaffNotificationEmail, sendFullyBookedEmail, sendBulkEmail } from "@/emails/index";
-import { Booking, BookingStatus, Role } from "@prisma/client";
+import { Booking, BookingStatus, PaymentMethod, Role } from "@prisma/client";
 
 export type BookingWithAgent = Booking & {
   agent: { id: string; name: string | null; email: string } | null;
@@ -15,8 +15,12 @@ import { authOptions } from "@/lib/auth";
 import { addClosedDate } from "./closedDate.actions";
 import { startOfDay, startOfMonth, endOfMonth, getDaysInMonth } from "date-fns";
 import { computeBookingTotalCents } from "@/lib/pricing";
+import { createPaymentOrder } from "@/lib/flash";
 
 const STAFF_ROLES: Role[] = [Role.ADMIN, Role.STAFF, Role.OWNER];
+
+const FLASH_CURRENCY = process.env.FLASH_CURRENCY || "EGP";
+const FLASH_MIN_CENTS = 500; // Flash rejects orders below 5 EGP
 
 
 
@@ -701,10 +705,177 @@ export async function updateBookingStatus(id: string, status: BookingStatus) {
       }
     }
 
+    // Generate a Flash payment link when moving into WAITING_PAYMENT.
+    // Link creation is non-fatal: the status change still succeeds and the
+    // admin can retry from the booking page if it fails.
+    if (status === BookingStatus.WAITING_PAYMENT) {
+      const linkRes = await createBookingPaymentLink(id);
+      if (!linkRes.success) {
+        return { success: true, warning: linkRes.message };
+      }
+    }
+
     return { success: true };
   } catch (error) {
     console.error('Status update error:', error);
     return { success: false, message: `Failed to update status. Error: ${error instanceof Error ? error.message : String(error)}` };
+  }
+}
+
+/**
+ * Create (or reuse) a Flash payment link for a booking's outstanding balance.
+ * Safe to call repeatedly — if a link already exists it is returned as-is.
+ */
+export async function createBookingPaymentLink(bookingId: string) {
+  try {
+    const booking = await prisma.booking.findUnique({ where: { id: bookingId } });
+    if (!booking) return { success: false, message: "Booking not found." };
+
+    // Idempotency: reuse an existing link rather than creating a duplicate
+    // Flash order (aggregatorOrderId = booking id is unique on Flash's side).
+    if (booking.flashOrderId && booking.paymentLink) {
+      return { success: true as const, paymentLink: booking.paymentLink, reused: true };
+    }
+
+    if (booking.totalPriceCents == null) {
+      return {
+        success: false,
+        message: "Set the booking total price before creating a payment link.",
+      };
+    }
+
+    const balanceCents = booking.totalPriceCents - booking.amountPaidCents;
+    if (balanceCents < FLASH_MIN_CENTS) {
+      return {
+        success: false,
+        message: `Outstanding balance must be at least ${FLASH_MIN_CENTS / 100} ${FLASH_CURRENCY} to create a payment link.`,
+      };
+    }
+
+    const result = await createPaymentOrder({
+      aggregatorOrderId: booking.id,
+      amountCents: balanceCents,
+      currency: FLASH_CURRENCY,
+      customer: { name: booking.name, phone: booking.phone },
+    });
+
+    await prisma.booking.update({
+      where: { id: bookingId },
+      data: {
+        flashOrderId: result.flashOrderId,
+        paymentLink: result.paymentLink,
+      },
+    });
+    revalidatePath('/bookings', 'layout');
+    revalidatePath(`/bookings/${bookingId}`);
+
+    return { success: true as const, paymentLink: result.paymentLink };
+  } catch (error) {
+    console.error('Flash payment link error:', error);
+    return {
+      success: false,
+      message: `Failed to create payment link. ${error instanceof Error ? error.message : String(error)}`,
+    };
+  }
+}
+
+/**
+ * Apply a verified Flash webhook event to a booking.
+ *
+ * Signature verification happens in the route before this is called. This
+ * function is idempotent (keyed on the Flash transaction id) and only records a
+ * payment + confirms the booking on a "succeeded" event. Returns `retry: true`
+ * only for unexpected failures so the route can signal Flash to retry.
+ */
+export async function recordFlashPayment(payload: Record<string, unknown>) {
+  try {
+    const transactionId = String(payload.transactionId ?? "");
+    const aggregatorOrderId = String(payload.aggregatorOrderId ?? "");
+    const status = String(payload.status ?? "");
+    const order = (payload.order ?? {}) as Record<string, unknown>;
+    const paidAmountCents = Number(
+      payload.PaidAmountCents ?? order.amountCents ?? 0
+    );
+
+    if (!transactionId || !aggregatorOrderId) {
+      console.warn("Flash webhook missing transactionId/aggregatorOrderId", {
+        transactionId,
+        aggregatorOrderId,
+      });
+      return { success: true, ignored: true as const };
+    }
+
+    // Only succeeded payments mutate the booking. Log everything else.
+    if (status !== "succeeded") {
+      console.info(`Flash webhook ignored (status=${status})`, {
+        aggregatorOrderId,
+        transactionId,
+      });
+      return { success: true, ignored: true as const };
+    }
+
+    // Idempotency: a retried/duplicate webhook for the same transaction is a no-op.
+    const existing = await prisma.bookingPayment.findUnique({
+      where: { flashTransactionId: transactionId },
+      select: { id: true },
+    });
+    if (existing) {
+      return { success: true, duplicate: true as const };
+    }
+
+    const booking = await prisma.booking.findUnique({
+      where: { id: aggregatorOrderId },
+      select: { id: true },
+    });
+    if (!booking) {
+      console.warn("Flash webhook for unknown booking", { aggregatorOrderId });
+      return { success: true, ignored: true as const };
+    }
+
+    if (!Number.isFinite(paidAmountCents) || paidAmountCents <= 0) {
+      console.warn("Flash webhook with invalid paid amount", {
+        aggregatorOrderId,
+        paidAmountCents,
+      });
+      return { success: true, ignored: true as const };
+    }
+
+    // Mirror payBookingDeposit: record the payment, re-aggregate, update booking.
+    await prisma.$transaction(async (tx) => {
+      await tx.bookingPayment.create({
+        data: {
+          bookingId: booking.id,
+          amountCents: paidAmountCents,
+          method: PaymentMethod.CARD,
+          reference: transactionId,
+          flashTransactionId: transactionId,
+        },
+      });
+
+      const { _sum } = await tx.bookingPayment.aggregate({
+        where: { bookingId: booking.id },
+        _sum: { amountCents: true },
+      });
+
+      await tx.booking.update({
+        where: { id: booking.id },
+        data: { amountPaidCents: _sum.amountCents ?? 0 },
+      });
+    });
+
+    // Reuse CONFIRMED side-effects (revalidation, 80-person auto-close).
+    await updateBookingStatus(booking.id, BookingStatus.CONFIRMED);
+    revalidatePath(`/bookings/${booking.id}`);
+
+    return { success: true, confirmed: true as const };
+  } catch (error) {
+    console.error("Flash webhook processing error:", error);
+    // Unexpected error — let Flash retry.
+    return {
+      success: false,
+      retry: true as const,
+      message: error instanceof Error ? error.message : String(error),
+    };
   }
 }
 
