@@ -192,6 +192,7 @@ async function BookingsPage({
           { label: "Day Use",     href: "/bookings/day-use",     variant: "outline" },
           { label: "Restaurant",  href: "/bookings/restaurant",  variant: "outline" },
           { label: "Schedule",    href: "/bookings/schedule",    variant: "outline" },
+          { label: "Deposits",    href: "/bookings/payments",    variant: "outline" },
         ].map((nav) => (
           <Button key={nav.href} asChild variant={nav.variant as any} className="rounded-full text-xs">
             <Link href={nav.href}>{nav.label}</Link>

@@ -221,12 +221,7 @@ export async function getFlashOrder(
     }
   );
 
-  const data = (await res.json().catch(() => ({}))) as {
-    id?: string;
-    aggregatorOrderId?: string;
-    amountCents?: number;
-    currency?: string;
-    status?: string;
+  const data = (await res.json().catch(() => ({}))) as Record<string, unknown> & {
     error?: { code?: string; message?: string };
   };
 
@@ -237,12 +232,26 @@ export async function getFlashOrder(
     );
   }
 
+  if (process.env.FLASH_WEBHOOK_DEBUG === "true") {
+    console.info("[flash] getFlashOrder raw response", JSON.stringify(data));
+  }
+
+  // Be tolerant of shape: some responses wrap the order in `order` (like the
+  // create-order response) rather than returning it flat.
+  const order = ((data.order as Record<string, unknown>) ?? data) as {
+    id?: string;
+    aggregatorOrderId?: string;
+    amountCents?: number;
+    currency?: string;
+    status?: string;
+  };
+
   return {
-    id: data.id,
-    aggregatorOrderId: data.aggregatorOrderId,
-    amountCents: data.amountCents,
-    currency: data.currency,
-    status: data.status,
+    id: order.id,
+    aggregatorOrderId: order.aggregatorOrderId,
+    amountCents: order.amountCents,
+    currency: order.currency,
+    status: order.status,
     raw: data,
   };
 }

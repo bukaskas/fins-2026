@@ -665,6 +665,24 @@ export async function updateBooking(id: string, data: UpdateBookingData) {
   }
 }
 
+export async function getAllDepositPayments() {
+  try {
+    const payments = await prisma.bookingPayment.findMany({
+      orderBy: { createdAt: "desc" },
+      include: {
+        booking: { select: { id: true, name: true, service: true, date: true } },
+      },
+    });
+    return { success: true as const, data: payments };
+  } catch (error) {
+    console.error("Error fetching deposit payments", error);
+    return {
+      success: false as const,
+      message: error instanceof Error ? error.message : String(error),
+    };
+  }
+}
+
 export async function getBookingById(id: string) {
   try {
     const booking = await prisma.booking.findUnique({
