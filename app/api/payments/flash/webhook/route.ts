@@ -17,9 +17,19 @@ export async function GET() {
 // Flash posts payment transaction notifications here.
 // Register this URL with Flash: `${NEXT_PUBLIC_SERVER_URL}/api/payments/flash/webhook`
 export async function POST(req: Request) {
+  // Unconditional hit log — proves Flash actually called us, even if the body
+  // is unparseable or the signature is wrong. Remove once the integration is
+  // confirmed working.
+  const rawBody = await req.text();
+  console.info("[flash-webhook] HIT", {
+    time: new Date().toISOString(),
+    headers: Object.fromEntries(req.headers.entries()),
+    rawBody,
+  });
+
   let payload: Record<string, unknown>;
   try {
-    payload = (await req.json()) as Record<string, unknown>;
+    payload = JSON.parse(rawBody) as Record<string, unknown>;
   } catch {
     console.warn("[flash-webhook] received non-JSON body");
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
