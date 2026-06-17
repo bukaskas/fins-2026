@@ -613,3 +613,24 @@ POST /v1/orders/send
 **Expected Error Codes:**
 
 - `ORDER_SEND_ATTEMPTS_EXCEEDED` — only 3 attempts are allowed per order.
+
+
+Base URL: https://stg-api.useflash.app
+
+Client ID: S4OcZbT7pko1ssRLb3i9l9zdM2JXpd2S
+
+Client Secret: KOJqTSx0Uxxoi6SKQgmflQMLAVs97zEmWYlMePfXE6qCc06Gd8sWfp9EyXBEvaNd
+
+Hmac secret: C7mX9qTp2KvR8nHs4YdL1jWf5ZaB
+
+Integration ID: 30015243
+Test Cards:
+
+Card Number: 5123456789012346
+Expiry Date: 01/39
+CVV: 123
+Test Wallets:
+
+Wallet Num: 01010101010
+MPin Code: 123456
+OTP: 123456
