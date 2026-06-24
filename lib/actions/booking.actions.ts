@@ -762,17 +762,20 @@ export async function createBookingPaymentLink(bookingId: string) {
       };
     }
 
-    const balanceCents = booking.totalPriceCents - booking.amountPaidCents;
-    if (balanceCents < FLASH_MIN_CENTS) {
+    // The online payment is a 50% deposit to confirm the booking; the rest is
+    // paid on arrival. Subtract anything already paid so we never overcharge.
+    const depositCents = Math.round(booking.totalPriceCents / 2);
+    const dueCents = depositCents - booking.amountPaidCents;
+    if (dueCents < FLASH_MIN_CENTS) {
       return {
         success: false,
-        message: `Outstanding balance must be at least ${FLASH_MIN_CENTS / 100} ${FLASH_CURRENCY} to create a payment link.`,
+        message: `Deposit must be at least ${FLASH_MIN_CENTS / 100} ${FLASH_CURRENCY} to create a payment link.`,
       };
     }
 
     const result = await createPaymentOrder({
       aggregatorOrderId: booking.id,
-      amountCents: balanceCents,
+      amountCents: dueCents,
       currency: FLASH_CURRENCY,
       customer: { name: booking.name, phone: booking.phone },
     });
@@ -871,7 +874,7 @@ export async function recordFlashPayment(payload: Record<string, unknown>) {
  * webhook and the manual status-check so the two paths can't double-record:
  *  - same idempotency key (DB unique) → no-op
  *  - booking already has any Flash-originated payment → no-op
- *    (the link is always for the full outstanding balance, so one per booking)
+ *    (the link is always for the 50% deposit, so one per booking)
  */
 async function applyFlashPayment(opts: {
   bookingId: string;

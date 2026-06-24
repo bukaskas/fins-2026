@@ -230,6 +230,8 @@ export default async function BookingDetailPage({
           status={booking.bookingStatus}
           totalPriceCents={total}
           amountPaidCents={paid}
+          bookingId={booking.id}
+          paymentLink={booking.paymentLink}
         />
 
         {/* hairline */}

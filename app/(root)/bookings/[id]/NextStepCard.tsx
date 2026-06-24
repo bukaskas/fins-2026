@@ -2,6 +2,7 @@ import { BookingStatus } from "@prisma/client";
 import { Instagram, Check, MessageCircle } from "lucide-react";
 
 import { CopyButton } from "./CopyButton";
+import PayDepositOnline from "./PayDepositOnline";
 
 const INSTAGRAM_URL = "https://ig.me/m/finskitesurfing";
 const INSTAGRAM_DISPLAY = "@finskitesurfing";
@@ -41,10 +42,14 @@ export default function NextStepCard({
   status,
   totalPriceCents = 0,
   amountPaidCents = 0,
+  bookingId,
+  paymentLink = null,
 }: {
   status: BookingStatus;
   totalPriceCents?: number;
   amountPaidCents?: number;
+  bookingId: string;
+  paymentLink?: string | null;
 }) {
   const variant = getVariant(status);
   if (!variant) return null;
@@ -73,7 +78,12 @@ export default function NextStepCard({
           {variant === "pending" && <PendingBody />}
           {variant === "screenshots" && <ScreenshotsBody />}
           {variant === "payment" && (
-            <PaymentBody totalCents={totalPriceCents} />
+            <PaymentBody
+              totalCents={totalPriceCents}
+              amountPaidCents={amountPaidCents}
+              bookingId={bookingId}
+              paymentLink={paymentLink}
+            />
           )}
           {variant === "confirmed" && (
             <ConfirmedBody remainingCents={remainingCents} />
@@ -237,16 +247,29 @@ function ScreenshotsBody() {
   );
 }
 
-function PaymentBody({ totalCents }: { totalCents: number }) {
+function PaymentBody({
+  totalCents,
+  amountPaidCents,
+  bookingId,
+  paymentLink,
+}: {
+  totalCents: number;
+  amountPaidCents: number;
+  bookingId: string;
+  paymentLink: string | null;
+}) {
   const depositCents = Math.round(totalCents / 2);
   const remainingCents = totalCents - depositCents;
+  // What's still owed to reach the 50% deposit (in case part was already paid).
+  const depositDueCents = Math.max(0, depositCents - amountPaidCents);
 
   return (
     <>
       <Eyebrow>Complete your booking</Eyebrow>
-      <Heading>Send a 50% deposit to confirm</Heading>
+      <Heading>Pay a 50% deposit to confirm</Heading>
       <Body>
-        Your reservation is on hold pending payment. The deposit is{" "}
+        Your reservation is on hold. Pay the deposit securely online to confirm
+        it instantly — the deposit is{" "}
         <span className="text-[#1a1614] font-[500]">non-refundable</span> and
         reservations{" "}
         <span className="text-[#1a1614] font-[500]">cannot be postponed</span>.
@@ -258,7 +281,7 @@ function PaymentBody({ totalCents }: { totalCents: number }) {
             <MicroLabel>Pay now</MicroLabel>
             <div className="mt-1.5 flex items-baseline gap-1">
               <span className="font-[family-name:var(--font-raleway)] text-[1.6rem] font-[200] leading-none tracking-[-0.02em] text-[#1a1614]">
-                {fmtEGP(depositCents)}
+                {fmtEGP(depositDueCents)}
               </span>
               <span className="font-[family-name:var(--font-raleway)] text-[0.7rem] font-[400] text-[#8a8480]">
                 EGP
@@ -286,8 +309,13 @@ function PaymentBody({ totalCents }: { totalCents: number }) {
         </div>
       )}
 
+      {/* Primary action: pay the deposit online */}
+      <div className="mt-6">
+        <PayDepositOnline bookingId={bookingId} paymentLink={paymentLink} />
+      </div>
+
       <p className="mt-4 font-[family-name:var(--font-raleway)] text-[0.82rem] font-[400] text-[#5b5650] leading-[1.55]">
-        The full remaining amount is due{" "}
+        The remaining balance is due{" "}
         <span className="text-[#1a1614] font-[500]">
           in cash or visa on arrival
         </span>
@@ -296,40 +324,48 @@ function PaymentBody({ totalCents }: { totalCents: number }) {
 
       <HairlineDivider />
 
-      <div className="grid grid-cols-1 gap-5">
-        <div>
-          <MicroLabel>Bank</MicroLabel>
-          <div className="mt-1.5 font-[family-name:var(--font-raleway)] text-[1rem] font-[400] text-[#1a1614]">
-            {BANK_NAME}
+      {/* Secondary fallback: manual bank transfer */}
+      <details className="group">
+        <summary className="flex cursor-pointer list-none items-center justify-between font-[family-name:var(--font-raleway)] text-[0.82rem] font-[500] text-[#5b5650] transition-colors hover:text-[#1a1614]">
+          <span>Prefer to pay by bank transfer?</span>
+          <span className="text-[1.1rem] leading-none text-[#b0a89f] transition-transform group-open:rotate-45">
+            +
+          </span>
+        </summary>
+
+        <div className="mt-5 grid grid-cols-1 gap-5">
+          <div>
+            <MicroLabel>Bank</MicroLabel>
+            <div className="mt-1.5 font-[family-name:var(--font-raleway)] text-[1rem] font-[400] text-[#1a1614]">
+              {BANK_NAME}
+            </div>
+          </div>
+
+          <div>
+            <MicroLabel>Account number</MicroLabel>
+            <div className="mt-2">
+              <CopyButton
+                value={ACCOUNT_NUMBER}
+                toastLabel="Account number copied"
+              />
+            </div>
+          </div>
+
+          <div>
+            <MicroLabel>Account name</MicroLabel>
+            <div className="mt-1.5 font-[family-name:var(--font-raleway)] text-[1rem] font-[400] text-[#1a1614]">
+              {ACCOUNT_NAME}
+            </div>
           </div>
         </div>
 
-        <div>
-          <MicroLabel>Account number</MicroLabel>
-          <div className="mt-2">
-            <CopyButton
-              value={ACCOUNT_NUMBER}
-              toastLabel="Account number copied"
-            />
-          </div>
+        <p className="mt-5 font-[family-name:var(--font-raleway)] text-[0.9rem] font-[400] text-[#5b5650] leading-[1.55]">
+          After paying, send a screenshot of the transaction with full details:
+        </p>
+        <div className="mt-4">
+          <WhatsAppButton caption="Send screenshot on WhatsApp" />
         </div>
-
-        <div>
-          <MicroLabel>Account name</MicroLabel>
-          <div className="mt-1.5 font-[family-name:var(--font-raleway)] text-[1rem] font-[400] text-[#1a1614]">
-            {ACCOUNT_NAME}
-          </div>
-        </div>
-      </div>
-
-      <HairlineDivider />
-
-      <p className="font-[family-name:var(--font-raleway)] text-[0.9rem] font-[400] text-[#5b5650] leading-[1.55]">
-        After payment, send a screenshot of the transaction with full details:
-      </p>
-      <div className="mt-4">
-        <WhatsAppButton caption="Send screenshot on WhatsApp" />
-      </div>
+      </details>
     </>
   );
 }

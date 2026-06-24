@@ -86,14 +86,27 @@ async function getAccessToken(): Promise<string> {
     },
   });
 
-  const data = (await res.json().catch(() => ({}))) as {
+  // Read the raw body once so we can log exactly what Flash returned,
+  // regardless of whether it's valid JSON or the shape we expect.
+  const rawBody = await res.text();
+  let data: {
     access_token?: string;
     expires_in?: number;
     error?: string;
     error_description?: string;
-  };
+  } = {};
+  try {
+    data = JSON.parse(rawBody);
+  } catch {
+    // non-JSON response; leave data empty and rely on rawBody for logging
+  }
 
   if (!res.ok || !data.access_token) {
+    console.error("[flash] token request failed", {
+      status: res.status,
+      statusText: res.statusText,
+      body: rawBody,
+    });
     throw new FlashError(
       data.error_description || data.error || "Failed to obtain Flash token.",
       { code: data.error, status: res.status }
