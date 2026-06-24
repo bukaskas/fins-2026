@@ -1,5 +1,14 @@
+import { buildMetadata } from "@/lib/metadata";
 import Image from "next/image";
 import Link from "next/link";
+
+export const metadata = buildMetadata({
+  title: "Refresher Kitesurfing Course",
+  description:
+    "Get back on the water with a refresher course at Fins near Sokhna.",
+  image: "/images/kitesurfing/refresher.webp",
+  path: "/kitesurfing/refresher-course",
+});
 
 import refresherPhoto from "@/public/images/kitesurfing/refresher.webp";
 import { Button } from "@/components/ui/button";

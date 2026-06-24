@@ -1,5 +1,14 @@
+import { buildMetadata } from "@/lib/metadata";
 import Image from "next/image";
 import Link from "next/link";
+
+export const metadata = buildMetadata({
+  title: "Restaurant",
+  description:
+    "Eat and relax at the Fins restaurant — fresh food by the beach near Sokhna.",
+  image: "/images/hero_images/restaurant_desktop3.webp",
+  path: "/restaurant",
+});
 import restaurantPhoto from "@/public/images/restaurant/restaurant.webp";
 import restaurantMobile from "@/public/images/restaurant/restaurant_mobilefins.webp";
 import webphoto17 from "@/public/images/webphotos_fins/webphoto_17.webp";

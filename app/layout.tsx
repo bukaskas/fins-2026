@@ -34,6 +34,22 @@ export const metadata: Metadata = {
   },
   description: APP_DESCRIPTION,
   metadataBase: new URL(SERVER_URL),
+  openGraph: {
+    title: { template: `%s | Fins`, default: APP_NAME },
+    description: APP_DESCRIPTION,
+    siteName: "Fins",
+    type: "website",
+    url: "/",
+    images: [
+      { url: "/images/hero_images/hero_desktop1.webp", width: 1200, height: 630, alt: APP_NAME },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: { template: `%s | Fins`, default: APP_NAME },
+    description: APP_DESCRIPTION,
+    images: ["/images/hero_images/hero_desktop1.webp"],
+  },
 };
 
 export default function RootLayout({

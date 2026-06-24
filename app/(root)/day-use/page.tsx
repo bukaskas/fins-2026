@@ -1,5 +1,14 @@
+import { buildMetadata } from "@/lib/metadata";
 import Image from "next/image";
 import heroDayUse from "@/public/images/day_use/beach2.webp";
+
+export const metadata = buildMetadata({
+  title: "Day Use",
+  description:
+    "Spend the day at Fins — beach, pool, food and games near Sokhna.",
+  image: "/images/hero_images/dayuse_intro.webp",
+  path: "/day-use",
+});
 import beachExperienceImage from "@/public/images/day_use/beach1.webp";
 import foodExperienceImage from "@/public/images/day_use/food.webp";
 import loungeExperienceImage from "@/public/images/day_use/lounge.webp";

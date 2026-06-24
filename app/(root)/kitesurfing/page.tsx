@@ -1,5 +1,14 @@
+import { buildMetadata } from "@/lib/metadata";
 import Image from "next/image";
 import Link from "next/link";
+
+export const metadata = buildMetadata({
+  title: "Kitesurfing",
+  description:
+    "Learn to kitesurf at Fins — courses for all levels on the flat water near Sokhna.",
+  image: "/images/hero_images/kitesurfing_desktop2.webp",
+  path: "/kitesurfing",
+});
 import heroImage from "@/public/images/hero_images/kitesurfing_desktop2.webp";
 import ContentSection from "@/components/kitesurfing/CoursesSection";
 import KitesurfingRentalSection from "@/components/kitesurfing/KitesurfingRentalSection";

@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { format } from "date-fns";
@@ -8,6 +9,7 @@ import { BookingStatus, Role } from "@prisma/client";
 import { authOptions } from "@/lib/auth";
 import { instagramHref } from "@/lib/utils";
 import { getBookingById } from "@/lib/actions/booking.actions";
+import { buildMetadata } from "@/lib/metadata";
 import PartyEditDialog from "./PartyEditDialog";
 import StatusEditDialog from "./StatusEditDialog";
 import NextStepCard from "./NextStepCard";
@@ -44,6 +46,29 @@ function fmtEGP(cents: number): string {
 
 function digits(s: string): string {
   return s.replace(/\D/g, "");
+}
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}): Promise<Metadata> {
+  const { id } = await params;
+  const booking = await getBookingById(id);
+  if (!booking) return { title: "Booking" };
+
+  const service =
+    SERVICE_LABEL[booking.service] ?? booking.service.replace(/-/g, " ");
+
+  return {
+    ...buildMetadata({
+      title: `${service} booking · ${booking.name}`,
+      description: `Your ${service.toLowerCase()} reservation at Fins.`,
+      path: `/bookings/${booking.id}`,
+    }),
+    // Private per-booking link — keep it out of search engines.
+    robots: { index: false, follow: false },
+  };
 }
 
 export default async function BookingDetailPage({

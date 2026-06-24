@@ -1,5 +1,14 @@
+import { buildMetadata } from "@/lib/metadata";
 import Image from "next/image";
 import Link from "next/link";
+
+export const metadata = buildMetadata({
+  title: "Beginner Kitesurfing Course",
+  description:
+    "Start kitesurfing from scratch at Fins — a beginner course on safe, flat water.",
+  image: "/images/hero_images/kitesurfing_desktop2.webp",
+  path: "/kitesurfing/beginner-course",
+});
 
 import beginnerPhoto from "@/public/images/webphotos_fins/webphoto_29.webp";
 import { Button } from "@/components/ui/button";

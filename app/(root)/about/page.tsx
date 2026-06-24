@@ -1,5 +1,14 @@
+import { buildMetadata } from "@/lib/metadata";
 import Image, { StaticImageData } from "next/image";
 import Link from "next/link";
+
+export const metadata = buildMetadata({
+  title: "About",
+  description:
+    "Get to know Fins — our story, our community and our beach near Sokhna.",
+  image: "/images/about/fins.webp",
+  path: "/about",
+});
 import storyPhoto from "@/public/images/about/fins.webp";
 import teamPhoto from "@/public/images/about/fins_staff.webp";
 import communityPhoto from "@/public/images/about/fins_community.webp";

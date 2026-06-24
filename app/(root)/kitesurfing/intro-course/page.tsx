@@ -1,5 +1,14 @@
+import { buildMetadata } from "@/lib/metadata";
 import Image from "next/image";
 import Link from "next/link";
+
+export const metadata = buildMetadata({
+  title: "Intro Kitesurfing Course",
+  description:
+    "Try kitesurfing with an intro course at Fins — a taster session near Sokhna.",
+  image: "/images/hero_images/kitesurfing_desktop2.webp",
+  path: "/kitesurfing/intro-course",
+});
 
 import introPhoto from "@/public/images/product-2.webp";
 import { Button } from "@/components/ui/button";
