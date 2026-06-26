@@ -257,6 +257,7 @@ export default async function BookingDetailPage({
           amountPaidCents={paid}
           bookingId={booking.id}
           paymentLink={booking.paymentLink}
+          waitingPaymentAt={booking.waitingPaymentAt}
         />
 
         {/* hairline */}

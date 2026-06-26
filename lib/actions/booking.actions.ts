@@ -22,6 +22,10 @@ const STAFF_ROLES: Role[] = [Role.ADMIN, Role.STAFF, Role.OWNER];
 const FLASH_CURRENCY = process.env.FLASH_CURRENCY || "EGP";
 const FLASH_MIN_CENTS = 500; // Flash rejects orders below 5 EGP
 
+// A booking in WAITING_PAYMENT auto-cancels this long after it entered the
+// status (i.e. after `waitingPaymentAt`) if it hasn't been paid/confirmed.
+const WAITING_PAYMENT_WINDOW_MS = 24 * 60 * 60 * 1000; // 24 hours
+
 
 
 
@@ -120,6 +124,7 @@ export async function createBooking(data: BookingFormData) {
 
 export async function getAllBookings() {
   try {
+    await cancelExpiredWaitingPayments();
     const bookings = await prisma.booking.findMany({
       include: { agent: { select: { id: true, name: true, email: true } } },
     });
@@ -685,6 +690,7 @@ export async function getAllDepositPayments() {
 
 export async function getBookingById(id: string) {
   try {
+    await cancelExpiredWaitingPayments();
     const booking = await prisma.booking.findUnique({
       where: { id },
       include: { agent: { select: { id: true, name: true, email: true } } },
@@ -694,6 +700,28 @@ export async function getBookingById(id: string) {
     console.error("Error fetching booking by id", e);
     return null;
   }
+}
+
+/**
+ * Cancel any booking still in WAITING_PAYMENT whose 24h window has elapsed.
+ *
+ * Idempotent by construction: the WHERE clause only matches still-waiting,
+ * already-expired rows, so re-running it (on read, or from the cron route) is a
+ * no-op once they're canceled. Bookings without a `waitingPaymentAt` (legacy
+ * rows) are skipped. Cancellation has no other side effects in this codebase, so
+ * a single bulk update is sufficient.
+ */
+export async function cancelExpiredWaitingPayments() {
+  const cutoff = new Date(Date.now() - WAITING_PAYMENT_WINDOW_MS);
+  const { count } = await prisma.booking.updateMany({
+    where: {
+      bookingStatus: BookingStatus.WAITING_PAYMENT,
+      waitingPaymentAt: { not: null, lt: cutoff },
+    },
+    data: { bookingStatus: BookingStatus.CANCELED },
+  });
+  if (count > 0) revalidatePath('/bookings', 'layout');
+  return count;
 }
 
 export async function updateBookingStatus(id: string, status: BookingStatus) {
@@ -706,6 +734,11 @@ export async function updateBookingStatus(id: string, status: BookingStatus) {
       data: {
         bookingStatus: status,
         ...(userId ? { agentId: userId } : {}),
+        // Start (or restart) the 24h payment countdown on entry into
+        // WAITING_PAYMENT; the deadline is derived as waitingPaymentAt + 24h.
+        ...(status === BookingStatus.WAITING_PAYMENT
+          ? { waitingPaymentAt: new Date() }
+          : {}),
       },
     });
     revalidatePath('/bookings', 'layout');

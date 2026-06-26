@@ -157,6 +157,12 @@ model Booking {
   flashOrderId         String?
   paymentLink          String?
   paymentLinkExpiresAt DateTime?
+
+  // 24h payment window: set when entering WAITING_PAYMENT; the booking
+  // auto-cancels 24h after this timestamp if still unpaid.
+  waitingPaymentAt DateTime?
+
+  @@index([bookingStatus, waitingPaymentAt])
 }
 
 model BookingPayment {

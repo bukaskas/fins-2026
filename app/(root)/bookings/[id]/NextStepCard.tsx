@@ -3,6 +3,10 @@ import { Instagram, Check, MessageCircle } from "lucide-react";
 
 import { CopyButton } from "./CopyButton";
 import PayDepositOnline from "./PayDepositOnline";
+import PaymentCountdown from "./PaymentCountdown";
+
+// Keep in sync with WAITING_PAYMENT_WINDOW_MS in lib/actions/booking.actions.ts
+const WAITING_PAYMENT_WINDOW_MS = 24 * 60 * 60 * 1000;
 
 const INSTAGRAM_URL = "https://ig.me/m/finskitesurfing";
 const INSTAGRAM_DISPLAY = "@finskitesurfing";
@@ -44,17 +48,26 @@ export default function NextStepCard({
   amountPaidCents = 0,
   bookingId,
   paymentLink = null,
+  waitingPaymentAt = null,
 }: {
   status: BookingStatus;
   totalPriceCents?: number;
   amountPaidCents?: number;
   bookingId: string;
   paymentLink?: string | null;
+  waitingPaymentAt?: Date | string | null;
 }) {
   const variant = getVariant(status);
   if (!variant) return null;
 
   const remainingCents = Math.max(0, totalPriceCents - amountPaidCents);
+
+  // Deadline for the 24h payment window (ISO string for the client countdown).
+  const paymentDeadline = waitingPaymentAt
+    ? new Date(
+        new Date(waitingPaymentAt).getTime() + WAITING_PAYMENT_WINDOW_MS,
+      ).toISOString()
+    : null;
 
   return (
     <section className="mt-8">
@@ -83,6 +96,7 @@ export default function NextStepCard({
               amountPaidCents={amountPaidCents}
               bookingId={bookingId}
               paymentLink={paymentLink}
+              deadline={paymentDeadline}
             />
           )}
           {variant === "confirmed" && (
@@ -252,11 +266,13 @@ function PaymentBody({
   amountPaidCents,
   bookingId,
   paymentLink,
+  deadline,
 }: {
   totalCents: number;
   amountPaidCents: number;
   bookingId: string;
   paymentLink: string | null;
+  deadline: string | null;
 }) {
   const depositCents = Math.round(totalCents / 2);
   const remainingCents = totalCents - depositCents;
@@ -274,6 +290,15 @@ function PaymentBody({
         reservations{" "}
         <span className="text-[#1a1614] font-[500]">cannot be postponed</span>.
       </Body>
+
+      {deadline && (
+        <div className="mt-5">
+          <PaymentCountdown deadline={deadline} />
+          <p className="mt-2 font-[family-name:var(--font-raleway)] text-[0.78rem] font-[400] text-[#8a8480] leading-[1.5]">
+            Pay within 24 hours or this reservation is released automatically.
+          </p>
+        </div>
+      )}
 
       {totalCents > 0 && (
         <div className="mt-6 grid grid-cols-2 gap-3">
