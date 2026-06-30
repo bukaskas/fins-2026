@@ -1,5 +1,7 @@
 import { getBookingCountsByDate } from "@/lib/actions/booking.actions";
 import { getClosedDates } from "@/lib/actions/closedDate.actions";
+import { getAutoConfirmBookings } from "@/lib/actions/settings.actions";
+import AutoConfirmToggle from "./AutoConfirmToggle";
 import { BookingCalendar } from "@/components/bookings/BookingCalendar";
 import { BookingStatus } from "@prisma/client";
 import { format, addMonths } from "date-fns";
@@ -41,11 +43,12 @@ async function BookingsDashboardPage({
   const activeFilter =
     STATUS_FILTERS.find((f) => f.value === status) ?? STATUS_FILTERS[0];
 
-  const [result, closedResult] = await Promise.all([
+  const [result, closedResult, autoConfirm] = await Promise.all([
     getBookingCountsByDate(
       activeFilter.statuses.length > 0 ? activeFilter.statuses : undefined,
     ),
     getClosedDates(new Date(), addMonths(new Date(), 6)),
+    getAutoConfirmBookings(),
   ]);
 
   const counts = result.success
@@ -158,6 +161,11 @@ async function BookingsDashboardPage({
             })}
           </div>
         </div>
+      </div>
+
+      {/* ── Auto-confirm toggle ── */}
+      <div className="max-w-5xl mx-auto px-6 pt-6">
+        <AutoConfirmToggle initial={autoConfirm} />
       </div>
 
       {/* ── Stats row ── */}

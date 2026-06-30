@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { format } from "date-fns";
 import { prisma } from "@/db/prisma";
-import { OrderStatus, ProductCategory, ProductType } from "@prisma/client";
+import { OrderStatus, ProductCategory, ProductType, UserType } from "@prisma/client";
 import {
   Table,
   TableBody,
@@ -48,6 +48,14 @@ function fmtDay(d: Date | null | undefined) {
   return format(d, "PP");
 }
 
+// Customer standing badge styling. Level 1 is the default/neutral case.
+const USER_TYPE_BADGE: Record<UserType, { label: string; bg: string; text: string; ring: string }> = {
+  [UserType.LEVEL_1]:   { label: "Level 1 · Good customer", bg: "#E2F0E6", text: "#1F5B36", ring: "#BFDDC8" },
+  [UserType.LEVEL_2]:   { label: "Level 2 · Limit when 50+", bg: "#FFF4E0", text: "#7A5414", ring: "#F2D9A6" },
+  [UserType.LEVEL_3]:   { label: "Level 3 · No Fridays",     bg: "#FCE6D5", text: "#7A3E18", ring: "#F1C9AA" },
+  [UserType.BLACKLIST]: { label: "Blacklist",                bg: "#FBE3E1", text: "#7E2A23", ring: "#F1C0BB" },
+};
+
 export default async function UserDetailPage({ params }: Props) {
   const { id } = await params;
 
@@ -65,7 +73,7 @@ export default async function UserDetailPage({ params }: Props) {
   ] = await Promise.all([
     prisma.user.findUnique({
       where: { id },
-      select: { id: true, name: true, email: true, phone: true, role: true, createdAt: true },
+      select: { id: true, name: true, email: true, phone: true, role: true, userType: true, createdAt: true },
     }),
     prisma.userWallet.findMany({
       where: { userId: id },
@@ -237,6 +245,16 @@ export default async function UserDetailPage({ params }: Props) {
             </p>
           </div>
           <div className="flex items-center gap-2">
+            <span
+              className="rounded-full border px-3 py-1 text-xs font-medium tracking-wide"
+              style={{
+                background: USER_TYPE_BADGE[user.userType].bg,
+                color: USER_TYPE_BADGE[user.userType].text,
+                borderColor: USER_TYPE_BADGE[user.userType].ring,
+              }}
+            >
+              {USER_TYPE_BADGE[user.userType].label}
+            </span>
             <span className="rounded-full border px-3 py-1 text-xs font-medium tracking-wide">
               {user.role}
             </span>

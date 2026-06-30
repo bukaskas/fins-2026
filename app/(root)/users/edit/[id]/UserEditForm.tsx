@@ -4,7 +4,7 @@ import React from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { toast } from "sonner";
-import { Role } from "@prisma/client";
+import { Role, UserType } from "@prisma/client";
 import { useForm } from "@tanstack/react-form";
 
 import { updateUser } from "@/lib/actions/user.actions";
@@ -41,6 +41,14 @@ type Rates = {
   kidsRateCents: number;
 };
 
+// User-facing labels for the customer standing levels.
+const USER_TYPE_LABELS: Record<UserType, string> = {
+  [UserType.LEVEL_1]: "Level 1 · Good customer",
+  [UserType.LEVEL_2]: "Level 2 · Limit when 50+ confirmed",
+  [UserType.LEVEL_3]: "Level 3 · Saturdays & weekdays only (no Fridays)",
+  [UserType.BLACKLIST]: "Blacklist · Do not accept",
+};
+
 type Props = {
   user: {
     id: string;
@@ -48,6 +56,7 @@ type Props = {
     email: string;
     phone: string | null;
     role: Role;
+    userType: UserType;
     isInstructor: boolean;
     instructorProfile?: Rates | null;
   };
@@ -65,6 +74,7 @@ const ZERO_RATES: Rates = {
 export default function UserEditFormClient({ user }: Props) {
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const roleOptions = Object.values(Role) as Role[];
+  const userTypeOptions = Object.values(UserType) as UserType[];
   const router = useRouter();
 
   const form = useForm({
@@ -74,6 +84,7 @@ export default function UserEditFormClient({ user }: Props) {
       email: user.email || "",
       password: "",
       role: user.role || Role.KITER,
+      userType: user.userType || UserType.LEVEL_1,
       isInstructor: user.isInstructor,
       rates: user.instructorProfile ?? ZERO_RATES,
     },
@@ -192,6 +203,38 @@ export default function UserEditFormClient({ user }: Props) {
                         {roleOptions.map((role) => (
                           <SelectItem key={role} value={role}>
                             {role}
+                          </SelectItem>
+                        ))}
+                      </SelectGroup>
+                    </SelectContent>
+                  </Select>
+                  <FieldError errors={field.state.meta.errors} />
+                </Field>
+              )}
+            </form.Field>
+
+            <form.Field name="userType">
+              {(field) => (
+                <Field>
+                  <FieldLabel htmlFor={field.name}>Customer type</FieldLabel>
+                  <Select
+                    value={field.state.value}
+                    onValueChange={(value) =>
+                      field.handleChange(value as UserType)
+                    }
+                    disabled={isSubmitting}
+                  >
+                    <SelectTrigger
+                      id={field.name}
+                      className="w-full rounded-full"
+                    >
+                      <SelectValue placeholder="Select customer type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectGroup>
+                        {userTypeOptions.map((t) => (
+                          <SelectItem key={t} value={t}>
+                            {USER_TYPE_LABELS[t]}
                           </SelectItem>
                         ))}
                       </SelectGroup>

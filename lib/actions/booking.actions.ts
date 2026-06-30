@@ -16,6 +16,7 @@ import { addClosedDate } from "./closedDate.actions";
 import { startOfDay, startOfMonth, endOfMonth, getDaysInMonth } from "date-fns";
 import { computeBookingTotalCents } from "@/lib/pricing";
 import { createPaymentOrder, getFlashOrder } from "@/lib/flash";
+import { getAutoConfirmBookings } from "./settings.actions";
 
 const STAFF_ROLES: Role[] = [Role.ADMIN, Role.STAFF, Role.OWNER];
 
@@ -58,6 +59,12 @@ export async function createBooking(data: BookingFormData) {
     });
     const isExisting = !!existingUser;
 
+    // Existing customers always skip review and go straight to payment. When the
+    // admin "auto-confirm" toggle is on, brand-new customers do too; otherwise
+    // they start as PENDING for availability review.
+    const autoConfirm = await getAutoConfirmBookings();
+    const goToPayment = isExisting || autoConfirm;
+
     const booking = await prisma.booking.create({
       data: {
         name: validatedData.name,
@@ -69,18 +76,21 @@ export async function createBooking(data: BookingFormData) {
         numberOfKids: validatedData.numberOfKids ?? 0,
         totalPriceCents: validatedData.totalPriceCents ?? null,
         instagram: validatedData.instagram?.trim() || null,
-        bookingStatus: isExisting
+        bookingStatus: goToPayment
           ? BookingStatus.WAITING_PAYMENT
           : BookingStatus.PENDING,
+        // Start the 24h payment countdown when landing in WAITING_PAYMENT.
+        ...(goToPayment ? { waitingPaymentAt: new Date() } : {}),
       },
     });
 
     const isDayUse = validatedData.service === "day-use";
     const isPharaoh = validatedData.service === "pharaoh-airstyle";
     const includeTickets = isDayUse || isPharaoh;
-    // Existing users land on the payment page directly, so skip the
+    // Bookings that go straight to payment (existing customers, or any booking
+    // while auto-confirm is on) land on the payment page directly, so skip the
     // "booking request received" guest email for them.
-    if (!isExisting) {
+    if (!goToPayment) {
       await sendBookingEmail(
         validatedData.email,
         validatedData.name,
@@ -675,12 +685,67 @@ export async function getAllDepositPayments() {
     const payments = await prisma.bookingPayment.findMany({
       orderBy: { createdAt: "desc" },
       include: {
-        booking: { select: { id: true, name: true, service: true, date: true } },
+        booking: {
+          select: {
+            id: true,
+            name: true,
+            service: true,
+            date: true,
+            agent: { select: { id: true, name: true, email: true } },
+          },
+        },
       },
     });
     return { success: true as const, data: payments };
   } catch (error) {
     console.error("Error fetching deposit payments", error);
+    return {
+      success: false as const,
+      message: error instanceof Error ? error.message : String(error),
+    };
+  }
+}
+
+/**
+ * Delete a single deposit payment and re-sync the booking's amountPaidCents.
+ * BookingPayment carries no wallet-ledger side effects, so a plain delete +
+ * re-aggregate keeps the booking total consistent.
+ */
+export async function deleteDepositPayment(paymentId: string) {
+  try {
+    const session = await getServerSession(authOptions);
+    const user = session?.user as { id?: string; role?: Role } | undefined;
+    if (!user?.role || !STAFF_ROLES.includes(user.role)) {
+      return { success: false as const, message: "Not authorized." };
+    }
+
+    const payment = await prisma.bookingPayment.findUnique({
+      where: { id: paymentId },
+      select: { bookingId: true },
+    });
+    if (!payment) {
+      return { success: false as const, message: "Payment not found." };
+    }
+
+    await prisma.$transaction(async (tx) => {
+      await tx.bookingPayment.delete({ where: { id: paymentId } });
+
+      const { _sum } = await tx.bookingPayment.aggregate({
+        where: { bookingId: payment.bookingId },
+        _sum: { amountCents: true },
+      });
+
+      await tx.booking.update({
+        where: { id: payment.bookingId },
+        data: { amountPaidCents: _sum.amountCents ?? 0 },
+      });
+    });
+
+    revalidatePath("/bookings/payments");
+    revalidatePath(`/bookings/${payment.bookingId}`);
+    return { success: true as const };
+  } catch (error) {
+    console.error("Error deleting deposit payment", error);
     return {
       success: false as const,
       message: error instanceof Error ? error.message : String(error),

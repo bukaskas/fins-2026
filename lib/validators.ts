@@ -99,7 +99,7 @@ export const resetPasswordSchema = z
   });
 export type ResetPasswordData = z.infer<typeof resetPasswordSchema>;
 
-import { Role } from "@prisma/client";
+import { Role, UserType } from "@prisma/client";
 
 const rateCentsField = z.coerce
   .number()
@@ -123,6 +123,7 @@ export const userEditFormSchema = z.object({
   phone: optionalPhoneSchema,
   email: z.string().email("Invalid email address"),
   role: z.nativeEnum(Role),
+  userType: z.nativeEnum(UserType),
   isInstructor: z.boolean().default(false),
   rates: instructorRatesSchema.optional(),
   // optional on edit; only validate if provided

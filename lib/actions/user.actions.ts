@@ -84,6 +84,7 @@ export async function getUserById(id: string) {
         email: true,
         phone: true,
         role: true,
+        userType: true,
         isInstructor: true,
         instructorProfile: {
           select: {
@@ -122,6 +123,7 @@ export async function updateUser(id: string, data: UserEditFormData) {
           phone: data.phone || null,
           email: data.email,
           role: data.role,
+          userType: data.userType,
           isInstructor: data.isInstructor,
           ...passwordData,
         },

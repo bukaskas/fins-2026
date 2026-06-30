@@ -199,6 +199,14 @@ enum Role {
   DAYPASS
 }
 
+/// Customer standing, used to decide how readily we accept their bookings.
+enum UserType {
+  LEVEL_1 // Good customer — always welcome.
+  LEVEL_2 // Better not to accept when the date already has 50+ confirmed.
+  LEVEL_3 // Accept on Saturdays and weekdays only (i.e. not Fridays).
+  BLACKLIST // Do not accept bookings — guest is not from the community.
+}
+
 model User {
   id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   email         String    @unique
@@ -211,6 +219,7 @@ model User {
   updatedAt     DateTime  @default(now()) @updatedAt
 
   role         Role      @default(KITER)
+  userType     UserType  @default(LEVEL_1)
   isInstructor Boolean   @default(false)
   accounts     Account[]
   sessions     Session[]
@@ -666,4 +675,11 @@ model Expense {
   @@index([status, type])
   @@index([payeeId, status])
   @@index([status, createdAt])
+}
+
+/// Generic key/value store for admin-controlled app settings (feature toggles, etc).
+model AppSetting {
+  key       String   @id
+  value     String
+  updatedAt DateTime @default(now()) @updatedAt
 }

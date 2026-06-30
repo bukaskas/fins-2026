@@ -6,18 +6,12 @@ import { Role } from "@prisma/client";
 
 import { authOptions } from "@/lib/auth";
 import { getAllDepositPayments } from "@/lib/actions/booking.actions";
+import { DeletePaymentButton } from "./DeletePaymentButton";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 const STAFF_ROLES: Role[] = [Role.ADMIN, Role.STAFF, Role.OWNER];
-
-const SERVICE_LABEL: Record<string, string> = {
-  "kitesurfing-course": "Kitesurfing course",
-  "day-use": "Day use",
-  restaurant: "Restaurant",
-  "pharaoh-airstyle": "Pharaoh Airstyle",
-};
 
 const METHOD_TONE: Record<string, { bg: string; text: string }> = {
   CASH: { bg: "#E2F0E6", text: "#1F5B36" },
@@ -79,10 +73,10 @@ export default async function DepositPaymentsPage() {
           <table className="w-full text-left">
             <thead>
               <tr className="border-b border-[#ece8e3] bg-[#FBF8F3]">
-                {["Date", "Guest", "Service", "Amount", "Method", "Reference"].map(
-                  (h) => (
+                {["Date", "Guest", "Agent", "Amount", "Method", "Reference", ""].map(
+                  (h, i) => (
                     <th
-                      key={h}
+                      key={h || `col-${i}`}
                       className="px-4 py-3 font-[family-name:var(--font-raleway)] text-[0.58rem] tracking-[0.18em] uppercase font-[700] text-[#8a8480]"
                     >
                       {h}
@@ -118,9 +112,8 @@ export default async function DepositPaymentsPage() {
                       </Link>
                     </td>
                     <td className="px-4 py-3 font-[family-name:var(--font-raleway)] text-[0.78rem] text-[#5b5650]">
-                      {p.booking
-                        ? SERVICE_LABEL[p.booking.service] ??
-                          p.booking.service.replace(/-/g, " ")
+                      {p.booking?.agent
+                        ? p.booking.agent.name || p.booking.agent.email
                         : "—"}
                     </td>
                     <td className="px-4 py-3 font-[family-name:var(--font-roboto-mono)] text-[0.82rem] text-[#1a1614] whitespace-nowrap tabular-nums">
@@ -142,6 +135,12 @@ export default async function DepositPaymentsPage() {
                     <td className="px-4 py-3 font-[family-name:var(--font-roboto-mono)] text-[0.68rem] text-[#b0a89f] max-w-[14rem] truncate">
                       {p.reference ?? "—"}
                     </td>
+                    <td className="px-4 py-3 text-right whitespace-nowrap">
+                      <DeletePaymentButton
+                        paymentId={p.id}
+                        guestName={p.booking?.name ?? ""}
+                      />
+                    </td>
                   </tr>
                 );
               })}
@@ -157,7 +156,7 @@ export default async function DepositPaymentsPage() {
                 <td className="px-4 py-3 font-[family-name:var(--font-roboto-mono)] text-[0.85rem] font-[600] text-[#1a1614] whitespace-nowrap tabular-nums">
                   {fmtEGP(totalCents)} EGP
                 </td>
-                <td colSpan={2} />
+                <td colSpan={3} />
               </tr>
             </tfoot>
           </table>
