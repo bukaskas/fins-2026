@@ -250,22 +250,49 @@ export async function getBookingCountsByDate(statuses?: BookingStatus[]) {
         date: { gte: start, lte: end },
         ...(statuses && statuses.length > 0 ? { bookingStatus: { in: statuses } } : {}),
       },
-      select: { date: true, numberOfPeople: true },
+      select: { date: true, numberOfPeople: true, bookingStatus: true },
     });
 
-    const map = new Map<string, { totalPeople: number; bookingCount: number }>();
+    type DayBreakdown = {
+      confirmedPeople: number;
+      confirmedCount: number;
+      activePeople: number;
+      activeCount: number;
+    };
+    const empty = (): DayBreakdown => ({
+      confirmedPeople: 0,
+      confirmedCount: 0,
+      activePeople: 0,
+      activeCount: 0,
+    });
+
+    const map = new Map<string, DayBreakdown>();
     bookings.forEach((b) => {
+      const isConfirmed = CONFIRMED_STATUSES.includes(b.bookingStatus);
+      const isActive = ACTIVE_PENDING_STATUSES.includes(b.bookingStatus);
+      // Declined/canceled/no-response contribute to neither number.
+      if (!isConfirmed && !isActive) return;
+
       const key = b.date.toISOString().split('T')[0];
-      const existing = map.get(key) ?? { totalPeople: 0, bookingCount: 0 };
-      map.set(key, {
-        totalPeople: existing.totalPeople + b.numberOfPeople,
-        bookingCount: existing.bookingCount + 1,
-      });
+      const day = map.get(key) ?? empty();
+      if (isConfirmed) {
+        day.confirmedPeople += b.numberOfPeople;
+        day.confirmedCount += 1;
+      } else {
+        day.activePeople += b.numberOfPeople;
+        day.activeCount += 1;
+      }
+      map.set(key, day);
     });
 
     return {
       success: true,
-      data: Array.from(map.entries()).map(([date, v]) => ({ date, ...v })),
+      data: Array.from(map.entries()).map(([date, v]) => ({
+        date,
+        ...v,
+        totalPeople: v.confirmedPeople + v.activePeople,
+        bookingCount: v.confirmedCount + v.activeCount,
+      })),
     };
   } catch (error) {
     console.error('Error fetching booking counts by date:', error);
@@ -318,6 +345,14 @@ export type AgentStatsResult = {
 const CONFIRMED_STATUSES: BookingStatus[] = [
   BookingStatus.CONFIRMED,
   BookingStatus.ARRIVED,
+];
+// Active but not yet confirmed — counted separately from confirmed on the
+// dashboard calendar.
+const ACTIVE_PENDING_STATUSES: BookingStatus[] = [
+  BookingStatus.PENDING,
+  BookingStatus.REQUEST_SENT,
+  BookingStatus.UNDER_REVIEW,
+  BookingStatus.WAITING_PAYMENT,
 ];
 const DECLINED_STATUSES: BookingStatus[] = [
   BookingStatus.DECLINED,

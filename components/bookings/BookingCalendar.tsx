@@ -9,15 +9,11 @@ import type { DayButton } from "react-day-picker";
 
 type DayCount = {
   date: string; // YYYY-MM-DD
+  confirmedPeople: number;
+  activePeople: number;
   totalPeople: number;
   bookingCount: number;
 };
-
-function badgeColor(totalPeople: number) {
-  if (totalPeople >= 16) return "text-red-600 dark:text-red-400";
-  if (totalPeople >= 6) return "text-amber-600 dark:text-amber-400";
-  return "text-blue-600 dark:text-blue-400";
-}
 
 export function BookingCalendar({
   counts,
@@ -54,14 +50,21 @@ export function BookingCalendar({
               <span className="text-[9px] font-semibold leading-none text-red-500 !opacity-100">
                 closed
               </span>
-            ) : data ? (
-              <span
-                className={cn(
-                  "text-[10px] font-semibold leading-none !opacity-100",
-                  badgeColor(data.totalPeople),
+            ) : data && (data.confirmedPeople > 0 || data.activePeople > 0) ? (
+              <span className="text-[10px] font-semibold leading-none !opacity-100">
+                {data.confirmedPeople > 0 && (
+                  <span className="text-emerald-600 dark:text-emerald-400">
+                    {data.confirmedPeople}
+                  </span>
                 )}
-              >
-                {data.totalPeople}p
+                {data.confirmedPeople > 0 && data.activePeople > 0 && (
+                  <span className="text-muted-foreground mx-0.5">·</span>
+                )}
+                {data.activePeople > 0 && (
+                  <span className="text-amber-600 dark:text-amber-400">
+                    {data.activePeople}
+                  </span>
+                )}
               </span>
             ) : null}
           </CalendarDayButton>

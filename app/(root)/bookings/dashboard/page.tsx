@@ -44,20 +44,36 @@ async function BookingsDashboardPage({
     STATUS_FILTERS.find((f) => f.value === status) ?? STATUS_FILTERS[0];
 
   const [result, closedResult, autoConfirm] = await Promise.all([
-    getBookingCountsByDate(
-      activeFilter.statuses.length > 0 ? activeFilter.statuses : undefined,
-    ),
+    getBookingCountsByDate(),
     getClosedDates(new Date(), addMonths(new Date(), 6)),
     getAutoConfirmBookings(),
   ]);
 
-  const counts = result.success
-    ? (result.data as {
-        date: string;
-        totalPeople: number;
-        bookingCount: number;
-      }[])
-    : [];
+  type DayCount = {
+    date: string;
+    confirmedPeople: number;
+    confirmedCount: number;
+    activePeople: number;
+    activeCount: number;
+    totalPeople: number;
+    bookingCount: number;
+  };
+  const counts = result.success ? (result.data as DayCount[]) : [];
+
+  // The calendar always shows both numbers (confirmed + active); the filter
+  // tabs only refine which slice the month stats + busiest-day stat reflect.
+  const peopleOf = (c: DayCount) =>
+    activeFilter.value === "confirmed"
+      ? c.confirmedPeople
+      : activeFilter.value === "pending"
+        ? c.activePeople
+        : c.totalPeople;
+  const bookingsOf = (c: DayCount) =>
+    activeFilter.value === "confirmed"
+      ? c.confirmedCount
+      : activeFilter.value === "pending"
+        ? c.activeCount
+        : c.bookingCount;
 
   const closedDateStrings = closedResult.success
     ? closedResult.data.map((cd) => format(new Date(cd.date), "yyyy-MM-dd"))
@@ -68,11 +84,11 @@ async function BookingsDashboardPage({
 
   const thisMonthCounts = counts.filter((c) => c.date.startsWith(thisMonth));
   const totalBookingsThisMonth = thisMonthCounts.reduce(
-    (s, c) => s + c.bookingCount,
+    (s, c) => s + bookingsOf(c),
     0,
   );
   const totalPeopleThisMonth = thisMonthCounts.reduce(
-    (s, c) => s + c.totalPeople,
+    (s, c) => s + peopleOf(c),
     0,
   );
 
@@ -82,7 +98,10 @@ async function BookingsDashboardPage({
     date: string;
     totalPeople: number;
   } | null>(
-    (best, c) => (!best || c.totalPeople > best.totalPeople ? c : best),
+    (best, c) =>
+      !best || peopleOf(c) > best.totalPeople
+        ? { date: c.date, totalPeople: peopleOf(c) }
+        : best,
     null,
   );
 
