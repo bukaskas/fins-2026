@@ -33,13 +33,14 @@ async function BookingsPage({
     status?: string;
     q?: string;
     service?: string;
+    agent?: string;
     range?: string;
     group?: string;
     sort?: string;
     dir?: string;
   }>;
 }) {
-  const { status, q, service, range = "upcoming", group = "date", sort = "date", dir = "desc" } =
+  const { status, q, service, agent = "all", range = "upcoming", group = "date", sort = "date", dir = "desc" } =
     await searchParams;
 
   const session = await getServerSession(authOptions);
@@ -82,6 +83,13 @@ async function BookingsPage({
   // Service
   if (service && service !== "all") {
     bookings = bookings.filter((b) => b.service === service);
+  }
+
+  // Agent
+  if (agent === "unassigned") {
+    bookings = bookings.filter((b) => b.agentId == null);
+  } else if (agent && agent !== "all") {
+    bookings = bookings.filter((b) => b.agentId === agent);
   }
 
   // Search
@@ -223,7 +231,10 @@ async function BookingsPage({
 
       {/* Filters */}
       <div className="mb-6 p-4 bg-white border border-[#ece8e3] rounded-xl">
-        <BookingsFilters total={bookings.length} />
+        <BookingsFilters
+          total={bookings.length}
+          agents={allUsers.map((u) => ({ id: u.id, label: u.name ?? u.email }))}
+        />
       </div>
 
       {/* Bookings list */}

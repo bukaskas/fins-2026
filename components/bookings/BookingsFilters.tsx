@@ -41,7 +41,15 @@ const DIR_OPTIONS = [
   { value: "asc",  label: "Oldest" },
 ];
 
-export function BookingsFilters({ total }: { total: number }) {
+type AgentOption = { id: string; label: string };
+
+export function BookingsFilters({
+  total,
+  agents = [],
+}: {
+  total: number;
+  agents?: AgentOption[];
+}) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [isPending, startTransition] = useTransition();
@@ -50,6 +58,7 @@ export function BookingsFilters({ total }: { total: number }) {
   const status  = searchParams.get("status")  ?? "all";
   const q       = searchParams.get("q")       ?? "";
   const service = searchParams.get("service") ?? "all";
+  const agent   = searchParams.get("agent")   ?? "all";
   const range   = searchParams.get("range")   ?? "upcoming";
   const group   = searchParams.get("group")   ?? "date";
   const sort    = searchParams.get("sort")    ?? "date";
@@ -74,7 +83,7 @@ export function BookingsFilters({ total }: { total: number }) {
   }
 
   const isFiltered =
-    status !== "all" || q !== "" || service !== "all" || range !== "upcoming";
+    status !== "all" || q !== "" || service !== "all" || agent !== "all" || range !== "upcoming";
 
   const selectClass =
     "border border-[#ece8e3] bg-white rounded-full px-3 py-1.5 text-[0.72rem] font-[family-name:var(--font-raleway)] font-[500] text-[#5a5450] tracking-[0.04em] focus:outline-none focus:border-[#1a1614] transition-colors appearance-none cursor-pointer";
@@ -103,10 +112,18 @@ export function BookingsFilters({ total }: { total: number }) {
           {SERVICE_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
         </select>
 
+        {agents.length > 0 && (
+          <select value={agent} onChange={(e) => push({ agent: e.target.value })} className={selectClass}>
+            <option value="all">All agents</option>
+            <option value="unassigned">Unassigned</option>
+            {agents.map((a) => <option key={a.id} value={a.id}>{a.label}</option>)}
+          </select>
+        )}
+
         {/* Clear */}
         {isFiltered && (
           <button
-            onClick={() => push({ status: "all", q: "", service: "all", range: "upcoming" })}
+            onClick={() => push({ status: "all", q: "", service: "all", agent: "all", range: "upcoming" })}
             className="flex items-center gap-1 text-[0.65rem] font-[family-name:var(--font-raleway)] font-[600] tracking-[0.08em] text-[#8a8480] hover:text-[#1a1614] transition-colors ml-1"
           >
             <X className="h-3 w-3" />
