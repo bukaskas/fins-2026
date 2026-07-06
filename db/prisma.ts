@@ -6,6 +6,15 @@ import ws from 'ws';
 neonConfig.webSocketConstructor = ws;
 const connectionString = process.env.DATABASE_URL;
 
-const adapter = new PrismaNeon({ connectionString });
+// Reuse a single client across dev hot reloads — each `new PrismaClient`
+// opens its own Neon pool, and leaking one per recompile exhausts connections.
+const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient };
 
-export const prisma = new PrismaClient({ adapter });
+function createClient() {
+  const adapter = new PrismaNeon({ connectionString });
+  return new PrismaClient({ adapter });
+}
+
+export const prisma = globalForPrisma.prisma ?? createClient();
+
+if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma;

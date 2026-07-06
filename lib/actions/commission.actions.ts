@@ -17,6 +17,7 @@ import {
   rateFieldForCommissionType,
 } from "@/lib/commission";
 import { commissionUpdateSchema } from "@/lib/validators";
+import { requireRole, STAFF_ROLES } from "@/lib/auth-guard";
 
 type Db = Prisma.TransactionClient | typeof prisma;
 
@@ -51,6 +52,7 @@ export async function ensureCommissionForSession(
   sessionId: string,
   txClient?: Prisma.TransactionClient
 ) {
+  await requireRole(STAFF_ROLES);
   const db: Db = txClient ?? prisma;
 
   const session = await db.lessonSession.findUnique({
@@ -155,6 +157,7 @@ export async function updateCommission(
   id: string,
   input: { overrideAmountCents?: number | null; commissionType?: CommissionType }
 ) {
+  await requireRole(STAFF_ROLES);
   const parsed = commissionUpdateSchema.safeParse(input);
   if (!parsed.success) {
     return { success: false, message: parsed.error.message };
@@ -214,6 +217,7 @@ export async function updateCommission(
 }
 
 export async function markCommissionPaid(id: string, paymentId: string) {
+  await requireRole(STAFF_ROLES);
   try {
     return await prisma.$transaction(async (tx) => {
       const commission = await tx.instructorCommission.findUniqueOrThrow({
@@ -284,6 +288,7 @@ export async function getInstructorCommissions(
   instructorId: string,
   filters: CommissionListFilters = {}
 ) {
+  await requireRole(STAFF_ROLES);
   const sessionWhere: Prisma.LessonSessionWhereInput = {};
   if (filters.from || filters.to) {
     sessionWhere.startsAt = {
@@ -367,6 +372,7 @@ type SettleInstructorCommissionsInput = {
 export async function settleInstructorCommissions(
   input: SettleInstructorCommissionsInput
 ) {
+  await requireRole(STAFF_ROLES);
   const { instructorId, from, to, method, reference, receivedAt } = input;
 
   try {
@@ -441,6 +447,7 @@ export async function settleInstructorCommissions(
 }
 
 export async function listPayoutPaymentsForInstructor(instructorId: string) {
+  await requireRole(STAFF_ROLES);
   return prisma.payment.findMany({
     where: { userId: instructorId },
     orderBy: { receivedAt: "desc" },

@@ -12,10 +12,10 @@ export type BookingWithAgent = Booking & {
 };
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
-import { addClosedDate } from "./closedDate.actions";
-import { startOfDay, startOfMonth, endOfMonth, getDaysInMonth } from "date-fns";
+import { requireRole, STAFF_ROLES as APP_STAFF_ROLES } from "@/lib/auth-guard";
+import { upsertClosedDate } from "@/lib/closed-dates";
 import { computeBookingTotalCents } from "@/lib/pricing";
-import { createPaymentOrder, getFlashOrder } from "@/lib/flash";
+import { createPaymentOrder, getFlashOrder, verifyWebhookSignature } from "@/lib/flash";
 import { getAutoConfirmBookings } from "./settings.actions";
 
 const STAFF_ROLES: Role[] = [Role.ADMIN, Role.STAFF, Role.OWNER];
@@ -27,6 +27,12 @@ const FLASH_MIN_CENTS = 500; // Flash rejects orders below 5 EGP
 // status (i.e. after `waitingPaymentAt`) if it hasn't been paid/confirmed.
 const WAITING_PAYMENT_WINDOW_MS = 24 * 60 * 60 * 1000; // 24 hours
 
+// Booking dates and closed dates are stored as UTC midnights; all calendar-day
+// math in this module works in UTC to stay server-timezone independent.
+function utcDayStart(d: Date): Date {
+  return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
+}
+
 
 
 
@@ -35,16 +41,28 @@ export async function createBooking(data: BookingFormData) {
   try {
     const validatedData = bookingFormSchema.parse(data);
 
-    // Gate: block closed dates for non-staff
+    // Gate: block closed dates for non-staff. Closed dates are stored as UTC
+    // midnights (see lib/closed-dates.ts), so compare in UTC.
     const session = await getServerSession(authOptions);
     const userRole = (session?.user as any)?.role as Role | undefined;
     if (!userRole || !STAFF_ROLES.includes(userRole)) {
-      const normalizedDate = startOfDay(validatedData.date);
+      const normalizedDate = utcDayStart(validatedData.date);
       const closed = await prisma.closedDate.findUnique({ where: { date: normalizedDate } });
       if (closed) {
         return { success: false, message: "Sorry, this date is fully booked." };
       }
     }
+
+    // Never trust the client's price: recompute for services with known
+    // pricing (day-use, pharaoh-airstyle). The client value is only a display
+    // hint, kept solely for services without server-side pricing.
+    const serverTotalCents = computeBookingTotalCents(
+      validatedData.service,
+      validatedData.date,
+      validatedData.numberOfPeople,
+      validatedData.numberOfKids ?? 0,
+    );
+    const totalPriceCents = serverTotalCents ?? validatedData.totalPriceCents ?? null;
 
     // Returning customers (matched by email or phone) skip the availability
     // review and go straight to payment.
@@ -74,7 +92,7 @@ export async function createBooking(data: BookingFormData) {
         service: validatedData.service,
         numberOfPeople: validatedData.numberOfPeople,
         numberOfKids: validatedData.numberOfKids ?? 0,
-        totalPriceCents: validatedData.totalPriceCents ?? null,
+        totalPriceCents,
         instagram: validatedData.instagram?.trim() || null,
         bookingStatus: goToPayment
           ? BookingStatus.WAITING_PAYMENT
@@ -98,7 +116,7 @@ export async function createBooking(data: BookingFormData) {
         validatedData.service,
         isDayUse ? validatedData.numberOfPeople : undefined,
         isDayUse ? (validatedData.numberOfKids ?? 0) : undefined,
-        isDayUse ? (validatedData.totalPriceCents ?? undefined) : undefined,
+        isDayUse ? (totalPriceCents ?? undefined) : undefined,
         booking.id,
       );
     }
@@ -110,7 +128,7 @@ export async function createBooking(data: BookingFormData) {
       validatedData.service,
       validatedData.numberOfPeople,
       includeTickets ? (validatedData.numberOfKids ?? 0) : undefined,
-      includeTickets ? (validatedData.totalPriceCents ?? undefined) : undefined,
+      includeTickets ? (totalPriceCents ?? undefined) : undefined,
       booking.id,
     );
 
@@ -127,12 +145,14 @@ export async function createBooking(data: BookingFormData) {
     if (isRedirectError(error)) {
       throw error;
     }
-    return { success: false, message: `Failed to create booking. Error: ${error instanceof Error ? error.message : String(error)}` };
+    // Public action: never echo internal error details to anonymous callers.
+    return { success: false, message: "Failed to create booking. Please try again or contact us." };
   }
 }
 
 
 export async function getAllBookings() {
+  await requireRole(APP_STAFF_ROLES);
   try {
     await cancelExpiredWaitingPayments();
     const bookings = await prisma.booking.findMany({
@@ -146,6 +166,7 @@ export async function getAllBookings() {
 }
 
 export async function getBookingsByService(service: string) {
+  await requireRole(APP_STAFF_ROLES);
   try {
     const bookings = await prisma.booking.findMany({
       where: { service },
@@ -177,11 +198,12 @@ export async function getDayUseMonthlyReport(opts: {
 }): Promise<
   { success: true; data: DayUseMonthlyReport } | { success: false; message: string }
 > {
+  await requireRole(APP_STAFF_ROLES);
   try {
     const { year, month, agentId } = opts;
-    const monthStart = startOfMonth(new Date(year, month - 1, 1));
-    const monthEnd = endOfMonth(monthStart);
-    const daysInMonth = getDaysInMonth(monthStart);
+    const monthStart = new Date(Date.UTC(year, month - 1, 1));
+    const monthEnd = new Date(Date.UTC(year, month, 0, 23, 59, 59, 999));
+    const daysInMonth = new Date(Date.UTC(year, month, 0)).getUTCDate();
 
     const bookings = await prisma.booking.findMany({
       where: {
@@ -214,7 +236,7 @@ export async function getDayUseMonthlyReport(opts: {
       const people = b.numberOfPeople + (b.numberOfKids ?? 0);
       const isConfirmed = CONFIRMED_STATUSES.includes(b.bookingStatus);
       const isDeclined = DECLINED_STATUSES.includes(b.bookingStatus);
-      const dayIndex = new Date(b.date).getDate() - 1;
+      const dayIndex = new Date(b.date).getUTCDate() - 1;
       const bucket = perDay[dayIndex];
 
       totals.appliedBookings += 1;
@@ -240,10 +262,11 @@ export async function getDayUseMonthlyReport(opts: {
 }
 
 export async function getBookingCountsByDate(statuses?: BookingStatus[]) {
+  await requireRole(APP_STAFF_ROLES);
   try {
     const today = new Date();
-    const start = new Date(today.getFullYear(), today.getMonth() - 3, 1);
-    const end = new Date(today.getFullYear(), today.getMonth() + 4, 0, 23, 59, 59);
+    const start = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth() - 3, 1));
+    const end = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth() + 4, 0, 23, 59, 59, 999));
 
     const bookings = await prisma.booking.findMany({
       where: {
@@ -301,6 +324,7 @@ export async function getBookingCountsByDate(statuses?: BookingStatus[]) {
 }
 
 export async function deleteBooking(id: string) {
+  await requireRole(APP_STAFF_ROLES);
   try {
     await prisma.booking.delete({ where: { id } });
     revalidatePath('/bookings', 'layout');
@@ -371,6 +395,7 @@ export async function getAgentStats(
   rangeStart: Date | null,
   rangeEnd: Date | null,
 ): Promise<{ success: true; data: AgentStatsResult } | { success: false; message: string }> {
+  await requireRole(APP_STAFF_ROLES);
   try {
     const where =
       rangeStart && rangeEnd ? { createdAt: { gte: rangeStart, lte: rangeEnd } } : {};
@@ -531,6 +556,7 @@ export async function getAgentStats(
 }
 
 export async function getBookingsByDate(date: string, statuses?: BookingStatus[]) {
+  await requireRole(APP_STAFF_ROLES);
   try {
     const start = new Date(`${date}T00:00:00.000Z`);
     const end = new Date(`${date}T23:59:59.999Z`);
@@ -677,6 +703,7 @@ export async function sendBulkEmails(
 }
 
 export async function updateBooking(id: string, data: UpdateBookingData) {
+  await requireRole(APP_STAFF_ROLES);
   try {
     const validatedData = updateBookingSchema.parse(data);
     const newTotalCents = computeBookingTotalCents(
@@ -716,6 +743,7 @@ export async function updateBooking(id: string, data: UpdateBookingData) {
 }
 
 export async function getAllDepositPayments() {
+  await requireRole(APP_STAFF_ROLES);
   try {
     const payments = await prisma.bookingPayment.findMany({
       orderBy: { createdAt: "desc" },
@@ -790,7 +818,18 @@ export async function deleteDepositPayment(paymentId: string) {
 
 export async function getBookingById(id: string) {
   try {
-    await cancelExpiredWaitingPayments();
+    // Public read path: expire only THIS booking if its payment window lapsed
+    // (idempotent single-row update), instead of sweeping the whole table on
+    // every anonymous page view. The table-wide sweep runs from the cron route
+    // and staff reads.
+    await prisma.booking.updateMany({
+      where: {
+        id,
+        bookingStatus: BookingStatus.WAITING_PAYMENT,
+        waitingPaymentAt: { not: null, lt: new Date(Date.now() - WAITING_PAYMENT_WINDOW_MS) },
+      },
+      data: { bookingStatus: BookingStatus.CANCELED },
+    });
     const booking = await prisma.booking.findUnique({
       where: { id },
       include: { agent: { select: { id: true, name: true, email: true } } },
@@ -825,15 +864,30 @@ export async function cancelExpiredWaitingPayments() {
 }
 
 export async function updateBookingStatus(id: string, status: BookingStatus) {
-  try {
-    const session = await getServerSession(authOptions);
-    const userId = (session?.user as any)?.id as string | undefined;
+  const session = await getServerSession(authOptions);
+  const user = session?.user as { id?: string; role?: Role } | undefined;
+  if (!user?.role || !(APP_STAFF_ROLES as Role[]).includes(user.role)) {
+    return { success: false, message: "Not authorized." };
+  }
+  return applyBookingStatusChange(id, status, user.id);
+}
 
+/**
+ * Internal status-change core (not an action endpoint). Also used by the
+ * Flash payment path, which runs without a user session — authorization there
+ * is the verified webhook signature, not a role.
+ */
+async function applyBookingStatusChange(
+  id: string,
+  status: BookingStatus,
+  agentId?: string,
+) {
+  try {
     const booking = await prisma.booking.update({
       where: { id },
       data: {
         bookingStatus: status,
-        ...(userId ? { agentId: userId } : {}),
+        ...(agentId ? { agentId } : {}),
         // Start (or restart) the 24h payment countdown on entry into
         // WAITING_PAYMENT; the deadline is derived as waitingPaymentAt + 24h.
         ...(status === BookingStatus.WAITING_PAYMENT
@@ -845,14 +899,14 @@ export async function updateBookingStatus(id: string, status: BookingStatus) {
 
     // Auto-close the date if confirmed people reach the 80-person limit
     if (status === BookingStatus.CONFIRMED) {
-      const dayStart = startOfDay(booking.date);
+      const dayStart = utcDayStart(booking.date);
       const dayEnd = new Date(dayStart.getTime() + 24 * 60 * 60 * 1000 - 1);
       const { _sum } = await prisma.booking.aggregate({
         where: { date: { gte: dayStart, lte: dayEnd }, bookingStatus: BookingStatus.CONFIRMED },
         _sum: { numberOfPeople: true },
       });
       if ((_sum.numberOfPeople ?? 0) >= 80) {
-        await addClosedDate(dayStart, "Auto-closed: 80-person daily capacity reached");
+        await upsertClosedDate(dayStart, "Auto-closed: 80-person daily capacity reached");
       }
     }
 
@@ -876,6 +930,9 @@ export async function updateBookingStatus(id: string, status: BookingStatus) {
 /**
  * Create (or reuse) a Flash payment link for a booking's outstanding balance.
  * Safe to call repeatedly — if a link already exists it is returned as-is.
+ *
+ * Intentionally public: guests trigger this from the unauthenticated booking
+ * detail page (PayDepositOnline). Knowing the booking UUID is the capability.
  */
 export async function createBookingPaymentLink(bookingId: string) {
   try {
@@ -934,14 +991,22 @@ export async function createBookingPaymentLink(bookingId: string) {
 }
 
 /**
- * Apply a verified Flash webhook event to a booking.
+ * Apply a Flash webhook event to a booking.
  *
- * Signature verification happens in the route before this is called. This
- * function is idempotent (keyed on the Flash transaction id) and only records a
- * payment + confirms the booking on a "succeeded" event. Returns `retry: true`
- * only for unexpected failures so the route can signal Flash to retry.
+ * The HMAC signature is verified here (in addition to the webhook route) so
+ * this exported server action cannot be invoked directly with a forged
+ * payload. This function is idempotent (keyed on the Flash transaction id) and
+ * only records a payment + confirms the booking on a "succeeded" event.
+ * Returns `retry: true` only for unexpected failures so the route can signal
+ * Flash to retry.
  */
-export async function recordFlashPayment(payload: Record<string, unknown>) {
+export async function recordFlashPayment(
+  payload: Record<string, unknown>,
+  signature: string | null,
+) {
+  if (!verifyWebhookSignature(payload, signature)) {
+    return { success: false, ignored: true as const, message: "Invalid signature." };
+  }
   try {
     const transactionId = String(payload.transactionId ?? "");
     const aggregatorOrderId = String(payload.aggregatorOrderId ?? "");
@@ -1051,8 +1116,9 @@ async function applyFlashPayment(opts: {
     });
   });
 
-  // Reuse CONFIRMED side-effects (revalidation, 80-person auto-close).
-  await updateBookingStatus(bookingId, BookingStatus.CONFIRMED);
+  // Reuse CONFIRMED side-effects (revalidation, 80-person auto-close) via the
+  // internal core — this path runs from the webhook with no user session.
+  await applyBookingStatusChange(bookingId, BookingStatus.CONFIRMED);
   revalidatePath(`/bookings/${bookingId}`);
 
   return { confirmed: true as const };
@@ -1063,6 +1129,7 @@ async function applyFlashPayment(opts: {
  * A webhook-free fallback/reconciliation path (idempotent with the webhook).
  */
 export async function checkBookingPaymentStatus(bookingId: string) {
+  await requireRole(APP_STAFF_ROLES);
   try {
     const booking = await prisma.booking.findUnique({
       where: { id: bookingId },
@@ -1099,6 +1166,7 @@ export async function checkBookingPaymentStatus(bookingId: string) {
 }
 
 export async function updateBookingParty(id: string, adults: number, kids: number) {
+  await requireRole(APP_STAFF_ROLES);
   try {
     if (!Number.isInteger(adults) || adults < 1) {
       return { success: false, message: "Adults must be a whole number ≥ 1." };
@@ -1177,6 +1245,7 @@ export async function payBookingDeposit(bookingId: string, data: BookingDepositD
 }
 
 export async function updateBookingAmountPaid(id: string, amountPaidCents: number) {
+  await requireRole(APP_STAFF_ROLES);
   try {
     await prisma.booking.update({ where: { id }, data: { amountPaidCents } });
     revalidatePath('/bookings', 'layout');
@@ -1188,9 +1257,9 @@ export async function updateBookingAmountPaid(id: string, amountPaidCents: numbe
 }
 
 export async function getFutureKitesurfingBookings() {
+  await requireRole(APP_STAFF_ROLES);
   try {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    const today = utcDayStart(new Date());
 
     const bookings = await prisma.booking.findMany({
       where: {
@@ -1209,6 +1278,7 @@ export async function getFutureKitesurfingBookings() {
 }
 
 export async function getBookingsByDateRange(from: string, to: string) {
+  await requireRole(APP_STAFF_ROLES);
   try {
     const start = new Date(`${from}T00:00:00.000Z`);
     const end = new Date(`${to}T23:59:59.999Z`);
@@ -1229,6 +1299,7 @@ export async function getBookingsByDateRange(from: string, to: string) {
 export async function batchUpdateBookingSchedule(
   updates: { id: string; time: string | null; instructor: string | null }[]
 ) {
+  await requireRole(APP_STAFF_ROLES);
   try {
     await prisma.$transaction(
       updates.map((u) =>
@@ -1246,9 +1317,9 @@ export async function batchUpdateBookingSchedule(
 }
 
 export async function getFutureBookingPeopleTotalsByDate() {
+  await requireRole(APP_STAFF_ROLES);
   try {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    const today = utcDayStart(new Date());
 
     const futureBookings = await prisma.booking.findMany({
       where: {
@@ -1289,6 +1360,7 @@ export async function getFutureBookingPeopleTotalsByDate() {
 }
 
 export async function assignBookingAgent(bookingId: string, agentId: string | null) {
+  await requireRole(APP_STAFF_ROLES);
   try {
     await prisma.booking.update({
       where: { id: bookingId },
@@ -1312,6 +1384,7 @@ export async function createDayUseBookingAdmin(data: {
   bookingStatus: BookingStatus;
   amountPaidCents: number;
 }) {
+  await requireRole(APP_STAFF_ROLES);
   try {
     const booking = await prisma.booking.create({
       data: {

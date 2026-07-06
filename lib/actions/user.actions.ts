@@ -1,6 +1,6 @@
 'use server'
 import { prisma } from "@/db/prisma";
-import { SignUpFormData, UserEditFormData } from "../validators";
+import { SignUpFormData, signUpFormSchema, UserEditFormData } from "../validators";
 import bcryptjs from "bcryptjs";
 
 import { Prisma, Role } from "@prisma/client";
@@ -14,37 +14,45 @@ import { issueEmailVerificationForUser } from "@/lib/actions/auth.actions";
 
 
 export async function createUser(data: SignUpFormData) {
+  // Server-side validation — never trust the client payload (enforces the
+  // password policy even if the form schema is bypassed).
+  const parsed = signUpFormSchema.safeParse(data);
+  if (!parsed.success) {
+    return {
+      success: false,
+      message: parsed.error.issues[0]?.message ?? "Invalid signup data.",
+    };
+  }
+  const input = parsed.data;
+
   try {
-    const hashedPassword = await bcryptjs.hash(data.password, 10);
+    const hashedPassword = await bcryptjs.hash(input.password, 10);
 
     const result = await prisma.$transaction(async (tx) => {
       const user = await tx.user.create({
         data: {
-          email: data.email,
+          email: input.email,
           password: hashedPassword,
-          name: data.name || null,
-          phone: data.phone || null,
+          name: input.name || null,
+          phone: input.phone || null,
         },
       });
 
-      // Optional for credentials provider, but you can keep it:
+      // Optional for credentials provider, but you can keep it. Keyed on the
+      // immutable user id, not the (changeable) email.
       await tx.account.create({
         data: {
           userId: user.id,
           type: "credentials",
           provider: "credentials",
-          providerAccountId: user.email, // or user.id
+          providerAccountId: user.id,
         },
       });
 
       return user;
     });
-    let emailSent = false;
     try {
-      console.log("[createUser] sending registration email to:", result.email);
       await sendRegistrationEmail(result.email, result.name || "");
-      emailSent = true;
-      console.log("[createUser] registration email sent");
     } catch (emailError) {
       console.error("[createUser] registration email failed:", emailError);
     }
@@ -112,7 +120,11 @@ export async function updateUser(id: string, data: UserEditFormData) {
   try {
     const passwordData =
       data.password && data.password.length > 0
-        ? { password: await bcryptjs.hash(data.password, 10) }
+        ? {
+            password: await bcryptjs.hash(data.password, 10),
+            // Changing the password invalidates outstanding sessions.
+            sessionVersion: { increment: 1 },
+          }
         : {};
 
     const updated = await prisma.$transaction(async (tx) => {
@@ -221,7 +233,7 @@ export async function createUserAsAdmin(data: {
       const u = await tx.user.create({
         data: {
           name: data.name || null,
-          email: data.email,
+          email: data.email.trim().toLowerCase(),
           phone: data.phone || null,
           role: data.role,
           isInstructor: data.isInstructor ?? false,
@@ -249,7 +261,7 @@ export async function createUserAsAdmin(data: {
 export async function createStudent(formData: FormData) {
   await requireRole(STAFF_ROLES);
   const name = String(formData.get("name") ?? "").trim();
-  const email = String(formData.get("email") ?? "").trim();
+  const email = String(formData.get("email") ?? "").trim().toLowerCase();
   const phone = String(formData.get("phone") ?? "").trim() || null;
 
   if (!name) throw new Error("Name is required.");
@@ -272,7 +284,12 @@ export async function createGuest(data: { name: string; email: string; phone: st
   try {
     const hashedPassword = await bcryptjs.hash(crypto.randomUUID(), 10);
     const user = await prisma.user.create({
-      data: { name: data.name, email: data.email, phone: data.phone || null, password: hashedPassword },
+      data: {
+        name: data.name,
+        email: data.email.trim().toLowerCase(),
+        phone: data.phone || null,
+        password: hashedPassword,
+      },
       select: { id: true, name: true, email: true },
     });
     return { success: true as const, user };

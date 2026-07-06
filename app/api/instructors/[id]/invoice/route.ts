@@ -7,6 +7,7 @@ import {
 } from "@prisma/client";
 import { startOfMonth, endOfMonth } from "date-fns";
 import { prisma } from "@/db/prisma";
+import { hasRole, STAFF_ROLES } from "@/lib/auth-guard";
 import { InstructorInvoicePdf } from "@/components/expenses/InstructorInvoicePdf";
 
 export const runtime = "nodejs";
@@ -21,6 +22,10 @@ export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  if (!(await hasRole(STAFF_ROLES))) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   const { id } = await params;
 
   const url = new URL(req.url);

@@ -17,15 +17,20 @@ export async function GET() {
 // Flash posts payment transaction notifications here.
 // Register this URL with Flash: `${NEXT_PUBLIC_SERVER_URL}/api/payments/flash/webhook`
 export async function POST(req: Request) {
-  // Unconditional hit log — proves Flash actually called us, even if the body
-  // is unparseable or the signature is wrong. Remove once the integration is
-  // confirmed working.
   const rawBody = await req.text();
-  console.info("[flash-webhook] HIT", {
-    time: new Date().toISOString(),
-    headers: Object.fromEntries(req.headers.entries()),
-    rawBody,
-  });
+
+  // Full request dump only under the debug flag — headers carry the HMAC
+  // signature and the body carries customer PII; neither belongs in routine
+  // production logs.
+  if (DEBUG) {
+    const headers = Object.fromEntries(req.headers.entries());
+    if (headers.signature) headers.signature = "<redacted>";
+    console.info("[flash-webhook] HIT", {
+      time: new Date().toISOString(),
+      headers,
+      rawBody,
+    });
+  }
 
   let payload: Record<string, unknown>;
   try {
@@ -63,7 +68,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
   }
 
-  const result = await recordFlashPayment(payload);
+  const result = await recordFlashPayment(payload, signature);
   if (DEBUG) console.info("[flash-webhook] result", result);
 
   // Only ask Flash to retry on unexpected failures. Handled, ignored, and

@@ -84,16 +84,3 @@ export function computeBookingTotalCents(
   }
   return null;
 }
-
-import { LessonType } from "@prisma/client";
-
-export const LESSON_PRICES_EGP: Record<LessonType, number> = {
-  PRIVATE: 22000,
-  GROUP: 17000,
-  FOIL: 15000,
-  KIDS: 12000,
-  EXTRA_PRIVATE: 10000,
-  EXTRA_GROUP: 10000,
-};
-
-export const COMMISSION_RATE = 0.25;

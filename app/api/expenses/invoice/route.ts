@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { renderToBuffer } from "@react-pdf/renderer";
 import { ExpenseStatus } from "@prisma/client";
 import { prisma } from "@/db/prisma";
+import { hasRole, STAFF_ROLES } from "@/lib/auth-guard";
 import { InvoicePdf } from "@/components/expenses/InvoicePdf";
 
 export const runtime = "nodejs";
@@ -13,6 +14,10 @@ function parseDate(value: string | null): Date | null {
 }
 
 export async function GET(req: NextRequest) {
+  if (!(await hasRole(STAFF_ROLES))) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   const url = new URL(req.url);
   const payeeId = url.searchParams.get("payeeId");
   if (!payeeId) {

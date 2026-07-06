@@ -3,22 +3,24 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/db/prisma";
 import { Prisma, WalletLedgerReason, WalletType, WalletUnit } from "@prisma/client";
+import { currentUserId, requireRole, STAFF_ROLES } from "@/lib/auth-guard";
+import { calculateDayUsePrice } from "@/lib/pricing";
 
 
 const BEACH_USE_SKU = "BEACH_USE_DAY";
-const DAY_USE_PRICE_CENTS = 150000; // 1500 EGP
 const OWNER_DISCOUNT = 0.2;
-const HOLIDAY_PRICE_MULTIPLIER = 1.25; // 25% increase on holidays
 
 
 export async function quickAddBeachUse(formData: FormData) {
+  await requireRole(STAFF_ROLES);
   const guestId = String(formData.get("guestId") ?? "").trim();
   if (!guestId) throw new Error("guestId is required.");
 
   const now = new Date();
-  const visitDate = now; // added
-  const notes = String(formData.get("notes") ?? "").trim() || null; // added
-  const actorId = String(formData.get("actorId") ?? "").trim() || null; // added
+  const visitDate = now;
+  const notes = String(formData.get("notes") ?? "").trim() || null;
+  // Audit attribution comes from the session, never from the form.
+  const actorId = await currentUserId();
 
   await prisma.$transaction(async (tx) => {
     const user = await tx.user.findUnique({
@@ -89,11 +91,14 @@ export async function quickAddBeachUse(formData: FormData) {
       return { ok: true, visitId: visit.id, charged: false };
     }
 
-    // 3) No membership + no credit => charge outstanding
+    // 3) No membership + no credit => charge outstanding. Single source of
+    // truth for the day-use price (incl. holiday/discounted dates) is
+    // lib/pricing — same rate a booking for today would get.
+    const { adultUnitCents, rateType } = calculateDayUsePrice(now, 1, 0);
     const isOwner = user.role === "OWNER";
     const chargeCents = isOwner
-      ? Math.trunc(DAY_USE_PRICE_CENTS * (1 - OWNER_DISCOUNT))
-      : DAY_USE_PRICE_CENTS;
+      ? Math.trunc(adultUnitCents * (1 - OWNER_DISCOUNT))
+      : adultUnitCents;
 
     await tx.beachVisit.create({
       data: {
@@ -103,8 +108,8 @@ export async function quickAddBeachUse(formData: FormData) {
         status: "OPEN",
         checkedInAt: now,
         notes: isOwner
-          ? "Desk quick add: OWNER 20% discount"
-          : "Desk quick add: regular 500 EGP",
+          ? `Desk quick add: OWNER 20% discount (${rateType} rate)`
+          : `Desk quick add: ${chargeCents / 100} EGP (${rateType} rate)`,
       },
     });
 
@@ -114,13 +119,15 @@ export async function quickAddBeachUse(formData: FormData) {
     });
 
     if (!product) {
+      // Catalog default = today's standard adult rate; the actual charge on
+      // each order line is chargeCents.
       product = await tx.product.create({
         data: {
           name: "Beach Use Day",
           sku: BEACH_USE_SKU,
           type: "SERVICE",
           category: "BEACH_USE",
-          priceCents: DAY_USE_PRICE_CENTS,
+          priceCents: adultUnitCents,
           currency: "EGP",
           isActive: true,
         },

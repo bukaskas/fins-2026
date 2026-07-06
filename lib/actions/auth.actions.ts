@@ -30,6 +30,16 @@ export async function requestPasswordReset(email: string) {
     });
 
     if (user) {
+      // Throttle: if a reset was requested in the last 60s, silently skip the
+      // send (prevents using this endpoint to spam a victim's inbox).
+      const recent = await prisma.passwordResetToken.findFirst({
+        where: { userId: user.id, createdAt: { gt: new Date(Date.now() - 60_000) } },
+        select: { id: true },
+      });
+      if (recent) {
+        return { success: true as const, message: GENERIC_RESET_MESSAGE };
+      }
+
       // Invalidate any outstanding reset tokens for this user.
       await prisma.passwordResetToken.deleteMany({ where: { userId: user.id } });
 
@@ -78,7 +88,9 @@ export async function resetPassword(token: string, newPassword: string) {
   await prisma.$transaction([
     prisma.user.update({
       where: { id: record.userId },
-      data: { password: hashedPassword },
+      // Bumping sessionVersion invalidates every outstanding JWT session
+      // (see lib/auth.ts jwt callback).
+      data: { password: hashedPassword, sessionVersion: { increment: 1 } },
     }),
     // Mark this token used and clear the rest for the account.
     prisma.passwordResetToken.update({
@@ -188,6 +200,22 @@ export async function resendVerification() {
   }
   if (user.emailVerified) {
     return { success: true as const, message: "Your email is already verified." };
+  }
+
+  // Throttle: verification tokens live VERIFY_TTL_MS from creation, so a token
+  // expiring more than TTL-60s from now was created within the last minute.
+  const existingToken = await prisma.verificationToken.findFirst({
+    where: { identifier: user.id },
+    select: { expires: true },
+  });
+  if (
+    existingToken &&
+    existingToken.expires.getTime() > Date.now() + VERIFY_TTL_MS - 60_000
+  ) {
+    return {
+      success: true as const,
+      message: "Verification email sent. Check your inbox.",
+    };
   }
 
   try {

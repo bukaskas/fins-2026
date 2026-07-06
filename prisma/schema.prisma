@@ -221,6 +221,9 @@ model User {
   role         Role      @default(KITER)
   userType     UserType  @default(LEVEL_1)
   isInstructor Boolean   @default(false)
+  /// Bumped on password reset/change; JWTs carrying an older version lose
+  /// their auth claims (see lib/auth.ts jwt callback).
+  sessionVersion Int     @default(0)
   accounts     Account[]
   sessions     Session[]
   members      Member[]
@@ -365,15 +368,17 @@ model Product {
 model Order {
   id         String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   userId     String      @db.Uuid
-  user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // Financial history is never deleted with a user — block instead (audit trail).
+  user       User        @relation(fields: [userId], references: [id], onDelete: Restrict)
   status     OrderStatus @default(OPEN)
   totalCents Int
   createdAt  DateTime    @default(now()) @db.Timestamp(6)
 
-  lines         OrderLine[]
-  allocations   PaymentAllocation[]
-  walletEntries WalletLedger[]
-  rentals       Rental[]
+  lines          OrderLine[]
+  allocations    PaymentAllocation[]
+  walletEntries  WalletLedger[]
+  rentals        Rental[]
+  lessonBookings LessonBooking[]
 }
 
 model OrderLine {
@@ -395,7 +400,7 @@ model OrderLine {
 model Payment {
   id          String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   userId      String        @db.Uuid
-  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user        User          @relation(fields: [userId], references: [id], onDelete: Restrict)
   amountCents Int
   method      PaymentMethod
   reference   String?
@@ -427,7 +432,7 @@ model UserWallet {
   createdAt DateTime   @default(now()) @db.Timestamp(6)
   updatedAt DateTime   @default(now()) @updatedAt
 
-  user    User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user    User           @relation(fields: [userId], references: [id], onDelete: Restrict)
   entries WalletLedger[]
 
   @@unique([userId, type])
@@ -453,8 +458,8 @@ model WalletLedger {
   beachVisitId    String? @db.Uuid
   rentalId        String? @db.Uuid
 
-  wallet        UserWallet     @relation(fields: [walletId], references: [id], onDelete: Cascade)
-  owner         User           @relation("WalletOwner", fields: [userId], references: [id], onDelete: Cascade)
+  wallet        UserWallet     @relation(fields: [walletId], references: [id], onDelete: Restrict)
+  owner         User           @relation("WalletOwner", fields: [userId], references: [id], onDelete: Restrict)
   actor         User?          @relation("WalletActor", fields: [actorId], references: [id], onDelete: SetNull)
   order         Order?         @relation(fields: [orderId], references: [id], onDelete: SetNull)
   orderLine     OrderLine?     @relation(fields: [orderLineId], references: [id], onDelete: SetNull)
@@ -506,12 +511,19 @@ model LessonBooking {
   notes       String?
   createdAt   DateTime            @default(now()) @db.Timestamp(6)
 
+  // Explicit link to the order created when this booking was charged
+  // (chargeGuestForSession) — replaces the ±24h time-window heuristic for
+  // repricing and revenue attribution. Null for legacy/free bookings.
+  orderId String? @db.Uuid
+
   session       LessonSession  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
-  guest         User           @relation(fields: [guestId], references: [id], onDelete: Cascade)
+  guest         User           @relation(fields: [guestId], references: [id], onDelete: Restrict)
+  order         Order?         @relation(fields: [orderId], references: [id], onDelete: SetNull)
   walletEntries WalletLedger[]
 
   @@unique([sessionId, guestId])
   @@index([guestId, createdAt])
+  @@index([orderId])
 }
 
 model BeachVisit {
@@ -525,7 +537,7 @@ model BeachVisit {
   notes        String?
   createdAt    DateTime         @default(now()) @db.Timestamp(6)
 
-  guest         User           @relation(fields: [guestId], references: [id], onDelete: Cascade)
+  guest         User           @relation(fields: [guestId], references: [id], onDelete: Restrict)
   walletEntries WalletLedger[]
 
   @@index([guestId, visitDate])
@@ -544,7 +556,7 @@ model Rental {
   createdAt  DateTime     @default(now()) @db.Timestamp(6)
   updatedAt  DateTime     @default(now()) @updatedAt
 
-  guest         User           @relation(fields: [guestId], references: [id], onDelete: Cascade)
+  guest         User           @relation(fields: [guestId], references: [id], onDelete: Restrict)
   order         Order          @relation(fields: [orderId], references: [id], onDelete: Restrict)
   lines         RentalLine[]
   walletEntries WalletLedger[]

@@ -1,16 +1,14 @@
 "use server";
 
 import { prisma } from "@/db/prisma";
-import {
-  Prisma,
-  WalletLedgerReason,
-  WalletType,
-  WalletUnit,
-} from "@prisma/client";
+import { Prisma, WalletType } from "@prisma/client";
 import { LessonType, LessonBookingStatus, OrderStatus, ProductType } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import bcryptjs from "bcryptjs";
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "@/lib/auth";
+import { hasRole, requireRole, STAFF_ROLES } from "@/lib/auth-guard";
 import { sendBookingEmail, sendStaffNotificationEmail } from "@/emails";
 import {
   KitesurfingBookingFormData,
@@ -76,136 +74,11 @@ async function chargeGuestForSession(
   });
 }
 
-type DecimalLike = Prisma.Decimal | number | string;
-
-type PostWalletLedgerInput = {
-  walletId: string;
-  userId: string;
-  actorId?: string | null;
-  delta: DecimalLike; // signed (+ credit, - consumption)
-  reason: WalletLedgerReason;
-  note?: string | null;
-  idempotencyKey?: string | null;
-
-  orderId?: string | null;
-  orderLineId?: string | null;
-  paymentId?: string | null;
-  lessonBookingId?: string | null;
-  beachVisitId?: string | null;
-  rentalId?: string | null;
-};
-
-function toDecimal(value: DecimalLike) {
-  return new Prisma.Decimal(value);
-}
-
-export async function getOrCreateWallet(
-  userId: string,
-  type: WalletType,
-  unit: WalletUnit
-) {
-  const wallet = await prisma.userWallet.upsert({
-    where: { userId_type: { userId, type } },
-    update: {},
-    create: {
-      userId,
-      type,
-      unit,
-      balance: new Prisma.Decimal(0),
-    },
-  });
-
-  if (wallet.unit !== unit) {
-    throw new Error(
-      `Wallet unit mismatch for ${type}. Expected ${unit}, found ${wallet.unit}.`
-    );
-  }
-
-  return wallet;
-}
-
-export async function postWalletLedger(input: PostWalletLedgerInput) {
-  const delta = toDecimal(input.delta);
-
-  if (delta.equals(0)) {
-    throw new Error("Ledger delta must not be 0.");
-  }
-
-  // Fast idempotency return
-  if (input.idempotencyKey) {
-    const existing = await prisma.walletLedger.findUnique({
-      where: {
-        walletId_idempotencyKey: {
-          walletId: input.walletId,
-          idempotencyKey: input.idempotencyKey,
-        },
-      },
-    });
-
-    if (existing) return existing;
-  }
-
-  try {
-    return await prisma.$transaction(async (tx) => {
-      // Atomic wallet balance update
-      const updatedWallet = await tx.userWallet.update({
-        where: { id: input.walletId, userId: input.userId },
-        data: { balance: { increment: delta } },
-        select: { id: true, userId: true, balance: true },
-      });
-
-      if (updatedWallet.userId !== input.userId) {
-        throw new Error("walletId does not belong to userId.");
-      }
-
-
-
-      // Create immutable ledger row
-      const entry = await tx.walletLedger.create({
-        data: {
-          walletId: input.walletId,
-          userId: input.userId,
-          actorId: input.actorId ?? null,
-          delta,
-          balanceAfter: updatedWallet.balance,
-          reason: input.reason,
-          note: input.note ?? null,
-          idempotencyKey: input.idempotencyKey ?? null,
-
-          orderId: input.orderId ?? null,
-          orderLineId: input.orderLineId ?? null,
-          paymentId: input.paymentId ?? null,
-          lessonBookingId: input.lessonBookingId ?? null,
-          beachVisitId: input.beachVisitId ?? null,
-          rentalId: input.rentalId ?? null,
-        },
-      });
-
-      return entry;
-    });
-  } catch (err: any) {
-    // Race-safe idempotency: if duplicate key was inserted in parallel, return it
-    if (
-      input.idempotencyKey &&
-      err?.code === "P2002" &&
-      String(err?.meta?.target ?? "").includes("walletId") &&
-      String(err?.meta?.target ?? "").includes("idempotencyKey")
-    ) {
-      const existing = await prisma.walletLedger.findUnique({
-        where: {
-          walletId_idempotencyKey: {
-            walletId: input.walletId,
-            idempotencyKey: input.idempotencyKey,
-          },
-        },
-      });
-      if (existing) return existing;
-    }
-    throw err;
-  }
-}
+// NOTE: getOrCreateWallet / postWalletLedger moved to lib/wallet.ts — they are
+// internal helpers and must not be exposed as server-action endpoints.
 
 export async function getLessonFormUsers() {
+  await requireRole(STAFF_ROLES);
   const [students, instructors] = await Promise.all([
     prisma.user.findMany({
       select: { id: true, name: true, email: true, phone: true }, // changed
@@ -222,6 +95,7 @@ export async function getLessonFormUsers() {
 }
 
 export async function getUserLessonHoursBalance(userId: string): Promise<number> {
+  await requireRole(STAFF_ROLES);
   if (!userId) return 0;
   const wallet = await prisma.userWallet.findUnique({
     where: { userId_type: { userId, type: WalletType.LESSON_HOURS } },
@@ -231,6 +105,7 @@ export async function getUserLessonHoursBalance(userId: string): Promise<number>
 }
 
 export async function getActiveLessonBundleProducts() {
+  await requireRole(STAFF_ROLES);
   const products = await prisma.product.findMany({
     where: {
       type: ProductType.BUNDLE_CREDIT,
@@ -273,6 +148,7 @@ function safeReturnTo(raw: unknown): string {
 }
 
 export async function createLessonSessionFromForm(formData: FormData) {
+  await requireRole(STAFF_ROLES);
   const returnTo = safeReturnTo(formData.get("returnTo"));
 
   const parsed = newLessonFormSchema.safeParse({
@@ -332,20 +208,21 @@ export async function createLessonSessionFromForm(formData: FormData) {
       select: { id: true },
     });
 
+    const order = await chargeGuestForSession(tx, {
+      guestId: studentId,
+      lessonType: product.lessonType,
+      durationMinutes,
+      productId: product.id,
+    });
+
     await tx.lessonBooking.create({
       data: {
         sessionId: session.id,
         guestId: studentId,
         status: LessonBookingStatus.CONFIRMED,
+        orderId: order.id,
       },
       select: { id: true },
-    });
-
-    await chargeGuestForSession(tx, {
-      guestId: studentId,
-      lessonType: product.lessonType,
-      durationMinutes,
-      productId: product.id,
     });
 
     await ensureCommissionForSession(session.id, tx);
@@ -371,6 +248,7 @@ const sessionInclude = {
 };
 
 export async function getLessonSessionsByDate(date: string) {
+  await requireRole(STAFF_ROLES);
   const start = new Date(`${date}T00:00:00.000Z`);
   const end = new Date(`${date}T23:59:59.999Z`);
 
@@ -384,6 +262,7 @@ export async function getLessonSessionsByDate(date: string) {
 export async function batchUpdateSessionSchedule(
   updates: { id: string; startsAt: string; endsAt: string; instructorId: string | null }[]
 ) {
+  await requireRole(STAFF_ROLES);
   try {
     await prisma.$transaction(async (tx) => {
       for (const u of updates) {
@@ -418,6 +297,7 @@ export async function createLessonSessionQuick(data: {
   guestId: string | null;
   productId?: string | null;
 }) {
+  await requireRole(STAFF_ROLES);
   const lessonType = data.lessonType as LessonType;
   if (!Object.values(LessonType).includes(lessonType)) {
     return { success: false, message: "Invalid lesson type." };
@@ -437,23 +317,24 @@ export async function createLessonSessionQuick(data: {
       });
 
       if (data.guestId) {
+        const durationMinutes = Math.round(
+          (s.endsAt.getTime() - s.startsAt.getTime()) / 60000,
+        );
+
+        const order = await chargeGuestForSession(tx, {
+          guestId: data.guestId,
+          lessonType,
+          durationMinutes,
+          productId: data.productId ?? null,
+        });
+
         await tx.lessonBooking.create({
           data: {
             sessionId: s.id,
             guestId: data.guestId,
             status: LessonBookingStatus.CONFIRMED,
+            orderId: order.id,
           },
-        });
-
-        const durationMinutes = Math.round(
-          (s.endsAt.getTime() - s.startsAt.getTime()) / 60000,
-        );
-
-        await chargeGuestForSession(tx, {
-          guestId: data.guestId,
-          lessonType,
-          durationMinutes,
-          productId: data.productId ?? null,
         });
       }
 
@@ -564,10 +445,10 @@ export async function createKitesurfingBookingFromPublic(
     };
   } catch (error) {
     console.error("Kitesurfing booking error:", error);
+    // Public action: never echo internal error details to anonymous callers.
     return {
       success: false,
-      message: `Failed to create booking. ${error instanceof Error ? error.message : String(error)
-        }`,
+      message: "Failed to create booking. Please try again or contact us.",
     };
   }
 }
@@ -583,6 +464,7 @@ export async function updateLessonSession(
     capacity: number;
   }
 ) {
+  await requireRole(STAFF_ROLES);
   try {
     const result = await prisma.$transaction(async (tx) => {
       // Snapshot the original start time so we can find the orders that were
@@ -640,6 +522,7 @@ export async function updateLessonSession(
         bookings: s.bookings.map((b) => ({
           guestId: b.guestId,
           guestName: b.guest.name ?? b.guest.email,
+          orderId: b.orderId,
         })),
       });
 
@@ -679,7 +562,7 @@ async function repriceGuestOrdersForSession(
       referenceDurationMinutes: number | null;
     };
     newDurationMinutes: number;
-    bookings: { guestId: string; guestName: string }[];
+    bookings: { guestId: string; guestName: string; orderId: string | null }[];
   },
 ): Promise<RepricingResult> {
   const result: RepricingResult = { updated: 0, skipped: [] };
@@ -700,20 +583,34 @@ async function repriceGuestOrdersForSession(
   const newLineTotal = Math.round(args.newProduct.priceCents * newQty.toNumber());
 
   for (const booking of args.bookings) {
-    const orderLine = await tx.orderLine.findFirst({
-      where: {
-        product: { sku: { in: lessonSkus } },
-        order: {
-          userId: booking.guestId,
-          createdAt: { gte: windowStart, lte: windowEnd },
-        },
-      },
-      orderBy: { order: { createdAt: "desc" } },
-      select: {
-        id: true,
-        order: { select: { id: true, status: true } },
-      },
-    });
+    // Preferred: the order explicitly linked when the booking was charged.
+    // Fallback (legacy bookings without the link): the guest's most recent
+    // lesson-SKU order line within ±24h of the original session start.
+    const orderLine = booking.orderId
+      ? await tx.orderLine.findFirst({
+          where: {
+            orderId: booking.orderId,
+            product: { sku: { in: lessonSkus } },
+          },
+          select: {
+            id: true,
+            order: { select: { id: true, status: true } },
+          },
+        })
+      : await tx.orderLine.findFirst({
+          where: {
+            product: { sku: { in: lessonSkus } },
+            order: {
+              userId: booking.guestId,
+              createdAt: { gte: windowStart, lte: windowEnd },
+            },
+          },
+          orderBy: { order: { createdAt: "desc" } },
+          select: {
+            id: true,
+            order: { select: { id: true, status: true } },
+          },
+        });
 
     if (!orderLine) continue;
 
@@ -764,6 +661,7 @@ export async function updateLessonBooking(
     capacity?: number;
   }
 ) {
+  await requireRole(STAFF_ROLES);
   try {
     const existing = await prisma.lessonBooking.findUniqueOrThrow({
       where: { id },
@@ -779,7 +677,7 @@ export async function updateLessonBooking(
           checkedInAt:
             data.attended && data.status === LessonBookingStatus.CONFIRMED
               ? new Date()
-              : undefined,
+              : null,
           notes: data.notes,
         },
       });
@@ -809,6 +707,7 @@ export async function updateLessonBooking(
 }
 
 export async function deleteLessonSession(id: string) {
+  await requireRole(STAFF_ROLES);
   try {
     await prisma.$transaction([
       prisma.lessonBooking.deleteMany({ where: { sessionId: id } }),
@@ -830,6 +729,18 @@ export async function getInstructorSessions(
   from: string,
   to: string
 ) {
+  // Staff can view any instructor's schedule. Users flagged `isInstructor`
+  // (whatever their role) can view their own — the /my-schedule page relies
+  // on this.
+  if (!(await hasRole(STAFF_ROLES))) {
+    const session = await getServerSession(authOptions);
+    const user = session?.user as
+      | { id?: string; isInstructor?: boolean }
+      | undefined;
+    if (!user?.isInstructor || user.id !== instructorId) {
+      throw new Error("Not authorized");
+    }
+  }
   const start = new Date(`${from}T00:00:00.000Z`);
   const end = new Date(`${to}T23:59:59.999Z`);
 
@@ -844,6 +755,7 @@ export async function getInstructorSessions(
 }
 
 export async function getAllLessons() {
+  await requireRole(STAFF_ROLES);
   return prisma.lessonSession.findMany({
     orderBy: { startsAt: "desc" },
     include: {
@@ -867,6 +779,7 @@ export async function updateLessonBookingStatus(
   id: string,
   status: LessonBookingStatus,
 ) {
+  await requireRole(STAFF_ROLES);
   try {
     const booking = await prisma.lessonBooking.update({
       where: { id },
@@ -885,6 +798,7 @@ export async function addGuestToSession(
   sessionId: string,
   data: { guestId: string; productId: string | null },
 ) {
+  await requireRole(STAFF_ROLES);
   try {
     const result = await prisma.$transaction(async (tx) => {
       const session = await tx.lessonSession.findUnique({
@@ -901,26 +815,27 @@ export async function addGuestToSession(
         throw new Error("This guest is already on this session.");
       }
 
+      const durationMinutes = Math.round(
+        (session.endsAt.getTime() - session.startsAt.getTime()) / 60000,
+      );
+
+      const order = await chargeGuestForSession(tx, {
+        guestId: data.guestId,
+        lessonType: session.lessonType,
+        durationMinutes,
+        productId: data.productId,
+      });
+
       const booking = await tx.lessonBooking.create({
         data: {
           sessionId,
           guestId: data.guestId,
           status: LessonBookingStatus.CONFIRMED,
+          orderId: order.id,
         },
         include: {
           guest: { select: { id: true, name: true, email: true, phone: true } },
         },
-      });
-
-      const durationMinutes = Math.round(
-        (session.endsAt.getTime() - session.startsAt.getTime()) / 60000,
-      );
-
-      await chargeGuestForSession(tx, {
-        guestId: data.guestId,
-        lessonType: session.lessonType,
-        durationMinutes,
-        productId: data.productId,
       });
 
       await ensureCommissionForSession(sessionId, tx);

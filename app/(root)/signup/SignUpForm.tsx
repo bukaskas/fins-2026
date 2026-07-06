@@ -25,7 +25,7 @@ const defaultUserValues = {
   name: "",
   phone: "",
   email: "",
-  password: "12345678",
+  password: "",
 };
 
 function SignUpForm() {
@@ -39,8 +39,6 @@ function SignUpForm() {
       onSubmit: ({ value }) => {
         const result = signUpFormSchema.safeParse(value);
         if (!result.success) {
-          console.log("Validation errors:", result.error.flatten());
-          console.log("Field errors:", result.error.flatten().fieldErrors);
           return result.error.flatten().fieldErrors as any;
         }
         return;

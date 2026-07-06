@@ -1,4 +1,12 @@
-import { email, z } from "zod";
+import { z } from "zod";
+
+// Emails are stored lowercase; normalize at every input boundary so lookups,
+// uniqueness, and password reset all agree (see code-review-v1.md H2).
+const emailSchema = z
+  .string()
+  .trim()
+  .toLowerCase()
+  .email("Invalid email address");
 import { BookingStatus, CommissionType, ExpenseType, PaymentMethod } from "@prisma/client";
 import { isValidPhoneNumber } from "libphonenumber-js";
 
@@ -35,11 +43,17 @@ export const bookingFormSchema = z.object({
     "Date must be today or in the future"
   ),
   phone: phoneSchema,
-  email: z.string().email("Invalid email address"),
+  email: emailSchema,
   service: z.string().min(1, "Service is required"),
-  numberOfPeople: z.number().int().min(1, "At least 1 person required"),
-  numberOfKids: z.number().int().min(0).default(0),
-  totalPriceCents: z.number().int().min(0).nullable().default(null),
+  numberOfPeople: z
+    .number()
+    .int()
+    .min(1, "At least 1 person required")
+    .max(100, "For groups over 100 people, please contact us directly"),
+  numberOfKids: z.number().int().min(0).max(100).default(0),
+  // Display hint only — the server recomputes the price for priced services
+  // (see createBooking).
+  totalPriceCents: z.number().int().min(0).max(100_000_000).nullable().default(null),
   time: z.string().nullable().default(null),
   instructor: z.string().nullable().default(null),
   instagram: z.string().trim().nullish(),
@@ -53,12 +67,12 @@ export const updateBookingSchema = z.object({
   date:             z.date(),
   email:            z.preprocess(
     (v) => (v === "" || v == null) ? null : v,
-    z.string().email("Invalid email address").nullable()
+    emailSchema.nullable()
   ),
   phone:            phoneSchema,
   service:          z.string().min(1, "Service is required"),
-  numberOfPeople:   z.number().int().min(1, "At least 1 person required"),
-  numberOfKids:     z.number().int().min(0).default(0),
+  numberOfPeople:   z.number().int().min(1, "At least 1 person required").max(100),
+  numberOfKids:     z.number().int().min(0).max(100).default(0),
   amountPaidCents:  z.number().int().min(0).default(0),
   instructor:       z.string().nullable().default(null),
   time:             z.string().nullable().default(null),
@@ -75,13 +89,13 @@ export type BookingDepositData = z.infer<typeof bookingDepositSchema>;
 export const signUpFormSchema = z.object({
   name: z.string().nullable(),
   phone: optionalPhoneSchema,
-  email: z.string().email("Invalid email address"),
-  password: z.string(),
+  email: emailSchema,
+  password: z.string().min(8, "Password must be at least 8 characters long"),
 });
 export type SignUpFormData = z.infer<typeof signUpFormSchema>;
 
 export const forgotPasswordSchema = z.object({
-  email: z.string().email("Invalid email address"),
+  email: emailSchema,
 });
 export type ForgotPasswordData = z.infer<typeof forgotPasswordSchema>;
 
@@ -121,7 +135,7 @@ export type InstructorRatesData = z.infer<typeof instructorRatesSchema>;
 export const userEditFormSchema = z.object({
   name: z.string().trim().nullable(),
   phone: optionalPhoneSchema,
-  email: z.string().email("Invalid email address"),
+  email: emailSchema,
   role: z.nativeEnum(Role),
   userType: z.nativeEnum(UserType),
   isInstructor: z.boolean().default(false),
@@ -198,7 +212,7 @@ export type NewLessonFormData = z.infer<typeof newLessonFormSchema>;
 
 export const kitesurfingBookingFormSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters long"),
-  email: z.string().email("Invalid email address"),
+  email: emailSchema,
   phone: phoneSchema,
   date: z.date({ error: "Date is required" }),
   time: z.string().min(1, "Please select a time"),

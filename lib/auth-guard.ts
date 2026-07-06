@@ -16,6 +16,13 @@ export const ADMIN_ROLES: Role[] = ADMIN_ROLE_NAMES as readonly string[] as Role
 /** Roles that operate the internal back-office (bookings, lessons, accounting). */
 export const STAFF_ROLES: Role[] = STAFF_ROLE_NAMES as readonly string[] as Role[];
 
+/** Returns the current session user's id, or null if not signed in. Use this
+ * (never a client-supplied field) for audit attribution like `actorId`. */
+export async function currentUserId(): Promise<string | null> {
+  const session = await getServerSession(authOptions);
+  return (session?.user as { id?: string } | undefined)?.id ?? null;
+}
+
 /** Returns the current session user's role, or null if not signed in. */
 export async function currentRole(): Promise<Role | null> {
   const session = await getServerSession(authOptions);

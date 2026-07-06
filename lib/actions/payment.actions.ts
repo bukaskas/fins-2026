@@ -3,6 +3,7 @@ import { prisma } from "@/db/prisma";
 import { OrderStatus, PaymentMethod, Prisma, WalletLedgerReason, WalletType } from "@prisma/client";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
+import { requireRole, STAFF_ROLES } from "@/lib/auth-guard";
 
 type CreateOrderItemInput = {
   productId: string;
@@ -35,7 +36,23 @@ function toInt(n: number) {
   return Math.trunc(n);
 }
 
+// Settlement transactions run Serializable so two concurrent payments for the
+// same user can't both allocate against the same outstanding amount. Postgres
+// aborts one of them (Prisma P2034); retry it a couple of times.
+async function withSerializableRetry<T>(fn: () => Promise<T>, attempts = 3): Promise<T> {
+  for (let attempt = 1; ; attempt++) {
+    try {
+      return await fn();
+    } catch (err) {
+      const code = (err as { code?: string })?.code;
+      if (code === "P2034" && attempt < attempts) continue;
+      throw err;
+    }
+  }
+}
+
 export async function createOrderForUser(input: CreateOrderForUserInput) {
+  await requireRole(STAFF_ROLES);
   const { userId, items } = input;
 
   if (!items.length) {
@@ -150,6 +167,7 @@ export async function createOrderForUser(input: CreateOrderForUserInput) {
 
 
 export async function consumeBundleUnit(input: ConsumeBundleUnitInput) {
+  await requireRole(STAFF_ROLES);
   const {
     userId,
     walletType,
@@ -208,6 +226,7 @@ export async function consumeBundleUnit(input: ConsumeBundleUnitInput) {
 // Payment settlement logic
 // Compare both functions: settleUserBalance and submitPaymentFromForm. The former is the core logic that applies a payment to a user's outstanding orders, while the latter is a helper that extracts form data and calls the settlement function.
 export async function settleUserBalance(input: SettleUserBalanceInput) {
+  await requireRole(STAFF_ROLES);
   const { userId, amountCents, method, reference } = input;
   const paymentAmount = toInt(amountCents);
 
@@ -215,7 +234,7 @@ export async function settleUserBalance(input: SettleUserBalanceInput) {
     throw new Error("Payment amount must be > 0.");
   }
 
-  return prisma.$transaction(async (tx) => {
+  return withSerializableRetry(() => prisma.$transaction(async (tx) => {
     // Ensure user exists
     const user = await tx.user.findUnique({ where: { id: userId }, select: { id: true } });
     if (!user) throw new Error("User not found.");
@@ -250,6 +269,15 @@ export async function settleUserBalance(input: SettleUserBalanceInput) {
       const alloc = Math.min(outstanding, remaining);
       allocations.push({ orderId: order.id, amountCents: alloc });
       remaining -= alloc;
+    }
+
+    // Reject overpayment: an unallocated surplus would vanish from the books
+    // (no credit-balance concept exists). Rolls the whole payment back.
+    if (remaining > 0) {
+      throw new Error(
+        `Payment exceeds the outstanding balance by ${(remaining / 100).toFixed(2)} EGP. ` +
+          "Reduce the amount, or create the order being paid for first.",
+      );
     }
 
     // Persist allocations
@@ -298,7 +326,10 @@ export async function settleUserBalance(input: SettleUserBalanceInput) {
       unappliedCents: remaining,
       outstandingCents: Math.max(totalCharged - totalPaid, 0),
     };
-  }, { timeout: 30000 });
+  }, {
+    timeout: 30000,
+    isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+  }));
 }
 
 type UpdatePaymentPatch = {
@@ -312,6 +343,7 @@ export async function updatePayment(
   paymentId: string,
   patch: UpdatePaymentPatch,
 ): Promise<{ success: true } | { success: false; error: string }> {
+  await requireRole(STAFF_ROLES);
   if (!paymentId) return { success: false, error: "Missing payment id." };
 
   const newAmount = toInt(patch.amountCents);
@@ -323,7 +355,7 @@ export async function updatePayment(
   }
 
   try {
-    const userId = await prisma.$transaction(async (tx) => {
+    const userId = await withSerializableRetry(() => prisma.$transaction(async (tx) => {
       const payment = await tx.payment.findUnique({
         where: { id: paymentId },
         include: {
@@ -371,6 +403,12 @@ export async function updatePayment(
           remaining -= alloc;
         }
 
+        if (remaining > 0) {
+          throw new Error(
+            `New amount exceeds the user's outstanding balance by ${(remaining / 100).toFixed(2)} EGP.`,
+          );
+        }
+
         for (const a of newAllocations) {
           await tx.paymentAllocation.create({
             data: { paymentId, orderId: a.orderId, amountCents: a.amountCents },
@@ -410,7 +448,10 @@ export async function updatePayment(
       });
 
       return payment.userId;
-    }, { timeout: 30000 });
+    }, {
+      timeout: 30000,
+      isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+    }));
 
     revalidatePath("/accounting/payments");
     revalidatePath("/accounting/open-orders");
@@ -425,6 +466,7 @@ export async function updatePayment(
 }
 
 export async function submitPaymentFromForm(formData: FormData) {
+  await requireRole(STAFF_ROLES);
   const userId = String(formData.get("userId") ?? "").trim();
   const method = String(formData.get("method") ?? "CASH").trim().toUpperCase() as PaymentMethod;
   const reference = String(formData.get("reference") ?? "").trim() || undefined;
@@ -469,6 +511,7 @@ function parseMoneyToCents(value: FormDataEntryValue | null) {
 
 // Payment list grouped by payment method
 export async function listPaymentsGroupedByMethod() {
+  await requireRole(STAFF_ROLES);
   // Only incoming guest payments: exclude rows that were created as the
   // settlement side of an instructor commission or an expense payout.
   const payments = await prisma.payment.findMany({

@@ -3,8 +3,10 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/db/prisma";
 import { InventoryCategory, InventoryMovementType, ItemCondition } from "@prisma/client";
+import { currentUserId, requireRole, STAFF_ROLES } from "@/lib/auth-guard";
 
 export async function getAllInventoryItems() {
+  await requireRole(STAFF_ROLES);
   return prisma.inventoryItem.findMany({
     where: { isActive: true },
     orderBy: [{ category: "asc" }, { name: "asc" }],
@@ -12,6 +14,7 @@ export async function getAllInventoryItems() {
 }
 
 export async function getAvailableInventoryItems() {
+  await requireRole(STAFF_ROLES);
   return prisma.inventoryItem.findMany({
     where: { isActive: true, availableQty: { gt: 0 } },
     orderBy: [{ category: "asc" }, { name: "asc" }],
@@ -19,6 +22,7 @@ export async function getAvailableInventoryItems() {
 }
 
 export async function getInventoryItemById(id: string) {
+  await requireRole(STAFF_ROLES);
   return prisma.inventoryItem.findUnique({
     where: { id },
     include: {
@@ -41,6 +45,7 @@ export async function getInventoryItemById(id: string) {
 }
 
 export async function createInventoryItem(formData: FormData) {
+  await requireRole(STAFF_ROLES);
   const sku = String(formData.get("sku") ?? "").trim();
   const name = String(formData.get("name") ?? "").trim();
   const category = String(formData.get("category") ?? "") as InventoryCategory;
@@ -66,6 +71,7 @@ export async function createInventoryItem(formData: FormData) {
 }
 
 export async function updateInventoryItem(id: string, formData: FormData) {
+  await requireRole(STAFF_ROLES);
   const name = String(formData.get("name") ?? "").trim();
   const category = String(formData.get("category") ?? "") as InventoryCategory;
   const size = String(formData.get("size") ?? "").trim() || null;
@@ -82,25 +88,41 @@ export async function updateInventoryItem(id: string, formData: FormData) {
 }
 
 export async function adjustInventoryQty(formData: FormData) {
+  await requireRole(STAFF_ROLES);
   const itemId = String(formData.get("itemId") ?? "").trim();
   const adjustment = Number(formData.get("adjustment") ?? 0);
-  const type = String(formData.get("type") ?? "ADJUSTMENT") as InventoryMovementType;
+  const typeRaw = String(formData.get("type") ?? "ADJUSTMENT");
   const reason = String(formData.get("reason") ?? "").trim() || null;
-  const actorId = String(formData.get("actorId") ?? "").trim() || null;
+  // Audit attribution comes from the session, never from the form.
+  const actorId = await currentUserId();
 
-  if (!itemId || adjustment === 0) throw new Error("Item and non-zero adjustment required.");
+  if (!itemId || !Number.isInteger(adjustment) || adjustment === 0) {
+    throw new Error("Item and non-zero whole-number adjustment required.");
+  }
+  if (!Object.values(InventoryMovementType).includes(typeRaw as InventoryMovementType)) {
+    throw new Error("Invalid movement type.");
+  }
+  const type = typeRaw as InventoryMovementType;
 
   await prisma.$transaction(async (tx) => {
     const item = await tx.inventoryItem.findUnique({ where: { id: itemId } });
     if (!item) throw new Error("Item not found.");
 
-    await tx.inventoryItem.update({
+    const updated = await tx.inventoryItem.update({
       where: { id: itemId },
       data: {
         totalQty: { increment: adjustment },
         availableQty: { increment: adjustment },
       },
+      select: { totalQty: true, availableQty: true },
     });
+
+    // Floor check: quantities must never go negative (rolls the tx back).
+    if (updated.totalQty < 0 || updated.availableQty < 0) {
+      throw new Error(
+        `Adjustment would make stock negative (total: ${updated.totalQty}, available: ${updated.availableQty}).`,
+      );
+    }
 
     await tx.inventoryMovement.create({
       data: {

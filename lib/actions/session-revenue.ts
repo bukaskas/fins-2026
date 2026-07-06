@@ -9,6 +9,7 @@ import {
   WalletLedgerReason,
 } from "@prisma/client";
 import { LESSON_TYPE_SKU } from "@/lib/lesson-products";
+import { requireRole, STAFF_ROLES } from "@/lib/auth-guard";
 
 type Db = Prisma.TransactionClient | typeof prisma;
 
@@ -34,6 +35,7 @@ export async function ensureSessionRevenue(
   sessionId: string,
   txClient?: Prisma.TransactionClient
 ) {
+  await requireRole(STAFF_ROLES);
   const db: Db = txClient ?? prisma;
 
   const session = await db.lessonSession.findUnique({
@@ -50,6 +52,7 @@ export async function ensureSessionRevenue(
           id: true,
           guestId: true,
           status: true,
+          orderId: true,
         },
       },
     },
@@ -93,6 +96,7 @@ export async function ensureSessionRevenue(
     const contribution = await classifyBooking(db, {
       bookingId: booking.id,
       guestId: booking.guestId,
+      orderId: booking.orderId,
       productId,
       sessionStartsAt: session.startsAt,
     });
@@ -121,6 +125,8 @@ export async function ensureSessionRevenue(
 type ClassifyArgs = {
   bookingId: string;
   guestId: string;
+  /** Order explicitly linked when the booking was charged (null for legacy rows). */
+  orderId: string | null;
   productId: string | null;
   sessionStartsAt: Date;
 };
@@ -154,7 +160,19 @@ async function classifyBooking(db: Db, args: ClassifyArgs): Promise<Contribution
     }
   }
 
-  // 2. Pay-per-session order → OrderLine for this lesson's default product against this guest near session start.
+  // 2. Explicit link: the order created when this booking was charged.
+  if (args.orderId) {
+    const linkedLine = await db.orderLine.findFirst({
+      where: { orderId: args.orderId },
+      select: { lineTotalCents: true },
+    });
+    if (linkedLine) {
+      return { cents: linkedLine.lineTotalCents, source: RevenueSource.ORDER };
+    }
+  }
+
+  // 3. Legacy fallback (no link): OrderLine for this lesson's default product
+  //    against this guest near session start.
   if (args.productId) {
     const dayMs = 24 * 60 * 60 * 1000;
     const windowStart = new Date(args.sessionStartsAt.getTime() - dayMs);
@@ -177,6 +195,6 @@ async function classifyBooking(db: Db, args: ClassifyArgs): Promise<Contribution
     }
   }
 
-  // 3. No charge attributable.
+  // 4. No charge attributable.
   return { cents: 0, source: RevenueSource.FREE };
 }
