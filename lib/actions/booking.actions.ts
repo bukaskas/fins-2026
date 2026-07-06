@@ -12,13 +12,13 @@ export type BookingWithAgent = Booking & {
 };
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
-import { requireRole, STAFF_ROLES as APP_STAFF_ROLES } from "@/lib/auth-guard";
+import { hasCapability, requireCapability } from "@/lib/auth-guard";
+import { roleHasCapability } from "@/lib/permissions";
 import { upsertClosedDate } from "@/lib/closed-dates";
 import { computeBookingTotalCents } from "@/lib/pricing";
 import { createPaymentOrder, getFlashOrder, verifyWebhookSignature } from "@/lib/flash";
 import { getAutoConfirmBookings } from "./settings.actions";
-
-const STAFF_ROLES: Role[] = [Role.ADMIN, Role.STAFF, Role.OWNER];
+import { DAILY_CAPACITY } from "@/lib/constants";
 
 const FLASH_CURRENCY = process.env.FLASH_CURRENCY || "EGP";
 const FLASH_MIN_CENTS = 500; // Flash rejects orders below 5 EGP
@@ -45,7 +45,7 @@ export async function createBooking(data: BookingFormData) {
     // midnights (see lib/closed-dates.ts), so compare in UTC.
     const session = await getServerSession(authOptions);
     const userRole = (session?.user as any)?.role as Role | undefined;
-    if (!userRole || !STAFF_ROLES.includes(userRole)) {
+    if (!roleHasCapability(userRole, "bookings:manage")) {
       const normalizedDate = utcDayStart(validatedData.date);
       const closed = await prisma.closedDate.findUnique({ where: { date: normalizedDate } });
       if (closed) {
@@ -152,7 +152,7 @@ export async function createBooking(data: BookingFormData) {
 
 
 export async function getAllBookings() {
-  await requireRole(APP_STAFF_ROLES);
+  await requireCapability("bookings:manage");
   try {
     await cancelExpiredWaitingPayments();
     const bookings = await prisma.booking.findMany({
@@ -166,7 +166,7 @@ export async function getAllBookings() {
 }
 
 export async function getBookingsByService(service: string) {
-  await requireRole(APP_STAFF_ROLES);
+  await requireCapability("bookings:manage");
   try {
     const bookings = await prisma.booking.findMany({
       where: { service },
@@ -198,7 +198,7 @@ export async function getDayUseMonthlyReport(opts: {
 }): Promise<
   { success: true; data: DayUseMonthlyReport } | { success: false; message: string }
 > {
-  await requireRole(APP_STAFF_ROLES);
+  await requireCapability("bookings:manage");
   try {
     const { year, month, agentId } = opts;
     const monthStart = new Date(Date.UTC(year, month - 1, 1));
@@ -262,7 +262,7 @@ export async function getDayUseMonthlyReport(opts: {
 }
 
 export async function getBookingCountsByDate(statuses?: BookingStatus[]) {
-  await requireRole(APP_STAFF_ROLES);
+  await requireCapability("bookings:manage");
   try {
     const today = new Date();
     const start = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth() - 3, 1));
@@ -324,7 +324,7 @@ export async function getBookingCountsByDate(statuses?: BookingStatus[]) {
 }
 
 export async function deleteBooking(id: string) {
-  await requireRole(APP_STAFF_ROLES);
+  await requireCapability("bookings:manage");
   try {
     await prisma.booking.delete({ where: { id } });
     revalidatePath('/bookings', 'layout');
@@ -395,7 +395,7 @@ export async function getAgentStats(
   rangeStart: Date | null,
   rangeEnd: Date | null,
 ): Promise<{ success: true; data: AgentStatsResult } | { success: false; message: string }> {
-  await requireRole(APP_STAFF_ROLES);
+  await requireCapability("bookings:manage");
   try {
     const where =
       rangeStart && rangeEnd ? { createdAt: { gte: rangeStart, lte: rangeEnd } } : {};
@@ -556,7 +556,7 @@ export async function getAgentStats(
 }
 
 export async function getBookingsByDate(date: string, statuses?: BookingStatus[]) {
-  await requireRole(APP_STAFF_ROLES);
+  await requireCapability("bookings:manage");
   try {
     const start = new Date(`${date}T00:00:00.000Z`);
     const end = new Date(`${date}T23:59:59.999Z`);
@@ -579,9 +579,7 @@ export async function getBookingsByDate(date: string, statuses?: BookingStatus[]
 
 export async function sendFullyBookedEmails(date: string) {
   try {
-    const session = await getServerSession(authOptions);
-    const userRole = (session?.user as { role?: Role } | undefined)?.role;
-    if (!userRole || !STAFF_ROLES.includes(userRole)) {
+    if (!(await hasCapability("bookings:manage"))) {
       return { success: false, message: "Not authorized." };
     }
 
@@ -645,9 +643,7 @@ export async function sendBulkEmails(
   message: string,
 ) {
   try {
-    const session = await getServerSession(authOptions);
-    const userRole = (session?.user as { role?: Role } | undefined)?.role;
-    if (!userRole || !STAFF_ROLES.includes(userRole)) {
+    if (!(await hasCapability("bookings:manage"))) {
       return { success: false, message: "Not authorized." };
     }
 
@@ -703,7 +699,7 @@ export async function sendBulkEmails(
 }
 
 export async function updateBooking(id: string, data: UpdateBookingData) {
-  await requireRole(APP_STAFF_ROLES);
+  await requireCapability("bookings:manage");
   try {
     const validatedData = updateBookingSchema.parse(data);
     const newTotalCents = computeBookingTotalCents(
@@ -743,7 +739,7 @@ export async function updateBooking(id: string, data: UpdateBookingData) {
 }
 
 export async function getAllDepositPayments() {
-  await requireRole(APP_STAFF_ROLES);
+  await requireCapability("bookings:manage");
   try {
     const payments = await prisma.bookingPayment.findMany({
       orderBy: { createdAt: "desc" },
@@ -776,9 +772,7 @@ export async function getAllDepositPayments() {
  */
 export async function deleteDepositPayment(paymentId: string) {
   try {
-    const session = await getServerSession(authOptions);
-    const user = session?.user as { id?: string; role?: Role } | undefined;
-    if (!user?.role || !STAFF_ROLES.includes(user.role)) {
+    if (!(await hasCapability("bookings:manage"))) {
       return { success: false as const, message: "Not authorized." };
     }
 
@@ -866,10 +860,10 @@ export async function cancelExpiredWaitingPayments() {
 export async function updateBookingStatus(id: string, status: BookingStatus) {
   const session = await getServerSession(authOptions);
   const user = session?.user as { id?: string; role?: Role } | undefined;
-  if (!user?.role || !(APP_STAFF_ROLES as Role[]).includes(user.role)) {
+  if (!roleHasCapability(user?.role, "bookings:manage")) {
     return { success: false, message: "Not authorized." };
   }
-  return applyBookingStatusChange(id, status, user.id);
+  return applyBookingStatusChange(id, status, user?.id);
 }
 
 /**
@@ -905,8 +899,8 @@ async function applyBookingStatusChange(
         where: { date: { gte: dayStart, lte: dayEnd }, bookingStatus: BookingStatus.CONFIRMED },
         _sum: { numberOfPeople: true },
       });
-      if ((_sum.numberOfPeople ?? 0) >= 80) {
-        await upsertClosedDate(dayStart, "Auto-closed: 80-person daily capacity reached");
+      if ((_sum.numberOfPeople ?? 0) >= DAILY_CAPACITY) {
+        await upsertClosedDate(dayStart, `Auto-closed: ${DAILY_CAPACITY}-person daily capacity reached`);
       }
     }
 
@@ -1129,7 +1123,7 @@ async function applyFlashPayment(opts: {
  * A webhook-free fallback/reconciliation path (idempotent with the webhook).
  */
 export async function checkBookingPaymentStatus(bookingId: string) {
-  await requireRole(APP_STAFF_ROLES);
+  await requireCapability("bookings:manage");
   try {
     const booking = await prisma.booking.findUnique({
       where: { id: bookingId },
@@ -1166,7 +1160,7 @@ export async function checkBookingPaymentStatus(bookingId: string) {
 }
 
 export async function updateBookingParty(id: string, adults: number, kids: number) {
-  await requireRole(APP_STAFF_ROLES);
+  await requireCapability("bookings:manage");
   try {
     if (!Number.isInteger(adults) || adults < 1) {
       return { success: false, message: "Adults must be a whole number ≥ 1." };
@@ -1202,7 +1196,7 @@ export async function payBookingDeposit(bookingId: string, data: BookingDepositD
   try {
     const session = await getServerSession(authOptions);
     const user = session?.user as { id?: string; role?: Role } | undefined;
-    if (!user?.role || !STAFF_ROLES.includes(user.role)) {
+    if (!roleHasCapability(user?.role, "bookings:manage")) {
       return { success: false, message: "Not authorized." };
     }
 
@@ -1215,7 +1209,7 @@ export async function payBookingDeposit(bookingId: string, data: BookingDepositD
           amountCents: validated.amountCents,
           method: validated.method,
           reference: validated.reference ?? null,
-          actorId: user.id ?? null,
+          actorId: user?.id ?? null,
         },
       });
 
@@ -1245,7 +1239,7 @@ export async function payBookingDeposit(bookingId: string, data: BookingDepositD
 }
 
 export async function updateBookingAmountPaid(id: string, amountPaidCents: number) {
-  await requireRole(APP_STAFF_ROLES);
+  await requireCapability("bookings:manage");
   try {
     await prisma.booking.update({ where: { id }, data: { amountPaidCents } });
     revalidatePath('/bookings', 'layout');
@@ -1257,7 +1251,7 @@ export async function updateBookingAmountPaid(id: string, amountPaidCents: numbe
 }
 
 export async function getFutureKitesurfingBookings() {
-  await requireRole(APP_STAFF_ROLES);
+  await requireCapability("bookings:manage");
   try {
     const today = utcDayStart(new Date());
 
@@ -1278,7 +1272,7 @@ export async function getFutureKitesurfingBookings() {
 }
 
 export async function getBookingsByDateRange(from: string, to: string) {
-  await requireRole(APP_STAFF_ROLES);
+  await requireCapability("bookings:manage");
   try {
     const start = new Date(`${from}T00:00:00.000Z`);
     const end = new Date(`${to}T23:59:59.999Z`);
@@ -1299,7 +1293,7 @@ export async function getBookingsByDateRange(from: string, to: string) {
 export async function batchUpdateBookingSchedule(
   updates: { id: string; time: string | null; instructor: string | null }[]
 ) {
-  await requireRole(APP_STAFF_ROLES);
+  await requireCapability("bookings:manage");
   try {
     await prisma.$transaction(
       updates.map((u) =>
@@ -1317,7 +1311,7 @@ export async function batchUpdateBookingSchedule(
 }
 
 export async function getFutureBookingPeopleTotalsByDate() {
-  await requireRole(APP_STAFF_ROLES);
+  await requireCapability("bookings:manage");
   try {
     const today = utcDayStart(new Date());
 
@@ -1360,7 +1354,7 @@ export async function getFutureBookingPeopleTotalsByDate() {
 }
 
 export async function assignBookingAgent(bookingId: string, agentId: string | null) {
-  await requireRole(APP_STAFF_ROLES);
+  await requireCapability("bookings:manage");
   try {
     await prisma.booking.update({
       where: { id: bookingId },
@@ -1384,7 +1378,7 @@ export async function createDayUseBookingAdmin(data: {
   bookingStatus: BookingStatus;
   amountPaidCents: number;
 }) {
-  await requireRole(APP_STAFF_ROLES);
+  await requireCapability("bookings:manage");
   try {
     const booking = await prisma.booking.create({
       data: {
@@ -1407,3 +1401,104 @@ export async function createDayUseBookingAdmin(data: {
   }
 }
 
+
+/* -------------------------------------------------------------------------- */
+/*  Reception dashboard                                                       */
+/* -------------------------------------------------------------------------- */
+
+export type ReceptionDashboardData = {
+  /** PENDING bookings awaiting review, oldest first. */
+  pending: BookingWithAgent[];
+  /** WAITING_PAYMENT bookings with their 24h deadline, soonest first. */
+  awaitingPayment: Array<BookingWithAgent & { paymentExpiresAt: Date | null }>;
+  /** Today's CONFIRMED / ARRIVED bookings with the balance still due. */
+  arrivals: Array<BookingWithAgent & { dueCents: number }>;
+  /** Confirmed headcount vs the 80-person cap for today + next 6 days. */
+  capacity: Array<{ date: string; people: number; closed: boolean }>;
+};
+
+export async function getReceptionDashboard(): Promise<ReceptionDashboardData> {
+  await requireCapability("bookings:manage");
+
+  // Sweep expired payment windows first so the queues are accurate.
+  await cancelExpiredWaitingPayments();
+
+  const todayStart = utcDayStart(new Date());
+  const todayEnd = new Date(todayStart.getTime() + 24 * 60 * 60 * 1000 - 1);
+  const weekEnd = new Date(todayStart.getTime() + 7 * 24 * 60 * 60 * 1000 - 1);
+  const agentInclude = {
+    agent: { select: { id: true, name: true, email: true } },
+  } as const;
+
+  const [pending, waiting, arrivals, weekConfirmed, closedDates] =
+    await Promise.all([
+      prisma.booking.findMany({
+        where: { bookingStatus: BookingStatus.PENDING },
+        orderBy: { createdAt: "asc" },
+        include: agentInclude,
+        take: 50,
+      }),
+      prisma.booking.findMany({
+        where: { bookingStatus: BookingStatus.WAITING_PAYMENT },
+        orderBy: { waitingPaymentAt: "asc" },
+        include: agentInclude,
+        take: 50,
+      }),
+      prisma.booking.findMany({
+        where: {
+          bookingStatus: { in: [BookingStatus.CONFIRMED, BookingStatus.ARRIVED] },
+          date: { gte: todayStart, lte: todayEnd },
+        },
+        orderBy: [{ time: "asc" }, { createdAt: "asc" }],
+        include: agentInclude,
+      }),
+      prisma.booking.findMany({
+        where: {
+          date: { gte: todayStart, lte: weekEnd },
+          bookingStatus: { in: [BookingStatus.CONFIRMED, BookingStatus.ARRIVED] },
+        },
+        select: { date: true, numberOfPeople: true, numberOfKids: true },
+      }),
+      prisma.closedDate.findMany({
+        where: { date: { gte: todayStart, lte: weekEnd } },
+        select: { date: true },
+      }),
+    ]);
+
+  const peopleByDay = new Map<string, number>();
+  for (const b of weekConfirmed) {
+    const key = b.date.toISOString().split("T")[0];
+    peopleByDay.set(
+      key,
+      (peopleByDay.get(key) ?? 0) + b.numberOfPeople + (b.numberOfKids ?? 0),
+    );
+  }
+  const closedSet = new Set(
+    closedDates.map((c) => c.date.toISOString().split("T")[0]),
+  );
+
+  const capacity = Array.from({ length: 7 }, (_, i) => {
+    const day = new Date(todayStart.getTime() + i * 24 * 60 * 60 * 1000);
+    const key = day.toISOString().split("T")[0];
+    return {
+      date: key,
+      people: peopleByDay.get(key) ?? 0,
+      closed: closedSet.has(key),
+    };
+  });
+
+  return {
+    pending,
+    awaitingPayment: waiting.map((b) => ({
+      ...b,
+      paymentExpiresAt: b.waitingPaymentAt
+        ? new Date(b.waitingPaymentAt.getTime() + WAITING_PAYMENT_WINDOW_MS)
+        : null,
+    })),
+    arrivals: arrivals.map((b) => ({
+      ...b,
+      dueCents: Math.max((b.totalPriceCents ?? 0) - b.amountPaidCents, 0),
+    })),
+    capacity,
+  };
+}

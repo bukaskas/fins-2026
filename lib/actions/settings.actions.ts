@@ -1,13 +1,9 @@
 "use server";
 
-import { getServerSession } from "next-auth/next";
-import { Role } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 
 import { prisma } from "@/db/prisma";
-import { authOptions } from "@/lib/auth";
-
-const STAFF_ROLES: Role[] = [Role.ADMIN, Role.STAFF, Role.OWNER];
+import { hasCapability } from "@/lib/auth-guard";
 
 // Setting keys (string-keyed AppSetting rows).
 const AUTO_CONFIRM_KEY = "auto_confirm_bookings";
@@ -32,9 +28,7 @@ export async function getAutoConfirmBookings(): Promise<boolean> {
 
 export async function setAutoConfirmBookings(enabled: boolean) {
   try {
-    const session = await getServerSession(authOptions);
-    const role = (session?.user as { role?: Role } | undefined)?.role;
-    if (!role || !STAFF_ROLES.includes(role)) {
+    if (!(await hasCapability("bookings:manage"))) {
       return { success: false as const, message: "Not authorized." };
     }
 

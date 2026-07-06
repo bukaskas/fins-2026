@@ -8,7 +8,7 @@ import { redirect } from "next/navigation";
 import bcryptjs from "bcryptjs";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
-import { hasRole, requireRole, STAFF_ROLES } from "@/lib/auth-guard";
+import { hasCapability, requireCapability } from "@/lib/auth-guard";
 import { sendBookingEmail, sendStaffNotificationEmail } from "@/emails";
 import {
   KitesurfingBookingFormData,
@@ -78,7 +78,7 @@ async function chargeGuestForSession(
 // internal helpers and must not be exposed as server-action endpoints.
 
 export async function getLessonFormUsers() {
-  await requireRole(STAFF_ROLES);
+  await requireCapability("lessons:manage");
   const [students, instructors] = await Promise.all([
     prisma.user.findMany({
       select: { id: true, name: true, email: true, phone: true }, // changed
@@ -95,7 +95,7 @@ export async function getLessonFormUsers() {
 }
 
 export async function getUserLessonHoursBalance(userId: string): Promise<number> {
-  await requireRole(STAFF_ROLES);
+  await requireCapability("lessons:view");
   if (!userId) return 0;
   const wallet = await prisma.userWallet.findUnique({
     where: { userId_type: { userId, type: WalletType.LESSON_HOURS } },
@@ -105,7 +105,7 @@ export async function getUserLessonHoursBalance(userId: string): Promise<number>
 }
 
 export async function getActiveLessonBundleProducts() {
-  await requireRole(STAFF_ROLES);
+  await requireCapability("lessons:view");
   const products = await prisma.product.findMany({
     where: {
       type: ProductType.BUNDLE_CREDIT,
@@ -148,7 +148,7 @@ function safeReturnTo(raw: unknown): string {
 }
 
 export async function createLessonSessionFromForm(formData: FormData) {
-  await requireRole(STAFF_ROLES);
+  await requireCapability("lessons:manage");
   const returnTo = safeReturnTo(formData.get("returnTo"));
 
   const parsed = newLessonFormSchema.safeParse({
@@ -248,7 +248,7 @@ const sessionInclude = {
 };
 
 export async function getLessonSessionsByDate(date: string) {
-  await requireRole(STAFF_ROLES);
+  await requireCapability("lessons:view");
   const start = new Date(`${date}T00:00:00.000Z`);
   const end = new Date(`${date}T23:59:59.999Z`);
 
@@ -262,7 +262,7 @@ export async function getLessonSessionsByDate(date: string) {
 export async function batchUpdateSessionSchedule(
   updates: { id: string; startsAt: string; endsAt: string; instructorId: string | null }[]
 ) {
-  await requireRole(STAFF_ROLES);
+  await requireCapability("lessons:manage");
   try {
     await prisma.$transaction(async (tx) => {
       for (const u of updates) {
@@ -297,7 +297,7 @@ export async function createLessonSessionQuick(data: {
   guestId: string | null;
   productId?: string | null;
 }) {
-  await requireRole(STAFF_ROLES);
+  await requireCapability("lessons:manage");
   const lessonType = data.lessonType as LessonType;
   if (!Object.values(LessonType).includes(lessonType)) {
     return { success: false, message: "Invalid lesson type." };
@@ -464,7 +464,7 @@ export async function updateLessonSession(
     capacity: number;
   }
 ) {
-  await requireRole(STAFF_ROLES);
+  await requireCapability("lessons:manage");
   try {
     const result = await prisma.$transaction(async (tx) => {
       // Snapshot the original start time so we can find the orders that were
@@ -661,7 +661,7 @@ export async function updateLessonBooking(
     capacity?: number;
   }
 ) {
-  await requireRole(STAFF_ROLES);
+  await requireCapability("lessons:manage");
   try {
     const existing = await prisma.lessonBooking.findUniqueOrThrow({
       where: { id },
@@ -707,7 +707,7 @@ export async function updateLessonBooking(
 }
 
 export async function deleteLessonSession(id: string) {
-  await requireRole(STAFF_ROLES);
+  await requireCapability("lessons:manage");
   try {
     await prisma.$transaction([
       prisma.lessonBooking.deleteMany({ where: { sessionId: id } }),
@@ -732,7 +732,7 @@ export async function getInstructorSessions(
   // Staff can view any instructor's schedule. Users flagged `isInstructor`
   // (whatever their role) can view their own — the /my-schedule page relies
   // on this.
-  if (!(await hasRole(STAFF_ROLES))) {
+  if (!(await hasCapability("lessons:view"))) {
     const session = await getServerSession(authOptions);
     const user = session?.user as
       | { id?: string; isInstructor?: boolean }
@@ -755,7 +755,7 @@ export async function getInstructorSessions(
 }
 
 export async function getAllLessons() {
-  await requireRole(STAFF_ROLES);
+  await requireCapability("lessons:view");
   return prisma.lessonSession.findMany({
     orderBy: { startsAt: "desc" },
     include: {
@@ -779,7 +779,7 @@ export async function updateLessonBookingStatus(
   id: string,
   status: LessonBookingStatus,
 ) {
-  await requireRole(STAFF_ROLES);
+  await requireCapability("lessons:manage");
   try {
     const booking = await prisma.lessonBooking.update({
       where: { id },
@@ -798,7 +798,7 @@ export async function addGuestToSession(
   sessionId: string,
   data: { guestId: string; productId: string | null },
 ) {
-  await requireRole(STAFF_ROLES);
+  await requireCapability("lessons:book");
   try {
     const result = await prisma.$transaction(async (tx) => {
       const session = await tx.lessonSession.findUnique({

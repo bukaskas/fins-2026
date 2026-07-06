@@ -15,4 +15,9 @@ export const STAFF_ROLES = [
   "INSTRUCTOR",
 ] as const;
 
-export type RoleName = (typeof STAFF_ROLES)[number] | "MEMBER" | "KITER" | "DAYPASS";
+export type RoleName =
+  | (typeof STAFF_ROLES)[number]
+  | "RECEPTION"
+  | "MEMBER"
+  | "KITER"
+  | "DAYPASS";

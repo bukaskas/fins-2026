@@ -9,7 +9,7 @@ import {
   WalletLedgerReason,
 } from "@prisma/client";
 import { LESSON_TYPE_SKU } from "@/lib/lesson-products";
-import { requireRole, STAFF_ROLES } from "@/lib/auth-guard";
+import { requireCapability } from "@/lib/auth-guard";
 
 type Db = Prisma.TransactionClient | typeof prisma;
 
@@ -35,7 +35,7 @@ export async function ensureSessionRevenue(
   sessionId: string,
   txClient?: Prisma.TransactionClient
 ) {
-  await requireRole(STAFF_ROLES);
+  await requireCapability("lessons:book");
   const db: Db = txClient ?? prisma;
 
   const session = await db.lessonSession.findUnique({

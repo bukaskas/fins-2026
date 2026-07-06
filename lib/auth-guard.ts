@@ -9,6 +9,7 @@ import {
   ADMIN_ROLES as ADMIN_ROLE_NAMES,
   STAFF_ROLES as STAFF_ROLE_NAMES,
 } from "@/lib/roles";
+import { roleHasCapability, type Capability } from "@/lib/permissions";
 
 /** Roles allowed to manage users (create/update/delete, export PII). */
 export const ADMIN_ROLES: Role[] = ADMIN_ROLE_NAMES as readonly string[] as Role[];
@@ -55,5 +56,17 @@ export async function requireRole(allowed: Role[]): Promise<void> {
 export async function requireRolePage(allowed: Role[]): Promise<void> {
   if (!(await hasRole(allowed))) {
     redirect("/signin");
+  }
+}
+
+/** True if the signed-in user's role grants the capability (lib/permissions). */
+export async function hasCapability(capability: Capability): Promise<boolean> {
+  return roleHasCapability(await currentRole(), capability);
+}
+
+/** Throws "Not authorized" unless the signed-in user holds the capability. */
+export async function requireCapability(capability: Capability): Promise<void> {
+  if (!(await hasCapability(capability))) {
+    throw new Error("Not authorized");
   }
 }

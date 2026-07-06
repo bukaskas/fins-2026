@@ -3,10 +3,10 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/db/prisma";
 import { InventoryCategory, InventoryMovementType, ItemCondition } from "@prisma/client";
-import { currentUserId, requireRole, STAFF_ROLES } from "@/lib/auth-guard";
+import { currentUserId, requireCapability } from "@/lib/auth-guard";
 
 export async function getAllInventoryItems() {
-  await requireRole(STAFF_ROLES);
+  await requireCapability("inventory:manage");
   return prisma.inventoryItem.findMany({
     where: { isActive: true },
     orderBy: [{ category: "asc" }, { name: "asc" }],
@@ -14,7 +14,7 @@ export async function getAllInventoryItems() {
 }
 
 export async function getAvailableInventoryItems() {
-  await requireRole(STAFF_ROLES);
+  await requireCapability("inventory:manage");
   return prisma.inventoryItem.findMany({
     where: { isActive: true, availableQty: { gt: 0 } },
     orderBy: [{ category: "asc" }, { name: "asc" }],
@@ -22,7 +22,7 @@ export async function getAvailableInventoryItems() {
 }
 
 export async function getInventoryItemById(id: string) {
-  await requireRole(STAFF_ROLES);
+  await requireCapability("inventory:manage");
   return prisma.inventoryItem.findUnique({
     where: { id },
     include: {
@@ -45,7 +45,7 @@ export async function getInventoryItemById(id: string) {
 }
 
 export async function createInventoryItem(formData: FormData) {
-  await requireRole(STAFF_ROLES);
+  await requireCapability("inventory:manage");
   const sku = String(formData.get("sku") ?? "").trim();
   const name = String(formData.get("name") ?? "").trim();
   const category = String(formData.get("category") ?? "") as InventoryCategory;
@@ -71,7 +71,7 @@ export async function createInventoryItem(formData: FormData) {
 }
 
 export async function updateInventoryItem(id: string, formData: FormData) {
-  await requireRole(STAFF_ROLES);
+  await requireCapability("inventory:manage");
   const name = String(formData.get("name") ?? "").trim();
   const category = String(formData.get("category") ?? "") as InventoryCategory;
   const size = String(formData.get("size") ?? "").trim() || null;
@@ -88,7 +88,7 @@ export async function updateInventoryItem(id: string, formData: FormData) {
 }
 
 export async function adjustInventoryQty(formData: FormData) {
-  await requireRole(STAFF_ROLES);
+  await requireCapability("inventory:manage");
   const itemId = String(formData.get("itemId") ?? "").trim();
   const adjustment = Number(formData.get("adjustment") ?? 0);
   const typeRaw = String(formData.get("type") ?? "ADJUSTMENT");

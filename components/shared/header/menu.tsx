@@ -14,7 +14,7 @@ import logo from "../../../public/images/logo.svg";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { UserAuthButton } from "./UserAuthButton";
-import { AdminLinks, AdminLinksMobile } from "./adminLinks";
+import { AdminLinks, AdminLinksMobile, visibleGroupsForRole } from "./adminLinks";
 
 const links = [
   { title: "Day Use",      href: "/day-use" },
@@ -38,8 +38,10 @@ function NavLink({ href, children }: { href: string; children: React.ReactNode }
 
 async function Menu() {
   const session = await getServerSession(authOptions);
-  const role = (session?.user as any)?.role;
-  const isAdmin = role === "ADMIN";
+  const role = (session?.user as any)?.role as string | undefined;
+  // Back-office dropdown shows for any role with at least one capability
+  // (links are filtered per role inside AdminLinks).
+  const hasBackOffice = visibleGroupsForRole(role).length > 0;
   const isInstructor = role === "INSTRUCTOR" || (session?.user as any)?.isInstructor === true;
 
   return (
@@ -76,7 +78,7 @@ async function Menu() {
 
         {/* Admin + Auth — pushed right */}
         <div className="absolute right-5 flex items-center gap-3">
-          {isInstructor && !isAdmin && (
+          {isInstructor && role !== "ADMIN" && (
             <Link
               href="/my-schedule"
               className="text-[0.72rem] font-[300] tracking-[0.18em] uppercase font-[family-name:var(--font-raleway)] text-gray-800 hover:text-gray-950 transition-colors"
@@ -84,7 +86,7 @@ async function Menu() {
               My Schedule
             </Link>
           )}
-          {isAdmin && <AdminLinks />}
+          {hasBackOffice && <AdminLinks role={role} />}
           <UserAuthButton session={session} />
         </div>
       </nav>
@@ -139,7 +141,7 @@ async function Menu() {
               </div>
 
               {/* Instructor schedule link (mobile) */}
-              {isInstructor && !isAdmin && (
+              {isInstructor && role !== "ADMIN" && (
                 <div className="px-4 pb-2">
                   <SheetClose asChild>
                     <Link
@@ -153,7 +155,7 @@ async function Menu() {
               )}
 
               {/* Admin links (mobile) */}
-              {isAdmin && <AdminLinksMobile />}
+              {hasBackOffice && <AdminLinksMobile role={role} />}
             </div>
 
             {/* Auth at the bottom */}

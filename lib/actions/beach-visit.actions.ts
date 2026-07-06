@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/db/prisma";
 import { Prisma, WalletLedgerReason, WalletType, WalletUnit } from "@prisma/client";
-import { currentUserId, requireRole, STAFF_ROLES } from "@/lib/auth-guard";
+import { currentUserId, requireCapability } from "@/lib/auth-guard";
 import { calculateDayUsePrice } from "@/lib/pricing";
 
 
@@ -12,7 +12,7 @@ const OWNER_DISCOUNT = 0.2;
 
 
 export async function quickAddBeachUse(formData: FormData) {
-  await requireRole(STAFF_ROLES);
+  await requireCapability("desk:checkin");
   const guestId = String(formData.get("guestId") ?? "").trim();
   if (!guestId) throw new Error("guestId is required.");
 

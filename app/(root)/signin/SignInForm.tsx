@@ -10,7 +10,9 @@ import { toast } from "sonner";
 export function SignInForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const callbackUrl = searchParams.get("callbackUrl") || "/";
+  // Without an explicit return path, land on /dashboard, which routes each
+  // role to its home screen (reception desk, accounting, my-schedule, …).
+  const callbackUrl = searchParams.get("callbackUrl") || "/dashboard";
 
   const [email, setEmail] = React.useState("");
   const [password, setPassword] = React.useState("");

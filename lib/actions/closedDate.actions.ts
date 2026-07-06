@@ -2,7 +2,7 @@
 
 import { prisma } from "@/db/prisma";
 import { addMonths } from "date-fns";
-import { requireRole, STAFF_ROLES } from "@/lib/auth-guard";
+import { requireCapability } from "@/lib/auth-guard";
 import { upsertClosedDate } from "@/lib/closed-dates";
 
 export async function getClosedDates(from?: Date, to?: Date) {
@@ -24,7 +24,7 @@ export async function getClosedDates(from?: Date, to?: Date) {
 }
 
 export async function addClosedDate(date: Date, reason?: string) {
-  await requireRole(STAFF_ROLES);
+  await requireCapability("bookings:manage");
   try {
     await upsertClosedDate(date, reason);
     return { success: true as const, message: "Date closed successfully." };
@@ -35,7 +35,7 @@ export async function addClosedDate(date: Date, reason?: string) {
 }
 
 export async function removeClosedDate(date: Date) {
-  await requireRole(STAFF_ROLES);
+  await requireCapability("bookings:manage");
   try {
     const normalized = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
     await prisma.closedDate.delete({ where: { date: normalized } });

@@ -197,6 +197,7 @@ enum Role {
   KITER
   OWNER
   DAYPASS
+  RECEPTION
 }
 
 /// Customer standing, used to decide how readily we accept their bookings.

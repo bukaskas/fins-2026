@@ -3,14 +3,14 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/db/prisma";
 import { LessonType, ProductCategory, ProductType, WalletType, WalletUnit } from "@prisma/client";
-import { requireRole, STAFF_ROLES } from "@/lib/auth-guard";
+import { requireCapability } from "@/lib/auth-guard";
 
 export async function getAllProducts(filters?: {
   type?: ProductType;
   category?: ProductCategory;
   isActive?: boolean;
 }) {
-  await requireRole(STAFF_ROLES);
+  await requireCapability("products:view");
   return prisma.product.findMany({
     where: {
       ...(filters?.type !== undefined && { type: filters.type }),
@@ -33,7 +33,7 @@ function parseCategory(formData: FormData): ProductCategory | null | "invalid" {
 export async function createProduct(
   formData: FormData
 ): Promise<{ success: boolean; error?: string }> {
-  await requireRole(STAFF_ROLES);
+  await requireCapability("products:manage");
   const sku = String(formData.get("sku") ?? "").trim();
   const name = String(formData.get("name") ?? "").trim();
   const type = String(formData.get("type") ?? "") as ProductType;
@@ -88,7 +88,7 @@ export async function updateProduct(
   id: string,
   formData: FormData
 ): Promise<{ success: boolean; error?: string }> {
-  await requireRole(STAFF_ROLES);
+  await requireCapability("products:manage");
   const name = String(formData.get("name") ?? "").trim();
   const type = String(formData.get("type") ?? "") as ProductType;
   const priceEgp = Number(formData.get("price") ?? 0);
@@ -204,7 +204,7 @@ function parseLessonFields(
 }
 
 export async function toggleProductActive(id: string): Promise<void> {
-  await requireRole(STAFF_ROLES);
+  await requireCapability("products:manage");
   const product = await prisma.product.findUnique({ where: { id }, select: { isActive: true } });
   if (!product) return;
 

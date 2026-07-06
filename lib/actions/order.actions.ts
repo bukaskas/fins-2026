@@ -4,7 +4,7 @@ import { OrderStatus, ProductType } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/db/prisma";
 import { createOrderForUser } from "@/lib/actions/payment.actions";
-import { requireRole, STAFF_ROLES } from "@/lib/auth-guard";
+import { requireCapability } from "@/lib/auth-guard";
 
 export type OrderLineInput = { productId: string; qty: number };
 
@@ -12,7 +12,7 @@ export async function createOrderFromForm(input: {
   userId: string;
   items: OrderLineInput[];
 }) {
-  await requireRole(STAFF_ROLES);
+  await requireCapability("accounting:manage");
   if (!input.userId) {
     return { success: false as const, error: "Missing user." };
   }
@@ -39,7 +39,7 @@ export async function updateOrderLines(
   orderId: string,
   items: OrderLineInput[],
 ) {
-  await requireRole(STAFF_ROLES);
+  await requireCapability("accounting:manage");
   if (!orderId) return { success: false as const, error: "Missing order." };
 
   const cleanedItems = items
@@ -123,7 +123,7 @@ export async function updateOrderLines(
 }
 
 export async function cancelOrder(orderId: string) {
-  await requireRole(STAFF_ROLES);
+  await requireCapability("accounting:manage");
   if (!orderId) return { success: false as const, error: "Missing order." };
 
   try {
@@ -165,7 +165,7 @@ export async function cancelOrder(orderId: string) {
 }
 
 export async function listUnsettledOrders() {
-  await requireRole(STAFF_ROLES);
+  await requireCapability("desk:collect");
   const orders = await prisma.order.findMany({
     where: {
       status: { in: [OrderStatus.OPEN, OrderStatus.PARTIAL] },

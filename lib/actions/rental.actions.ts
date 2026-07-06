@@ -4,12 +4,12 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/db/prisma";
 import { createRentalSchema } from "@/lib/validators";
-import { currentUserId, requireRole, STAFF_ROLES } from "@/lib/auth-guard";
+import { currentUserId, requireCapability } from "@/lib/auth-guard";
 
 const OVERDUE_AFTER_HOURS = 4;
 
 export async function createRental(formData: FormData) {
-  await requireRole(STAFF_ROLES);
+  await requireCapability("rentals:manage");
   // Audit attribution comes from the session, never from the form.
   const actorId = await currentUserId();
   const productLinesJson = String(formData.get("productLinesJson") ?? "[]");
@@ -161,7 +161,7 @@ export async function createRental(formData: FormData) {
 }
 
 export async function returnRental(rentalId: string) {
-  await requireRole(STAFF_ROLES);
+  await requireCapability("rentals:manage");
   await prisma.$transaction(async (tx) => {
     const rental = await tx.rental.findUnique({
       where: { id: rentalId },
@@ -208,7 +208,7 @@ export async function returnRental(rentalId: string) {
 }
 
 export async function returnRentalLine(rentalLineId: string) {
-  await requireRole(STAFF_ROLES);
+  await requireCapability("rentals:manage");
   await prisma.$transaction(async (tx) => {
     const line = await tx.rentalLine.findUnique({
       where: { id: rentalLineId },
@@ -263,7 +263,7 @@ export async function returnRentalLine(rentalLineId: string) {
 }
 
 export async function cancelRental(rentalId: string) {
-  await requireRole(STAFF_ROLES);
+  await requireCapability("rentals:manage");
   await prisma.$transaction(async (tx) => {
     const rental = await tx.rental.findUnique({
       where: { id: rentalId },
@@ -303,7 +303,7 @@ export async function cancelRental(rentalId: string) {
 }
 
 export async function getAllRentals() {
-  await requireRole(STAFF_ROLES);
+  await requireCapability("rentals:manage");
   return prisma.rental.findMany({
     orderBy: { createdAt: "desc" },
     include: {
@@ -327,7 +327,7 @@ export async function getAllRentals() {
 }
 
 export async function getRentalById(id: string) {
-  await requireRole(STAFF_ROLES);
+  await requireCapability("rentals:manage");
   return prisma.rental.findUnique({
     where: { id },
     include: {
@@ -356,7 +356,7 @@ export async function getRentalById(id: string) {
 }
 
 export async function getRentalProducts() {
-  await requireRole(STAFF_ROLES);
+  await requireCapability("rentals:manage");
   return prisma.product.findMany({
     where: { category: "RENTAL", isActive: true },
     select: { id: true, name: true, sku: true, priceCents: true },
@@ -365,7 +365,7 @@ export async function getRentalProducts() {
 }
 
 export async function markOverdueRentals() {
-  await requireRole(STAFF_ROLES);
+  await requireCapability("rentals:manage");
   const cutoff = new Date(Date.now() - OVERDUE_AFTER_HOURS * 60 * 60 * 1000);
   await prisma.rental.updateMany({
     where: { status: "OPEN", startsAt: { lt: cutoff } },
@@ -374,7 +374,7 @@ export async function markOverdueRentals() {
 }
 
 export async function getRentalFormUsers() {
-  await requireRole(STAFF_ROLES);
+  await requireCapability("rentals:manage");
   return prisma.user.findMany({
     select: { id: true, name: true, email: true, phone: true },
     orderBy: { name: "asc" },

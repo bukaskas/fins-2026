@@ -3,7 +3,7 @@ import { prisma } from "@/db/prisma";
 import { OrderStatus, PaymentMethod, Prisma, WalletLedgerReason, WalletType } from "@prisma/client";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { requireRole, STAFF_ROLES } from "@/lib/auth-guard";
+import { requireCapability } from "@/lib/auth-guard";
 
 type CreateOrderItemInput = {
   productId: string;
@@ -52,7 +52,7 @@ async function withSerializableRetry<T>(fn: () => Promise<T>, attempts = 3): Pro
 }
 
 export async function createOrderForUser(input: CreateOrderForUserInput) {
-  await requireRole(STAFF_ROLES);
+  await requireCapability("accounting:manage");
   const { userId, items } = input;
 
   if (!items.length) {
@@ -167,7 +167,7 @@ export async function createOrderForUser(input: CreateOrderForUserInput) {
 
 
 export async function consumeBundleUnit(input: ConsumeBundleUnitInput) {
-  await requireRole(STAFF_ROLES);
+  await requireCapability("accounting:manage");
   const {
     userId,
     walletType,
@@ -226,7 +226,7 @@ export async function consumeBundleUnit(input: ConsumeBundleUnitInput) {
 // Payment settlement logic
 // Compare both functions: settleUserBalance and submitPaymentFromForm. The former is the core logic that applies a payment to a user's outstanding orders, while the latter is a helper that extracts form data and calls the settlement function.
 export async function settleUserBalance(input: SettleUserBalanceInput) {
-  await requireRole(STAFF_ROLES);
+  await requireCapability("desk:collect");
   const { userId, amountCents, method, reference } = input;
   const paymentAmount = toInt(amountCents);
 
@@ -343,7 +343,7 @@ export async function updatePayment(
   paymentId: string,
   patch: UpdatePaymentPatch,
 ): Promise<{ success: true } | { success: false; error: string }> {
-  await requireRole(STAFF_ROLES);
+  await requireCapability("accounting:manage");
   if (!paymentId) return { success: false, error: "Missing payment id." };
 
   const newAmount = toInt(patch.amountCents);
@@ -466,7 +466,7 @@ export async function updatePayment(
 }
 
 export async function submitPaymentFromForm(formData: FormData) {
-  await requireRole(STAFF_ROLES);
+  await requireCapability("desk:collect");
   const userId = String(formData.get("userId") ?? "").trim();
   const method = String(formData.get("method") ?? "CASH").trim().toUpperCase() as PaymentMethod;
   const reference = String(formData.get("reference") ?? "").trim() || undefined;
@@ -511,7 +511,7 @@ function parseMoneyToCents(value: FormDataEntryValue | null) {
 
 // Payment list grouped by payment method
 export async function listPaymentsGroupedByMethod() {
-  await requireRole(STAFF_ROLES);
+  await requireCapability("accounting:manage");
   // Only incoming guest payments: exclude rows that were created as the
   // settlement side of an instructor commission or an expense payout.
   const payments = await prisma.payment.findMany({

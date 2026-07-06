@@ -9,7 +9,7 @@ import {
   Prisma,
 } from "@prisma/client";
 import { revalidatePath } from "next/cache";
-import { requireRole, STAFF_ROLES } from "@/lib/auth-guard";
+import { requireCapability } from "@/lib/auth-guard";
 
 export type ExpenseFilters = {
   status?: ExpenseStatus;
@@ -46,7 +46,7 @@ export async function createExpense(input: {
   amountCents: number;
   payeeId?: string;
 }): Promise<{ success: boolean; id?: string; message?: string }> {
-  await requireRole(STAFF_ROLES);
+  await requireCapability("accounting:manage");
   if ((input.type as ExpenseType) === ExpenseType.INSTRUCTOR_COMMISSION) {
     return {
       success: false,
@@ -95,7 +95,7 @@ export async function createExpense(input: {
 export async function cancelExpense(
   id: string
 ): Promise<{ success: boolean; message?: string }> {
-  await requireRole(STAFF_ROLES);
+  await requireCapability("accounting:manage");
   try {
     const existing = await prisma.expense.findUnique({
       where: { id },
@@ -145,7 +145,7 @@ export async function markExpensePaid(
   id: string,
   paymentId: string
 ): Promise<{ success: boolean; message?: string }> {
-  await requireRole(STAFF_ROLES);
+  await requireCapability("accounting:manage");
   try {
     return await prisma.$transaction(async (tx) => {
       const expense = await tx.expense.findUnique({
@@ -221,7 +221,7 @@ export async function listExpenses(filters: ExpenseFilters = {}): Promise<{
     paid: { count: number; cents: number };
   };
 }> {
-  await requireRole(STAFF_ROLES);
+  await requireCapability("accounting:manage");
   const where: Prisma.ExpenseWhereInput = {
     ...(filters.status && { status: filters.status }),
     ...(filters.type && { type: filters.type }),
@@ -277,7 +277,7 @@ type SettlePayeeExpensesInput = {
 };
 
 export async function settlePayeeExpenses(input: SettlePayeeExpensesInput) {
-  await requireRole(STAFF_ROLES);
+  await requireCapability("accounting:manage");
   const { payeeId, from, to, expenseIds, method, reference, receivedAt } = input;
 
   try {
@@ -379,7 +379,7 @@ export async function getExpenseSummary(): Promise<{
   paidCents: number;
   byType: Record<ExpenseType, { pendingCents: number; count: number }>;
 }> {
-  await requireRole(STAFF_ROLES);
+  await requireCapability("accounting:manage");
   const byTypeAndStatus = await prisma.expense.groupBy({
     by: ["type", "status"],
     _sum: { amountCents: true },
