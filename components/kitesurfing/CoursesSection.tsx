@@ -15,132 +15,111 @@ import {
 } from "@/components/ui/dialog";
 import Reveal from "@/components/kitesurfing/Reveal";
 
-const accent = "#38bdf8";
+const accent = "#0ea5e9";
 
 type CourseCardProps = {
   index: string;
   tag: string;
   title: string;
   subtitle: string;
-  duration: string;
-  price: string;
+  facts: { label: string; value: string }[];
   image: StaticImageData;
   dialogTitle?: string;
   dialogContent?: React.ReactNode;
   moreInfoHref?: string;
-  priority?: boolean;
 };
 
 const ctaClass =
-  "group inline-flex items-center gap-2 text-[0.65rem] tracking-[0.22em] uppercase font-[family-name:var(--font-raleway)] font-[600] transition-opacity duration-200 hover:opacity-60";
+  "group inline-flex items-center gap-2 text-[0.72rem] tracking-[0.18em] uppercase font-[family-name:var(--font-raleway)] font-[600] text-neu-primary transition-opacity duration-200 hover:opacity-70 cursor-pointer";
 
 function CourseCard({
   index,
   tag,
   title,
   subtitle,
-  duration,
-  price,
+  facts,
   image,
   dialogTitle,
   dialogContent,
   moreInfoHref,
-  priority = false,
 }: CourseCardProps) {
   return (
-    <div className="group flex flex-col bg-[#f0f9ff] border-b border-r border-[#e0f2fe] last:border-r-0 odd:md:border-r even:md:border-r-0">
+    <div className="group neu-raised flex flex-col rounded-[2rem] p-3">
       {/* Photo */}
-      <div className="relative aspect-[4/3] overflow-hidden">
+      <div className="relative aspect-[4/3] overflow-hidden rounded-[1.5rem]">
         <Image
           src={image}
           alt={title}
           fill
           className="object-cover transition-transform duration-700 group-hover:scale-[1.04]"
           sizes="(max-width: 768px) 100vw, 50vw"
-          priority={priority}
         />
-        {/* Bottom gradient */}
-        <div className="absolute inset-x-0 bottom-0 h-1/4 bg-gradient-to-t from-black/30 to-transparent" />
-        {/* Tag badge */}
-        <span
-          className="absolute top-4 left-4 text-[0.55rem] tracking-[0.28em] uppercase font-[family-name:var(--font-raleway)] font-[600] px-2.5 py-1"
-          style={{ background: accent, color: "#0c1a2e" }}
-        >
+        <span className="absolute top-4 left-4 rounded-full bg-neu-primary text-white text-[0.62rem] tracking-[0.22em] uppercase font-[family-name:var(--font-raleway)] font-[600] px-3 py-1.5">
           {tag}
         </span>
       </div>
 
       {/* Info panel */}
-      <div className="flex flex-col flex-1 gap-5 p-7 md:p-8">
-        {/* Ghost index */}
-        <span
-          className="font-[family-name:var(--font-raleway)] font-[100] text-[3.8rem] leading-none select-none"
-          style={{ color: "#bae6fd" }}
-        >
-          {index}
-        </span>
-
-        <div className="flex flex-col gap-2">
-          <h3
-            className="font-[family-name:var(--font-raleway)] text-[clamp(1.6rem,3vw,2.2rem)] font-[100] tracking-[-0.01em] leading-[0.9]"
-            style={{ color: "#0c1a2e" }}
+      <div className="flex flex-col flex-1 gap-4 p-4 md:p-5">
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex flex-col gap-2">
+            <h3 className="font-[family-name:var(--font-raleway)] text-[clamp(1.5rem,3vw,2rem)] font-[300] tracking-[-0.01em] leading-[0.95] text-neu-fg">
+              {title}
+            </h3>
+            <p className="text-[0.85rem] leading-relaxed font-[family-name:var(--font-raleway)] font-[400] text-neu-muted">
+              {subtitle}
+            </p>
+          </div>
+          <span
+            aria-hidden="true"
+            className="font-[family-name:var(--font-raleway)] font-[200] text-[3rem] leading-none select-none text-neu-primary/25"
           >
-            {title}
-          </h3>
-          <p
-            className="text-[0.82rem] leading-relaxed font-[family-name:var(--font-raleway)] font-[300]"
-            style={{ color: "#64748b" }}
-          >
-            {subtitle}
-          </p>
+            {index}
+          </span>
         </div>
 
-        {/* Key facts: duration + price */}
-        <div className="grid grid-cols-2 gap-x-6 border-t border-[#e0f2fe] pt-4 mt-auto">
-          <div className="flex flex-col gap-1">
-            <span className="text-[0.55rem] tracking-[0.28em] uppercase font-[family-name:var(--font-raleway)] font-[500] text-[#94a3b8]">
-              Duration
-            </span>
-            <span className="text-[0.85rem] font-[family-name:var(--font-raleway)] font-[500] text-[#0c1a2e]">
-              {duration}
-            </span>
-          </div>
-          <div className="flex flex-col gap-1">
-            <span className="text-[0.55rem] tracking-[0.28em] uppercase font-[family-name:var(--font-raleway)] font-[500] text-[#94a3b8]">
-              Price
-            </span>
-            <span className="text-[0.85rem] font-[family-name:var(--font-raleway)] font-[600] text-[#0c1a2e]">
-              {price}
-            </span>
-          </div>
+        {/* Key facts */}
+        <div className="grid grid-cols-2 gap-2.5 mt-auto">
+          {facts.map(({ label, value }) => (
+            <div
+              key={label}
+              className="flex flex-col gap-1 rounded-xl bg-neu-inset/45 px-3.5 py-2.5"
+            >
+              <span className="text-[0.62rem] tracking-[0.22em] uppercase font-[family-name:var(--font-raleway)] font-[600] text-neu-muted">
+                {label}
+              </span>
+              <span className="text-[0.85rem] font-[family-name:var(--font-raleway)] font-[600] text-neu-fg">
+                {value}
+              </span>
+            </div>
+          ))}
         </div>
 
         {/* CTA */}
         {moreInfoHref ? (
-          <Link
-            href={moreInfoHref}
-            className={ctaClass}
-            style={{ color: accent }}
-          >
-            Details & Pricing
-            <span className="group-hover:translate-x-1 transition-transform duration-200">
+          <Link href={moreInfoHref} className={ctaClass}>
+            Details &amp; Pricing
+            <span
+              aria-hidden="true"
+              className="group-hover:translate-x-1 transition-transform duration-200"
+            >
               →
             </span>
           </Link>
         ) : (
           <Dialog>
-            <DialogTrigger className={ctaClass} style={{ color: accent }}>
-              Details & Pricing
-              <span className="group-hover:translate-x-1 transition-transform duration-200">
+            <DialogTrigger className={ctaClass}>
+              Details &amp; Pricing
+              <span
+                aria-hidden="true"
+                className="group-hover:translate-x-1 transition-transform duration-200"
+              >
                 →
               </span>
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle
-                  eyebrow="Kitesurfing · Fins Sokhna"
-                  accent={accent}
-                >
+                <DialogTitle eyebrow="Kitesurfing · Fins Sokhna" accent={accent}>
                   {dialogTitle}
                 </DialogTitle>
               </DialogHeader>
@@ -159,10 +138,9 @@ const bookBtn = (
   <div className="flex justify-end mt-4 pt-4 border-t border-white/10">
     <Link
       href={BOOKING_HREF}
-      className="inline-flex items-center gap-2 text-black text-[0.72rem] font-[700] tracking-[0.14em] uppercase px-5 py-2.5 font-[family-name:var(--font-raleway)] transition-opacity duration-200 hover:opacity-85"
-      style={{ background: accent }}
+      className="neu-btn inline-flex items-center gap-2 rounded-xl bg-neu-primary text-white text-[0.72rem] font-[700] tracking-[0.14em] uppercase px-5 py-2.5 font-[family-name:var(--font-raleway)]"
     >
-      Book now →
+      Book now <span aria-hidden="true">→</span>
     </Link>
   </div>
 );
@@ -170,13 +148,14 @@ const bookBtn = (
 const courses: CourseCardProps[] = [
   {
     index: "01",
-    tag: "Level 1 & Level 2 IKO course",
+    tag: "IKO Level 1 & 2",
     title: "Beginner Course",
     subtitle: "Learn to control the kite and get on the board",
-    duration: "2–3 days",
-    price: "From 22,000 EGP",
+    facts: [
+      { label: "Duration", value: "2–3 days" },
+      { label: "Price", value: "From 22,000 EGP" },
+    ],
     image: beginnerPhoto,
-    priority: true,
     moreInfoHref: "/kitesurfing/beginner-course",
   },
   {
@@ -184,20 +163,22 @@ const courses: CourseCardProps[] = [
     tag: "2 hours",
     title: "Intro Session",
     subtitle: "One session to get a taste of kitesurfing",
-    duration: "2 hours",
-    price: "From 5,500 EGP",
+    facts: [
+      { label: "Duration", value: "2 hours" },
+      { label: "Price", value: "From 5,500 EGP" },
+    ],
     image: privateCourse,
-    priority: true,
     moreInfoHref: "/kitesurfing/intro-course",
   },
-
   {
     index: "03",
     tag: "2 hours",
     title: "Refresher Course",
     subtitle: "Finished the beginner course? Polish your skills to ride solo",
-    duration: "2 hours",
-    price: "From 5,500 EGP",
+    facts: [
+      { label: "Duration", value: "2 hours" },
+      { label: "Price", value: "From 5,500 EGP" },
+    ],
     image: refresher,
     moreInfoHref: "/kitesurfing/refresher-course",
   },
@@ -206,8 +187,10 @@ const courses: CourseCardProps[] = [
     tag: "Ages 8+",
     title: "Kids Courses",
     subtitle: "Purpose-built courses for young riders, from age 8",
-    duration: "From age 8",
-    price: "15% off courses",
+    facts: [
+      { label: "Starting age", value: "8 years" },
+      { label: "Price", value: "15% off courses" },
+    ],
     image: kidsCourse,
     dialogTitle: "Kids Courses",
     dialogContent: (
@@ -229,44 +212,46 @@ const courses: CourseCardProps[] = [
 
 function ContentSection() {
   return (
-    <section id="courses" className="bg-white scroll-mt-16">
+    <section id="courses" className="bg-neu-base scroll-mt-40">
       {/* Section header */}
-      <div className="max-w-7xl mx-auto px-8 md:px-14 lg:px-20 pt-16 pb-12 md:pt-20 md:pb-14">
+      <div className="max-w-7xl mx-auto px-6 md:px-14 lg:px-20 pt-16 pb-12 md:pt-20 md:pb-14">
         <Reveal>
           <div className="flex items-center gap-3 mb-8">
-            <span className="h-px w-7 flex-shrink-0 bg-[#38bdf8]" />
-            <span className="text-[0.58rem] tracking-[0.4em] uppercase font-[family-name:var(--font-raleway)] font-[500] text-[#38bdf8]">
+            <span
+              aria-hidden="true"
+              className="h-px w-7 flex-shrink-0 bg-neu-primary"
+            />
+            <span className="text-[0.7rem] tracking-[0.3em] uppercase font-[family-name:var(--font-raleway)] font-[600] text-neu-primary">
               IKO Certified · Sokhna Red Sea
             </span>
           </div>
           <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
             <h2 className="font-[family-name:var(--font-raleway)] leading-none">
-              <span className="block text-[clamp(2.4rem,5vw,4.5rem)] font-[100] tracking-[-0.02em] text-[#0c1a2e] leading-[0.9]">
+              <span className="block text-[clamp(2.4rem,5vw,4.5rem)] font-[300] tracking-[-0.02em] text-neu-fg leading-[0.95]">
                 Learn to
               </span>
-              <span
-                className="block text-[clamp(2.4rem,5vw,4.5rem)] font-[800] tracking-[-0.02em] leading-[0.9]"
-                style={{ color: accent }}
-              >
+              <span className="block text-[clamp(2.4rem,5vw,4.5rem)] font-[800] tracking-[-0.02em] leading-[0.95] text-neu-primary">
                 kitesurf
               </span>
             </h2>
-            <p className="text-[0.85rem] text-[#64748b] font-[family-name:var(--font-raleway)] font-[300] max-w-xs leading-relaxed">
-              From your very first session to riding solo — choose the course that
-              fits where you are right now.
+            <p className="text-[0.85rem] text-neu-muted font-[family-name:var(--font-raleway)] font-[400] max-w-xs leading-relaxed">
+              From your very first session to riding solo — choose the course
+              that fits where you are right now.
             </p>
           </div>
         </Reveal>
       </div>
 
       {/* Course grid */}
-      <Reveal delay={0.1}>
-        <div className="grid grid-cols-1 md:grid-cols-2 border-t border-[#e0f2fe]">
-          {courses.map((course) => (
-            <CourseCard key={course.title} {...course} />
-          ))}
-        </div>
-      </Reveal>
+      <div className="max-w-7xl mx-auto px-6 md:px-14 lg:px-20 pb-8">
+        <Reveal delay={0.1}>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
+            {courses.map((course) => (
+              <CourseCard key={course.title} {...course} />
+            ))}
+          </div>
+        </Reveal>
+      </div>
     </section>
   );
 }

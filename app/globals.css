@@ -7,6 +7,26 @@
 
 @theme {
   --font-roboto: "Roboto Mono", monospace;
+
+  /* Neumorphism tokens — see .claude/design-system/MASTER.md */
+  --color-neu-base: #e3ebf3;
+  --color-neu-inset: #d6e0ea;
+  --color-neu-fg: #22303f;
+  --color-neu-muted: #5b6b7c;
+  --color-neu-primary: #0ea5e9;
+  --color-neu-accent: #38bdf8;
+  --shadow-neu:
+    -6px -6px 14px rgba(255, 255, 255, 0.85),
+    6px 6px 14px rgba(136, 152, 170, 0.55);
+  --shadow-neu-sm:
+    -3px -3px 7px rgba(255, 255, 255, 0.85),
+    3px 3px 7px rgba(136, 152, 170, 0.55);
+  --shadow-neu-inset:
+    inset -4px -4px 8px rgba(255, 255, 255, 0.85),
+    inset 4px 4px 8px rgba(136, 152, 170, 0.55);
+  --shadow-neu-inset-sm:
+    inset -2px -2px 4px rgba(255, 255, 255, 0.85),
+    inset 2px 2px 4px rgba(136, 152, 170, 0.55);
 }
 
 @theme inline {
@@ -184,4 +204,41 @@ html {
     transform: none;
     transition: none;
   }
+}
+
+/* Keep content visible when JS never runs (reveal is progressive enhancement) */
+@media (scripting: none), print {
+  .kite-reveal {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+}
+
+/* Neumorphic surfaces — see .claude/design-system/MASTER.md */
+.neu-raised {
+  background: var(--color-neu-base);
+  box-shadow: var(--shadow-neu);
+}
+
+.neu-raised-sm {
+  background: var(--color-neu-base);
+  box-shadow: var(--shadow-neu-sm);
+}
+
+.neu-inset {
+  background: var(--color-neu-inset);
+  box-shadow: var(--shadow-neu-inset);
+}
+
+.neu-btn {
+  cursor: pointer;
+  transition:
+    box-shadow 150ms cubic-bezier(0.4, 0, 0.2, 1),
+    transform 150ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.neu-btn:active {
+  box-shadow: var(--shadow-neu-inset-sm);
+  transform: scale(0.98);
 }

@@ -28,10 +28,13 @@ function NavLink({ href, children }: { href: string; children: React.ReactNode }
   return (
     <Link
       href={href}
-      className="group relative text-gray-800 hover:text-gray-950 text-[0.72rem] font-[300] tracking-[0.18em] uppercase font-[family-name:var(--font-raleway)] transition-colors duration-200"
+      className="group relative text-neu-fg hover:text-neu-primary text-[0.72rem] font-[500] tracking-[0.18em] uppercase font-[family-name:var(--font-raleway)] transition-colors duration-200"
     >
       {children}
-      <span className="absolute -bottom-0.5 left-0 h-px w-0 bg-gray-800 group-hover:w-full transition-all duration-300 ease-out" />
+      <span
+        aria-hidden="true"
+        className="absolute -bottom-0.5 left-0 h-px w-0 bg-neu-primary group-hover:w-full transition-all duration-300 ease-out"
+      />
     </Link>
   );
 }
@@ -65,7 +68,7 @@ async function Menu() {
             height={80}
             alt={APP_NAME}
           />
-          <span className="hidden lg:block text-[0.55rem] tracking-[0.28em] uppercase text-gray-500 font-[300] -mt-1 whitespace-nowrap">
+          <span className="hidden lg:block text-[0.55rem] tracking-[0.28em] uppercase text-neu-muted font-[400] -mt-1 whitespace-nowrap">
             kite surfing center
           </span>
         </Link>
@@ -81,7 +84,7 @@ async function Menu() {
           {isInstructor && role !== "ADMIN" && (
             <Link
               href="/my-schedule"
-              className="text-[0.72rem] font-[300] tracking-[0.18em] uppercase font-[family-name:var(--font-raleway)] text-gray-800 hover:text-gray-950 transition-colors"
+              className="text-[0.72rem] font-[500] tracking-[0.18em] uppercase font-[family-name:var(--font-raleway)] text-neu-fg hover:text-neu-primary transition-colors"
             >
               My Schedule
             </Link>
@@ -104,21 +107,21 @@ async function Menu() {
         </Link>
 
         <Sheet>
-          <SheetTrigger className="absolute right-4 p-1 text-gray-800 hover:text-gray-950 transition-colors">
+          <SheetTrigger className="absolute right-4 p-1 text-neu-fg hover:text-neu-primary transition-colors cursor-pointer">
             <MenuIcon size={26} strokeWidth={1.5} />
           </SheetTrigger>
 
           <SheetContent
             side="right"
-            className="[&>button:first-of-type]:hidden flex flex-col w-[280px] bg-zinc-950 text-white border-l border-white/8 p-0"
+            className="[&>button:first-of-type]:hidden flex flex-col w-[280px] bg-neu-base text-neu-fg border-l-0 p-0"
           >
             {/* Sheet header */}
-            <div className="flex items-center justify-between px-6 pt-8 pb-6 border-b border-white/8">
-              <SheetTitle className="text-xs tracking-[0.3em] uppercase font-[300] font-[family-name:var(--font-raleway)] text-white/60">
+            <div className="flex items-center justify-between px-6 pt-8 pb-6 border-b border-[#8898aa]/20">
+              <SheetTitle className="text-xs tracking-[0.3em] uppercase font-[500] font-[family-name:var(--font-raleway)] text-neu-muted">
                 Menu
               </SheetTitle>
               <SheetClose asChild>
-                <button className="h-8 w-8 flex items-center justify-center text-white/40 hover:text-white transition-colors">
+                <button className="h-8 w-8 flex items-center justify-center text-neu-muted hover:text-neu-fg transition-colors cursor-pointer">
                   <X className="h-4 w-4" strokeWidth={1.5} />
                 </button>
               </SheetClose>
@@ -132,7 +135,7 @@ async function Menu() {
                   <SheetClose asChild key={link.href}>
                     <Link
                       href={link.href}
-                      className="flex items-center px-3 py-3 text-lg font-[300] tracking-[0.1em] text-white/80 hover:text-white hover:bg-white/5 rounded-sm transition-colors font-[family-name:var(--font-raleway)]"
+                      className="flex items-center px-3 py-3 text-lg font-[400] tracking-[0.1em] text-neu-fg hover:text-neu-primary hover:bg-neu-inset rounded-xl transition-colors font-[family-name:var(--font-raleway)]"
                     >
                       {link.title}
                     </Link>
@@ -146,7 +149,7 @@ async function Menu() {
                   <SheetClose asChild>
                     <Link
                       href="/my-schedule"
-                      className="flex items-center px-3 py-3 text-lg font-[300] tracking-[0.1em] text-white/80 hover:text-white hover:bg-white/5 rounded-sm transition-colors font-[family-name:var(--font-raleway)]"
+                      className="flex items-center px-3 py-3 text-lg font-[400] tracking-[0.1em] text-neu-fg hover:text-neu-primary hover:bg-neu-inset rounded-xl transition-colors font-[family-name:var(--font-raleway)]"
                     >
                       My Schedule
                     </Link>
@@ -159,10 +162,10 @@ async function Menu() {
             </div>
 
             {/* Auth at the bottom */}
-            <div className="border-t border-white/8 px-4 py-5">
+            <div className="border-t border-[#8898aa]/20 px-4 py-5">
               <UserAuthButton
                 session={session}
-                className="w-full justify-start text-base font-[300] tracking-wide text-white/70 hover:text-white hover:bg-white/5 h-11 px-3"
+                className="w-full justify-start text-base font-[400] tracking-wide text-neu-fg hover:text-neu-primary hover:bg-neu-inset h-11 px-3"
               />
             </div>
 

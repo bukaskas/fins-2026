@@ -15,10 +15,10 @@ export function NavScrollWrapper({ children }: { children: React.ReactNode }) {
 
   return (
     <header
-      className={`w-full z-50 transition-all duration-500 ease-in-out ${
+      className={`sticky top-0 w-full z-50 backdrop-blur-md transition-all duration-500 ease-in-out ${
         scrolled
-          ? "bg-white/90 backdrop-blur-md border-b border-gray-200/60 shadow-[0_1px_24px_rgba(0,0,0,0.06)]"
-          : "bg-transparent"
+          ? "bg-neu-base/85 shadow-neu-sm"
+          : "bg-neu-base/60"
       }`}
     >
       {children}
