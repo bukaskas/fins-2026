@@ -79,6 +79,19 @@ export const updateBookingSchema = z.object({
 });
 export type UpdateBookingData = z.infer<typeof updateBookingSchema>;
 
+export const corporateBookingSchema = z.object({
+  name: z.string().min(2, "Name must be at least 2 characters long"),
+  phone: phoneSchema,
+  email: z.preprocess(
+    (v) => (v === "" || v == null ? null : v),
+    emailSchema.nullable(),
+  ),
+  date: z.date({ error: "Date is required" }),
+  numberOfPeople: z.number().int().min(1, "At least 1 person required").max(1000),
+  depositCents: z.number().int().positive("Deposit must be greater than 0"),
+});
+export type CorporateBookingData = z.infer<typeof corporateBookingSchema>;
+
 export const bookingDepositSchema = z.object({
   amountCents: z.number().int().positive("Amount must be greater than 0"),
   method: z.nativeEnum(PaymentMethod),

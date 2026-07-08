@@ -3,7 +3,7 @@
 import { prisma } from "@/db/prisma";
 import { isRedirectError } from "next/dist/client/components/redirect-error";
 import { revalidatePath } from "next/cache";
-import { BookingDepositData, bookingDepositSchema, BookingFormData, bookingFormSchema, bulkEmailSchema, UpdateBookingData, updateBookingSchema } from "../validators";
+import { BookingDepositData, bookingDepositSchema, BookingFormData, bookingFormSchema, bulkEmailSchema, CorporateBookingData, corporateBookingSchema, UpdateBookingData, updateBookingSchema } from "../validators";
 import { sendBookingEmail, sendStaffNotificationEmail, sendFullyBookedEmail, sendBulkEmail } from "@/emails/index";
 import { Booking, BookingStatus, PaymentMethod, Role } from "@prisma/client";
 
@@ -1395,6 +1395,33 @@ export async function createDayUseBookingAdmin(data: {
     });
     revalidatePath("/bookings");
     revalidatePath("/bookings/day-use");
+    return { success: true, bookingId: booking.id };
+  } catch (error) {
+    return { success: false, message: `Failed to create booking: ${error instanceof Error ? error.message : String(error)}` };
+  }
+}
+
+
+export async function createCorporateBooking(data: CorporateBookingData) {
+  await requireCapability("bookings:manage");
+  try {
+    const validated = corporateBookingSchema.parse(data);
+    const booking = await prisma.booking.create({
+      data: {
+        service: "corporate",
+        name: validated.name,
+        phone: validated.phone,
+        email: validated.email,
+        date: validated.date,
+        numberOfPeople: validated.numberOfPeople,
+        // Deposit owed lives in totalPriceCents; amountPaidCents stays 0 until
+        // the deposit is collected via PayDepositDialog / payBookingDeposit.
+        totalPriceCents: validated.depositCents,
+        amountPaidCents: 0,
+        bookingStatus: BookingStatus.WAITING_PAYMENT,
+      },
+    });
+    revalidatePath("/bookings");
     return { success: true, bookingId: booking.id };
   } catch (error) {
     return { success: false, message: `Failed to create booking: ${error instanceof Error ? error.message : String(error)}` };

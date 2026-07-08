@@ -184,6 +184,9 @@ async function BookingsPage({
               phone: b.phone,
             }))}
           />
+          <Button asChild variant="outline" className="rounded-full">
+            <Link href="/bookings/corporate/new">+ New Corporate</Link>
+          </Button>
           <Button asChild className="rounded-full">
             <Link href="/bookings/day-use/new">+ New Day Use</Link>
           </Button>
