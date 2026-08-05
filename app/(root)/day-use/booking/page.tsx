@@ -1,5 +1,6 @@
 "use client";
 import * as React from "react";
+import { z } from "zod";
 import { useRouter } from "next/navigation";
 import {
   Field,
@@ -37,6 +38,12 @@ import {
   formatEGP,
 } from "@/lib/pricing";
 import { Checkbox } from "@/components/ui/checkbox";
+
+// Instagram is optional in the shared schema (other forms, e.g. Pharaoh
+// event booking, don't collect it) but required for day-use bookings.
+const dayUseBookingFormSchema = bookingFormSchema.extend({
+  instagram: z.string().trim().min(1, "Instagram account is required"),
+});
 
 const RATE_META = {
   standard:   { label: "Standard",   dot: "#3b82f6", bg: "#eff6ff", color: "#1d4ed8" },
@@ -152,7 +159,7 @@ function DayUseBookingForm() {
     } as BookingFormData,
     validators: {
       onSubmit: ({ value }) => {
-        const result = bookingFormSchema.safeParse(value);
+        const result = dayUseBookingFormSchema.safeParse(value);
         if (result.success) return;
         const fieldErrors = result.error.flatten().fieldErrors;
         return fieldErrors as any;
@@ -550,7 +557,7 @@ function DayUseBookingForm() {
                         return (
                           <Field data-invalid={isInvalid}>
                             <FieldLabel htmlFor={field.name}>
-                              Instagram (optional)
+                              Instagram
                             </FieldLabel>
                             <Input
                               id={field.name}
