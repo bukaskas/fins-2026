@@ -1,6 +1,7 @@
 import Image, { StaticImageData } from "next/image";
 import Link from "next/link";
 import Reveal from "@/components/kitesurfing/Reveal";
+import { KITESURFING_BOOKING_URL } from "@/lib/constants";
 
 /**
  * Shared building blocks for the course detail pages
@@ -176,7 +177,7 @@ export function CourseAside({
 
       <div className="mt-8 flex flex-col gap-3">
         <Link
-          href="/kitesurfing/booking"
+          href={KITESURFING_BOOKING_URL}
           className="neu-btn inline-flex items-center justify-center rounded-2xl bg-neu-primary text-white text-[0.8rem] font-[700] tracking-[0.1em] uppercase px-6 py-3.5 shadow-neu-sm"
         >
           {bookLabel}

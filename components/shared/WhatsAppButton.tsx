@@ -11,8 +11,8 @@ const contacts = [
   },
   {
     label: "Kitesurfing reservations",
-    detail: "Book online",
-    href: "https://school.finskitesurfing.com/book",
+    detail: "+201121105926",
+    href: "https://wa.me/201121105926",
   },
 ];
 

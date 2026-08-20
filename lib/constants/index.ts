@@ -6,6 +6,7 @@ export const BOOKINGS_PAGE_SIZE = 100;
 export const APP_DESCRIPTION = process.env.NEXT_PUBLIC_APP_DESCRIPTION || 'Beautiful restaurant and kitesurfing center near Sokhna';
 export const SERVER_URL = process.env.NEXT_PUBLIC_SERVER_URL || 'https://www.finskitesurfing.com';
 export const WHATSAPP_PHONE = '01222144388';
+export const KITESURFING_BOOKING_URL = 'https://school.finskitesurfing.com/book';
 export const EMAIL_ADDRESS = 'info@finskitesurfing.com';
 function parseEmails(raw: string | undefined, fallback: string): string[] {
   const src = raw?.trim() || fallback;

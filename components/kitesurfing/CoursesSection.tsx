@@ -14,6 +14,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import Reveal from "@/components/kitesurfing/Reveal";
+import { KITESURFING_BOOKING_URL } from "@/lib/constants";
 
 const accent = "#0ea5e9";
 
@@ -132,12 +133,10 @@ function CourseCard({
   );
 }
 
-const BOOKING_HREF = "/kitesurfing/booking";
-
 const bookBtn = (
   <div className="flex justify-end mt-4 pt-4 border-t border-white/10">
     <Link
-      href={BOOKING_HREF}
+      href={KITESURFING_BOOKING_URL}
       className="neu-btn inline-flex items-center gap-2 rounded-xl bg-neu-primary text-white text-[0.72rem] font-[700] tracking-[0.14em] uppercase px-5 py-2.5 font-[family-name:var(--font-raleway)]"
     >
       Book now <span aria-hidden="true">→</span>

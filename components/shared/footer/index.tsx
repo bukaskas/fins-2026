@@ -3,6 +3,7 @@ import {
   EMAIL_ADDRESS,
   FACEBOOK_URL,
   INSTAGRAM_URL,
+  KITESURFING_BOOKING_URL,
   LOCATION_ADDRESS,
   WHATSAPP_PHONE,
 } from "@/lib/constants";
@@ -21,7 +22,7 @@ const linkColumns = [
       { label: "Courses",      href: "/kitesurfing#courses" },
       { label: "Gear Rental",  href: "/kitesurfing#rental" },
       { label: "Storage",      href: "/kitesurfing#storage" },
-      { label: "Book a session", href: "/kitesurfing/booking" },
+      { label: "Book a session", href: KITESURFING_BOOKING_URL },
     ],
   },
   {

@@ -1,6 +1,7 @@
 import { buildMetadata } from "@/lib/metadata";
 import Image from "next/image";
 import Link from "next/link";
+import { KITESURFING_BOOKING_URL } from "@/lib/constants";
 
 export const metadata = buildMetadata({
   title: "Kitesurfing",
@@ -71,7 +72,7 @@ function Hero() {
           <Reveal delay={0.3}>
             <div className="flex flex-wrap items-center gap-4">
               <Link
-                href="/kitesurfing/booking"
+                href={KITESURFING_BOOKING_URL}
                 className="neu-btn inline-flex items-center gap-2 rounded-2xl bg-neu-primary text-white text-[0.75rem] font-[700] tracking-[0.12em] uppercase px-7 py-3.5 font-[family-name:var(--font-raleway)] shadow-neu-sm"
               >
                 Book a session
@@ -141,7 +142,7 @@ function NavigationMenu() {
         </ul>
 
         <Link
-          href="/kitesurfing/booking"
+          href={KITESURFING_BOOKING_URL}
           className="neu-btn flex-shrink-0 rounded-full bg-neu-primary text-white text-[0.7rem] font-[600] tracking-[0.16em] uppercase px-5 py-2 font-[family-name:var(--font-raleway)] shadow-neu-sm"
         >
           Book
