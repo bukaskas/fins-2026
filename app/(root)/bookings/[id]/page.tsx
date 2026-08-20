@@ -3,10 +3,21 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { format } from "date-fns";
 import { getServerSession } from "next-auth/next";
-import { ArrowLeft, Pencil, Phone, Mail, MessageCircle, Instagram } from "lucide-react";
+import {
+  ArrowLeft,
+  ArrowUpRight,
+  Clock3,
+  Pencil,
+  Phone,
+  Mail,
+  MapPin,
+  MessageCircle,
+  Instagram,
+} from "lucide-react";
 import { BookingStatus, Role } from "@prisma/client";
 
 import { authOptions } from "@/lib/auth";
+import { LOCATION_ADDRESS } from "@/lib/constants";
 import { instagramHref } from "@/lib/utils";
 import { getBookingById } from "@/lib/actions/booking.actions";
 import { buildMetadata } from "@/lib/metadata";
@@ -249,6 +260,51 @@ export default async function BookingDetailPage({
             </div>
           </div>
         </header>
+
+        {booking.bookingStatus === BookingStatus.CONFIRMED && (
+          <section
+            aria-label="Visit information"
+            className="grid grid-cols-2 gap-3"
+          >
+            <div className="flex min-w-0 items-center gap-3 rounded-2xl border border-[#ece8e3] bg-white/70 px-4 py-4 shadow-[0_8px_24px_-16px_rgba(40,32,24,0.22)] backdrop-blur-sm">
+              <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-[#FFF4E0] text-[#7A5414]">
+                <Clock3 className="size-4" strokeWidth={1.7} aria-hidden="true" />
+              </span>
+              <span className="min-w-0">
+                <span className="block font-[family-name:var(--font-raleway)] text-[0.58rem] font-[600] uppercase tracking-[0.2em] text-[#b0a89f]">
+                  Working time
+                </span>
+                <span className="mt-1 block font-[family-name:var(--font-roboto-mono)] text-[0.78rem] tracking-[0.01em] text-[#1a1614] sm:text-[0.86rem]">
+                  9:30 am – 12 pm
+                </span>
+              </span>
+            </div>
+
+            <a
+              href={LOCATION_ADDRESS}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="group flex min-w-0 items-center gap-3 rounded-2xl border border-[#ece8e3] bg-white/70 px-4 py-4 shadow-[0_8px_24px_-16px_rgba(40,32,24,0.22)] backdrop-blur-sm transition-colors hover:border-[#d6d0c8] hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#62B07F]"
+            >
+              <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-[#E4F1FA] text-[#1E4F72]">
+                <MapPin className="size-4" strokeWidth={1.7} aria-hidden="true" />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block font-[family-name:var(--font-raleway)] text-[0.58rem] font-[600] uppercase tracking-[0.2em] text-[#b0a89f]">
+                  Location
+                </span>
+                <span className="mt-1 block font-[family-name:var(--font-raleway)] text-[0.78rem] font-[500] text-[#1a1614] sm:text-[0.86rem]">
+                  Open in Google Maps
+                </span>
+              </span>
+              <ArrowUpRight
+                className="size-3.5 shrink-0 text-[#b0a89f] transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5"
+                strokeWidth={1.7}
+                aria-hidden="true"
+              />
+            </a>
+          </section>
+        )}
 
         {/* next step — conditional on status, sits right under the date */}
         <NextStepCard
