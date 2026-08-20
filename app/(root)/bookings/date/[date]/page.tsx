@@ -1,6 +1,7 @@
 import { getBookingsByDate, type BookingWithAgent } from "@/lib/actions/booking.actions";
 import { listAgents } from "@/lib/actions/user.actions";
 import BookingComponent from "@/components/kitesurfing/BookingComponent";
+import { AgentsProvider } from "@/components/bookings/AgentsProvider";
 import { BookingStatus } from "@prisma/client";
 import { format } from "date-fns";
 import Link from "next/link";
@@ -154,6 +155,7 @@ async function BookingsByDatePage({
   const baseHref   = `/bookings/date/${date}`;
 
   return (
+    <AgentsProvider agents={allUsers}>
     <div className="min-h-screen bg-[#faf9f7]">
       {/* ── Header ── */}
       <div className="bg-white border-b border-[#ece8e3]">
@@ -298,7 +300,7 @@ async function BookingsByDatePage({
                           </p>
                           <div className="space-y-2">
                             {list.map((b) => (
-                              <BookingComponent key={b.id} booking={b} allUsers={allUsers} />
+                              <BookingComponent key={b.id} booking={b} />
                             ))}
                           </div>
                         </div>
@@ -317,7 +319,7 @@ async function BookingsByDatePage({
                   />
                   <div className="space-y-2">
                     {serviceBookings.map((b) => (
-                      <BookingComponent key={b.id} booking={b} allUsers={allUsers} />
+                      <BookingComponent key={b.id} booking={b} />
                     ))}
                   </div>
                 </section>
@@ -327,6 +329,7 @@ async function BookingsByDatePage({
         )}
       </div>
     </div>
+    </AgentsProvider>
   );
 }
 

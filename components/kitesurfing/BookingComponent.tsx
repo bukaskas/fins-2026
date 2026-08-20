@@ -18,7 +18,8 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import type { BookingWithAgent } from "@/lib/actions/booking.actions";
+import type { BookingRow } from "@/lib/actions/booking.actions";
+import { useAgents } from "@/components/bookings/AgentsProvider";
 import PayDepositDialog from "@/components/bookings/PayDepositDialog";
 import { updateBookingStatus, assignBookingAgent } from "@/lib/actions/booking.actions";
 
@@ -49,6 +50,23 @@ const STATUS_BORDER: Record<BookingStatus, string> = {
   CANCELED:            "#d1d5db",
 };
 
+// STATUS_BORDER drives dots and the left strip, where saturation is fine.
+// Label text needs ≥4.5:1 on white, so it uses these darker pairs instead.
+const STATUS_TEXT: Record<BookingStatus, string> = {
+  PENDING:             "#b45309",
+  REQUEST_SENT:        "#0369a1",
+  UNDER_REVIEW:        "#c2410c",
+  WAITING_PAYMENT:     "#6d28d9",
+  CONFIRMED:           "#15803d",
+  ARRIVED:             "#0f766e",
+  DECLINED:            "#b91c1c",
+  NO_RESPONSE_EXPIRED: "#4b5563",
+  CANCELED:            "#6b7280",
+};
+
+// Muted foreground that still clears 4.5:1 on white (the old #b0a89f is 2.3:1).
+const MUTED = "#6b6460";
+
 const STATUS_LABEL: Record<BookingStatus, string> = {
   PENDING:             "Pending",
   REQUEST_SENT:        "Request Sent",
@@ -63,16 +81,20 @@ const STATUS_LABEL: Record<BookingStatus, string> = {
 
 const ALL_STATUSES = Object.values(BookingStatus);
 
-const SERVICE_META: Record<string, { dot: string; label: string }> = {
-  "kitesurfing-course": { dot: "#38bdf8", label: "Kitesurfing" },
-  "day-use":            { dot: "#fbbf24", label: "Day Use" },
-  "restaurant":         { dot: "#fb923c", label: "Restaurant" },
-  "pharaoh-airstyle":   { dot: "#e879f9", label: "Pharaoh" },
+const SERVICE_META: Record<string, { dot: string; text: string; label: string }> = {
+  "kitesurfing-course": { dot: "#38bdf8", text: "#0369a1", label: "Kitesurfing" },
+  "day-use":            { dot: "#fbbf24", text: "#b45309", label: "Day Use" },
+  "restaurant":         { dot: "#fb923c", text: "#c2410c", label: "Restaurant" },
+  "pharaoh-airstyle":   { dot: "#e879f9", text: "#a21caf", label: "Pharaoh" },
 };
+
+// Shared focus ring — the rows are keyboard-navigable and had none.
+const FOCUS_RING =
+  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1a1614] focus-visible:ring-offset-2";
 
 type UserStub = { id: string; name: string | null; email: string };
 
-function buildWaData(booking: BookingWithAgent) {
+function buildWaData(booking: BookingRow) {
   const phone = booking.phone.replace(/\D/g, "");
 
   const bookingUrl = `${SERVER_URL}/bookings/${booking.id}`;
@@ -93,7 +115,8 @@ function buildWaData(booking: BookingWithAgent) {
   return { instagramText, depositText, plainWa: `https://wa.me/${phone}` };
 }
 
-function BookingComponent({ booking, allUsers }: { booking: BookingWithAgent; allUsers: UserStub[] }) {
+function BookingComponent({ booking }: { booking: BookingRow }) {
+  const allUsers = useAgents();
   const [status, setStatus]           = useState<BookingStatus>(booking.bookingStatus);
   const [isPending, setIsPending]     = useState(false);
   const [amountPaid, setAmountPaid]   = useState(booking.amountPaidCents);
@@ -106,6 +129,7 @@ function BookingComponent({ booking, allUsers }: { booking: BookingWithAgent; al
   const month   = dateObj.getUTCMonth() + 1;
 
   const accentColor = STATUS_BORDER[status];
+  const statusTextColor = STATUS_TEXT[status];
   const waData      = buildWaData(booking);
   const serviceMeta = SERVICE_META[booking.service ?? ""];
 
@@ -160,7 +184,7 @@ function BookingComponent({ booking, allUsers }: { booking: BookingWithAgent; al
         <div className="w-[3px] shrink-0" style={{ background: accentColor }} />
 
         {/* ── Content ── */}
-        <div className="flex-1 flex items-center gap-4 px-4 py-3.5 min-w-0">
+        <div className="flex-1 flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4 px-3.5 sm:px-4 py-3.5 min-w-0">
 
           {/* Left: info */}
           <div className="flex-1 min-w-0 space-y-1.5">
@@ -169,7 +193,7 @@ function BookingComponent({ booking, allUsers }: { booking: BookingWithAgent; al
               <span className="font-[family-name:var(--font-raleway)] font-[700] text-[0.92rem] text-[#1a1614] leading-snug truncate">
                 {booking.name}
               </span>
-              <span className="inline-flex items-center gap-0.5 text-[#a09890] shrink-0">
+              <span className="inline-flex items-center gap-0.5 shrink-0" style={{ color: MUTED }}>
                 <Users className="h-3 w-3" />
                 <span className="font-[family-name:var(--font-raleway)] text-[0.72rem] font-[500] tabular-nums">
                   {booking.numberOfPeople}
@@ -182,8 +206,8 @@ function BookingComponent({ booking, allUsers }: { booking: BookingWithAgent; al
               {serviceMeta && (
                 <>
                   <span
-                    className="font-[family-name:var(--font-raleway)] text-[0.6rem] tracking-[0.12em] uppercase font-[700]"
-                    style={{ color: serviceMeta.dot }}
+                    className="font-[family-name:var(--font-raleway)] text-[0.72rem] sm:text-[0.6rem] tracking-[0.12em] uppercase font-[700]"
+                    style={{ color: serviceMeta.text }}
                   >
                     {serviceMeta.label}
                   </span>
@@ -192,19 +216,19 @@ function BookingComponent({ booking, allUsers }: { booking: BookingWithAgent; al
               )}
               {booking.time && (
                 <>
-                  <span className="font-[family-name:var(--font-roboto)] text-[0.72rem] text-[#8a8480] tabular-nums">
+                  <span className="font-[family-name:var(--font-roboto)] text-[0.72rem] text-[#6b6460] tabular-nums">
                     {booking.time}
                   </span>
                   <span className="text-[#d6d0c8] text-[0.6rem]">·</span>
                 </>
               )}
-              <span className="font-[family-name:var(--font-roboto)] text-[0.72rem] text-[#a09890] tabular-nums">
+              <span className="font-[family-name:var(--font-roboto)] text-[0.72rem] text-[#6b6460] tabular-nums">
                 {day}/{month}
               </span>
               {booking.instructor && (
                 <>
                   <span className="text-[#d6d0c8] text-[0.6rem]">·</span>
-                  <span className="font-[family-name:var(--font-raleway)] text-[0.67rem] text-[#8a8480] truncate max-w-[100px]">
+                  <span className="font-[family-name:var(--font-raleway)] text-[0.72rem] sm:text-[0.67rem] text-[#6b6460] truncate max-w-[100px]">
                     {booking.instructor}
                   </span>
                 </>
@@ -214,9 +238,9 @@ function BookingComponent({ booking, allUsers }: { booking: BookingWithAgent; al
             {/* Booked-on timestamp + Instagram */}
             <div className="flex items-center gap-3 flex-wrap">
               {booking.createdAt && (
-                <div className="flex items-center gap-1 text-[#b0a89f]">
+                <div className="flex items-center gap-1 text-[#6b6460]">
                   <Clock className="h-2.5 w-2.5 shrink-0" />
-                  <span className="font-[family-name:var(--font-roboto)] text-[0.66rem] tabular-nums">
+                  <span className="font-[family-name:var(--font-roboto)] text-[0.72rem] sm:text-[0.66rem] tabular-nums">
                     Booked {format(new Date(booking.createdAt), "d MMM, HH:mm")}
                   </span>
                 </div>
@@ -226,10 +250,10 @@ function BookingComponent({ booking, allUsers }: { booking: BookingWithAgent; al
                   href={instagramHref(booking.instagram)}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center gap-1 text-[#c13584] hover:text-[#a02c6d] transition-colors"
+                  className={`flex items-center gap-1 rounded-sm text-[#a02c6d] hover:text-[#c13584] transition-colors ${FOCUS_RING}`}
                 >
                   <Instagram className="h-2.5 w-2.5 shrink-0" />
-                  <span className="font-[family-name:var(--font-raleway)] text-[0.66rem] font-[500] truncate max-w-[140px]">
+                  <span className="font-[family-name:var(--font-raleway)] text-[0.72rem] sm:text-[0.66rem] font-[500] truncate max-w-[140px]">
                     {booking.instagram}
                   </span>
                 </a>
@@ -238,14 +262,14 @@ function BookingComponent({ booking, allUsers }: { booking: BookingWithAgent; al
           </div>
 
           {/* Right: status + amount + actions */}
-          <div className="flex flex-col items-end gap-2.5 shrink-0">
+          <div className="flex w-full flex-wrap items-center justify-end gap-2 sm:w-auto sm:flex-col sm:items-end sm:gap-2.5 sm:shrink-0">
 
             {/* Status pill — dropdown trigger */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button
                   disabled={isPending}
-                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border transition-opacity disabled:opacity-40 hover:opacity-75"
+                  className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 sm:py-1 rounded-full border transition-opacity disabled:opacity-40 hover:opacity-75 ${FOCUS_RING}`}
                   style={{ borderColor: `${accentColor}40`, background: `${accentColor}12` }}
                 >
                   <span
@@ -253,8 +277,8 @@ function BookingComponent({ booking, allUsers }: { booking: BookingWithAgent; al
                     style={{ background: accentColor }}
                   />
                   <span
-                    className="font-[family-name:var(--font-raleway)] text-[0.6rem] tracking-[0.1em] uppercase font-[700]"
-                    style={{ color: accentColor }}
+                    className="font-[family-name:var(--font-raleway)] text-[0.72rem] sm:text-[0.6rem] tracking-[0.1em] uppercase font-[700]"
+                    style={{ color: statusTextColor }}
                   >
                     {STATUS_LABEL[status]}
                   </span>
@@ -288,8 +312,8 @@ function BookingComponent({ booking, allUsers }: { booking: BookingWithAgent; al
                   style={{ background: "#6366f1" }}
                 />
                 <span
-                  className="font-[family-name:var(--font-raleway)] text-[0.6rem] tracking-[0.1em] uppercase font-[700] truncate max-w-[90px]"
-                  style={{ color: "#6366f1" }}
+                  className="font-[family-name:var(--font-raleway)] text-[0.72rem] sm:text-[0.6rem] tracking-[0.1em] uppercase font-[700] truncate max-w-[90px]"
+                  style={{ color: "#4338ca" }}
                 >
                   {agent.name ?? agent.email.split("@")[0]}
                 </span>
@@ -297,11 +321,11 @@ function BookingComponent({ booking, allUsers }: { booking: BookingWithAgent; al
             )}
 
             {/* Amount + action buttons row */}
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-1.5 ml-auto sm:ml-0">
               {/* Amount paid chip */}
               <span
-                className="font-[family-name:var(--font-raleway)] text-[0.65rem] font-[600] tabular-nums mr-1"
-                style={{ color: amountPaid > 0 ? "#22c55e" : "#c0b8b0" }}
+                className="font-[family-name:var(--font-raleway)] text-[0.75rem] sm:text-[0.65rem] font-[600] tabular-nums mr-1"
+                style={{ color: amountPaid > 0 ? "#15803d" : MUTED }}
               >
                 {amountPaid > 0 ? `${(amountPaid / 100).toLocaleString("en-EG")} EGP` : "Unpaid"}
               </span>
@@ -309,7 +333,7 @@ function BookingComponent({ booking, allUsers }: { booking: BookingWithAgent; al
               {/* Phone */}
               <a
                 href={`tel:${booking.phone}`}
-                className="flex items-center justify-center w-9 h-9 rounded-xl bg-[#eff6ff] text-[#3b82f6] hover:bg-[#dbeafe] active:bg-[#bfdbfe] transition-colors"
+                className={`flex items-center justify-center w-10 h-10 sm:w-9 sm:h-9 rounded-xl bg-[#eff6ff] text-[#1d4ed8] hover:bg-[#dbeafe] active:bg-[#bfdbfe] transition-colors ${FOCUS_RING}`}
                 title="Call"
               >
                 <Phone className="h-[18px] w-[18px]" />
@@ -319,7 +343,7 @@ function BookingComponent({ booking, allUsers }: { booking: BookingWithAgent; al
               <DropdownMenu open={dropdownOpen} onOpenChange={setDropdownOpen}>
                 <DropdownMenuTrigger asChild>
                   <button
-                    className="flex items-center justify-center w-9 h-9 rounded-xl bg-[#f5f2ef] text-[#6b6460] hover:bg-[#ece8e3] active:bg-[#ddd8d2] transition-colors"
+                    className={`flex items-center justify-center w-10 h-10 sm:w-9 sm:h-9 rounded-xl bg-[#f5f2ef] text-[#6b6460] hover:bg-[#ece8e3] active:bg-[#ddd8d2] transition-colors ${FOCUS_RING}`}
                     title="More actions"
                   >
                     <MoreHorizontal className="h-[18px] w-[18px]" />
@@ -414,7 +438,7 @@ function BookingComponent({ booking, allUsers }: { booking: BookingWithAgent; al
               {/* Edit booking */}
               <Link
                 href={`/bookings/${booking.id}/edit`}
-                className="flex items-center justify-center w-9 h-9 rounded-xl bg-[#f5f2ef] text-[#6b6460] hover:bg-[#ece8e3] active:bg-[#ddd8d2] transition-colors"
+                className={`flex items-center justify-center w-10 h-10 sm:w-9 sm:h-9 rounded-xl bg-[#f5f2ef] text-[#6b6460] hover:bg-[#ece8e3] active:bg-[#ddd8d2] transition-colors ${FOCUS_RING}`}
                 title="Edit booking"
               >
                 <Pencil className="h-[18px] w-[18px]" />

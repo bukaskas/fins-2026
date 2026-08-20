@@ -163,6 +163,10 @@ model Booking {
   waitingPaymentAt DateTime?
 
   @@index([bookingStatus, waitingPaymentAt])
+  // /bookings filters and sorts by date on every load; the composite covers
+  // the same query narrowed to one status.
+  @@index([date])
+  @@index([bookingStatus, date])
 }
 
 model BookingPayment {

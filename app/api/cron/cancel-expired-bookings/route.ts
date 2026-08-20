@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 
 import { cancelExpiredWaitingPayments } from "@/lib/actions/booking.actions";
 
@@ -8,10 +9,12 @@ import { cancelExpiredWaitingPayments } from "@/lib/actions/booking.actions";
 //   GET ${SERVER_URL}/api/cron/cancel-expired-bookings
 //   Authorization: Bearer ${CRON_SECRET}
 //
-// On-read cancellation (in getBookingById/getAllBookings) is the primary
-// guarantee; this endpoint is the belt-and-suspenders path for when no one
-// opens a page. In production CRON_SECRET is required; without it the
-// endpoint refuses to run (open only as a dev convenience).
+// This endpoint is the primary guarantee — it runs hourly (see vercel.json).
+// The bookings list no longer sweeps on read: doing writes plus cache
+// revalidation inside a render is unsupported in the App Router, so a booking
+// can sit in WAITING_PAYMENT for up to an hour past its deadline before this
+// flips it. In production CRON_SECRET is required; without it the endpoint
+// refuses to run (open only as a dev convenience).
 export async function GET(req: Request) {
   const secret = process.env.CRON_SECRET;
   if (!secret && process.env.NODE_ENV === "production") {
@@ -26,6 +29,7 @@ export async function GET(req: Request) {
 
   try {
     const canceled = await cancelExpiredWaitingPayments();
+    if (canceled > 0) revalidatePath("/bookings", "layout");
     return NextResponse.json({ ok: true, canceled });
   } catch (error) {
     console.error("[cron] cancel-expired-bookings failed", error);

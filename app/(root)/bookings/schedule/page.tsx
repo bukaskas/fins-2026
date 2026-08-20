@@ -11,6 +11,7 @@ import type { SessionWithBookings, ServiceProduct } from "@/components/bookings/
 import type { LessonProductOption } from "@/components/lessons/NewLessonForm";
 import { ProductCategory } from "@prisma/client";
 import BookingComponent from "@/components/kitesurfing/BookingComponent";
+import { AgentsProvider } from "@/components/bookings/AgentsProvider";
 import { format } from "date-fns";
 import { LessonsTable } from "@/components/lessons/LessonsTable";
 import type { SessionRow } from "@/components/lessons/LessonSessionEditSheet";
@@ -112,6 +113,7 @@ export default async function SchedulePage() {
   const nextSession = upcomingTodaySessions[0] ?? null;
 
   return (
+    <AgentsProvider agents={allUsers}>
     <main
       className="min-h-screen font-(family-name:--font-geist-sans) text-stone-900 antialiased"
       style={{
@@ -263,7 +265,6 @@ export default async function SchedulePage() {
                       <BookingComponent
                         key={b.id}
                         booking={b}
-                        allUsers={allUsers}
                       />
                     ))}
                   </div>
@@ -287,6 +288,7 @@ export default async function SchedulePage() {
         </SurfaceCard>
       </div>
     </main>
+    </AgentsProvider>
   );
 }
 

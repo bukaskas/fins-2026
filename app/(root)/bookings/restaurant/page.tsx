@@ -1,6 +1,7 @@
 import { getBookingsByService, type BookingWithAgent } from "@/lib/actions/booking.actions";
 import { listAgents } from "@/lib/actions/user.actions";
 import BookingComponent from "@/components/kitesurfing/BookingComponent";
+import { AgentsProvider } from "@/components/bookings/AgentsProvider";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 
@@ -29,6 +30,7 @@ async function RestaurantBookingsPage() {
   });
 
   return (
+    <AgentsProvider agents={allUsers}>
     <div className="p-6">
       <div className="mb-8 flex items-center justify-between gap-4">
         <div className="flex items-center gap-3">
@@ -47,11 +49,12 @@ async function RestaurantBookingsPage() {
       ) : (
         <div className="space-y-2">
           {sorted.map((booking) => (
-            <BookingComponent key={booking.id} booking={booking} allUsers={allUsers} />
+            <BookingComponent key={booking.id} booking={booking} />
           ))}
         </div>
       )}
     </div>
+    </AgentsProvider>
   );
 }
 

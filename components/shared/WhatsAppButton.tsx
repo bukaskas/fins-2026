@@ -6,13 +6,13 @@ import { FaWhatsapp } from "react-icons/fa";
 const contacts = [
   {
     label: "Day Use reservations",
-    phone: "+201222144388",
+    detail: "+201222144388",
     href: "https://wa.me/201222144388",
   },
   {
     label: "Kitesurfing reservations",
-    phone: "+201080500099",
-    href: "https://wa.me/201080500099",
+    detail: "Book online",
+    href: "https://school.finskitesurfing.com/book",
   },
 ];
 
@@ -69,7 +69,7 @@ export default function WhatsAppButton() {
                 </span>
                 <span className="min-w-0">
                   <span className="block font-medium text-neutral-900">{contact.label}</span>
-                  <span className="block text-sm text-neutral-500">{contact.phone}</span>
+                  <span className="block text-sm text-neutral-500">{contact.detail}</span>
                 </span>
               </a>
             ))}

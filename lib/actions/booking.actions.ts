@@ -5,7 +5,7 @@ import { isRedirectError } from "next/dist/client/components/redirect-error";
 import { revalidatePath } from "next/cache";
 import { BookingDepositData, bookingDepositSchema, BookingFormData, bookingFormSchema, bulkEmailSchema, CorporateBookingData, corporateBookingSchema, UpdateBookingData, updateBookingSchema } from "../validators";
 import { sendBookingEmail, sendStaffNotificationEmail, sendFullyBookedEmail, sendBulkEmail } from "@/emails/index";
-import { Booking, BookingStatus, PaymentMethod, Role } from "@prisma/client";
+import { Booking, BookingStatus, PaymentMethod, Prisma, Role } from "@prisma/client";
 
 export type BookingWithAgent = Booking & {
   agent: { id: string; name: string | null; email: string } | null;
@@ -18,7 +18,7 @@ import { upsertClosedDate } from "@/lib/closed-dates";
 import { computeBookingTotalCents } from "@/lib/pricing";
 import { createPaymentOrder, getFlashOrder, verifyWebhookSignature } from "@/lib/flash";
 import { getAutoConfirmBookings } from "./settings.actions";
-import { DAILY_CAPACITY } from "@/lib/constants";
+import { BOOKINGS_PAGE_SIZE, DAILY_CAPACITY } from "@/lib/constants";
 
 const FLASH_CURRENCY = process.env.FLASH_CURRENCY || "EGP";
 const FLASH_MIN_CENTS = 500; // Flash rejects orders below 5 EGP
@@ -31,6 +31,11 @@ const WAITING_PAYMENT_WINDOW_MS = 24 * 60 * 60 * 1000; // 24 hours
 // math in this module works in UTC to stay server-timezone independent.
 function utcDayStart(d: Date): Date {
   return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
+}
+
+/** Dates are UTC midnights, so day arithmetic is plain millisecond arithmetic. */
+function addUtcDays(d: Date, days: number): Date {
+  return new Date(d.getTime() + days * 24 * 60 * 60 * 1000);
 }
 
 
@@ -151,18 +156,150 @@ export async function createBooking(data: BookingFormData) {
 }
 
 
-export async function getAllBookings() {
-  await requireCapability("bookings:manage");
-  try {
-    await cancelExpiredWaitingPayments();
-    const bookings = await prisma.booking.findMany({
-      include: { agent: { select: { id: true, name: true, email: true } } },
-    });
-    return { success: true, data: bookings };
-  } catch (error) {
-    console.error('Error fetching bookings:', error);
-    return { success: false, message: `Failed to fetch bookings. Error: ${error instanceof Error ? error.message : String(error)}` };
+// ── /bookings list query ─────────────────────────────────────────────────────
+//
+// Filtering, sorting and pagination all run in Postgres. Nothing here loads the
+// whole table: the list is capped by `limit`, the counts are aggregates, and the
+// row shape is the columns the UI actually renders.
+
+/** Exactly the columns a booking row renders — not all 22 of them. */
+const BOOKING_ROW_SELECT = {
+  id: true,
+  name: true,
+  date: true,
+  time: true,
+  phone: true,
+  email: true,
+  service: true,
+  numberOfPeople: true,
+  numberOfKids: true,
+  instructor: true,
+  instagram: true,
+  bookingStatus: true,
+  totalPriceCents: true,
+  amountPaidCents: true,
+  createdAt: true,
+  agent: { select: { id: true, name: true, email: true } },
+} satisfies Prisma.BookingSelect;
+
+export type BookingRow = Prisma.BookingGetPayload<{ select: typeof BOOKING_ROW_SELECT }>;
+
+/** Raw search params from /bookings, already string-typed. */
+export type BookingsQuery = {
+  status?: string;
+  service?: string;
+  agent?: string;
+  q?: string;
+  range?: string;
+  sort?: string;
+  dir?: string;
+  /** "1" restricts to bookings with nothing paid yet. */
+  unpaid?: string;
+  limit?: number;
+};
+
+export type BookingsPageResult = {
+  rows: BookingRow[];
+  /** Rows matching the filters, ignoring `limit`. */
+  total: number;
+  hasMore: boolean;
+  /** Unfiltered counts behind the four stat chips. */
+  stats: { today: number; week: number; waiting: number; unpaid: number };
+};
+
+const BOOKINGS_MAX_LIMIT = 2000;
+
+function bookingsWhere(query: BookingsQuery): Prisma.BookingWhereInput {
+  const { status, service, agent, q, unpaid, range = "upcoming" } = query;
+  const where: Prisma.BookingWhereInput = {};
+
+  if (status && status !== "all" && (Object.values(BookingStatus) as string[]).includes(status)) {
+    where.bookingStatus = status as BookingStatus;
   }
+
+  if (service && service !== "all") where.service = service;
+
+  if (unpaid === "1") where.amountPaidCents = 0;
+
+  if (agent === "unassigned") where.agentId = null;
+  else if (agent && agent !== "all") where.agentId = agent;
+
+  const term = q?.trim();
+  if (term) {
+    where.OR = [
+      { name:  { contains: term, mode: "insensitive" } },
+      { email: { contains: term, mode: "insensitive" } },
+      { phone: { contains: term } },
+    ];
+  }
+
+  const todayStart = utcDayStart(new Date());
+  if (range === "today") {
+    where.date = { gte: todayStart, lt: addUtcDays(todayStart, 1) };
+  } else if (range === "week") {
+    where.date = { gte: todayStart, lt: addUtcDays(todayStart, 8) };
+  } else if (range !== "all") {
+    where.date = { gte: todayStart }; // "upcoming" — the default
+  }
+
+  return where;
+}
+
+function bookingsOrderBy(sort?: string, dir?: string): Prisma.BookingOrderByWithRelationInput[] {
+  // `id` is the tiebreaker so paging never repeats or drops a row.
+  if (sort === "created") {
+    return [{ createdAt: dir === "asc" ? "asc" : "desc" }, { id: "asc" }];
+  }
+  return [{ date: "asc" }, { time: { sort: "asc", nulls: "last" } }, { id: "asc" }];
+}
+
+export async function getBookingsPage(query: BookingsQuery): Promise<BookingsPageResult> {
+  await requireCapability("bookings:manage");
+
+  const where = bookingsWhere(query);
+  const limit = Math.min(Math.max(query.limit ?? BOOKINGS_PAGE_SIZE, 1), BOOKINGS_MAX_LIMIT);
+
+  const todayStart = utcDayStart(new Date());
+  const tomorrowStart = addUtcDays(todayStart, 1);
+  const weekEnd = addUtcDays(todayStart, 8);
+
+  const [rows, total, today, week, waiting, unpaid] = await Promise.all([
+    prisma.booking.findMany({
+      where,
+      orderBy: bookingsOrderBy(query.sort, query.dir),
+      select: BOOKING_ROW_SELECT,
+      take: limit + 1, // one extra row is how we know there is a next page
+    }),
+    prisma.booking.count({ where }),
+    prisma.booking.count({ where: { date: { gte: todayStart, lt: tomorrowStart } } }),
+    prisma.booking.count({ where: { date: { gte: todayStart, lt: weekEnd } } }),
+    prisma.booking.count({ where: { bookingStatus: BookingStatus.WAITING_PAYMENT } }),
+    prisma.booking.count({
+      where: { bookingStatus: BookingStatus.CONFIRMED, amountPaidCents: 0 },
+    }),
+  ]);
+
+  const hasMore = rows.length > limit;
+
+  return {
+    rows: hasMore ? rows.slice(0, limit) : rows,
+    total,
+    hasMore,
+    stats: { today, week, waiting, unpaid },
+  };
+}
+
+/**
+ * Every guest matching the current filters — not just the loaded page.
+ * Backs "Copy guests", which must cover the whole filtered set.
+ */
+export async function getFilteredBookingGuests(query: BookingsQuery) {
+  await requireCapability("bookings:manage");
+  return prisma.booking.findMany({
+    where: bookingsWhere(query),
+    orderBy: bookingsOrderBy(query.sort, query.dir),
+    select: { name: true, date: true, phone: true },
+  });
 }
 
 export async function getBookingsByService(service: string) {
@@ -844,6 +981,13 @@ export async function getBookingById(id: string) {
  * rows) are skipped. Cancellation has no other side effects in this codebase, so
  * a single bulk update is sufficient.
  */
+/**
+ * Cancels bookings whose 24h WAITING_PAYMENT window has elapsed.
+ *
+ * Deliberately does NOT call revalidatePath: this runs from render paths
+ * (e.g. the reception dashboard) where cache revalidation is unsupported and
+ * throws. Callers that run outside render — the cron route — revalidate.
+ */
 export async function cancelExpiredWaitingPayments() {
   const cutoff = new Date(Date.now() - WAITING_PAYMENT_WINDOW_MS);
   const { count } = await prisma.booking.updateMany({
@@ -853,7 +997,6 @@ export async function cancelExpiredWaitingPayments() {
     },
     data: { bookingStatus: BookingStatus.CANCELED },
   });
-  if (count > 0) revalidatePath('/bookings', 'layout');
   return count;
 }
 
