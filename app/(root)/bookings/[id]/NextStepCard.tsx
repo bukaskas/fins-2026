@@ -14,7 +14,7 @@ const ACCOUNT_NUMBER = "1105202510010201";
 const BANK_NAME = "Arab African International Bank";
 const ACCOUNT_NAME = "Fins Kite Surfing";
 const WHATSAPP_NUMBER = "+201222144388";
-const WHATSAPP_URL = "https://wa.me/201080500099";
+const WHATSAPP_URL = `https://wa.me/${WHATSAPP_NUMBER.replace(/\D/g, "")}`;
 
 const SCREENSHOT_STATUSES: BookingStatus[] = [
   BookingStatus.REQUEST_SENT,

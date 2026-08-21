@@ -49,7 +49,7 @@ export async function createBooking(data: BookingFormData) {
     // Gate: block closed dates for non-staff. Closed dates are stored as UTC
     // midnights (see lib/closed-dates.ts), so compare in UTC.
     const session = await getServerSession(authOptions);
-    const userRole = (session?.user as any)?.role as Role | undefined;
+    const userRole = (session?.user as { role?: Role } | undefined)?.role;
     if (!roleHasCapability(userRole, "bookings:manage")) {
       const normalizedDate = utcDayStart(validatedData.date);
       const closed = await prisma.closedDate.findUnique({ where: { date: normalizedDate } });
@@ -226,11 +226,21 @@ function bookingsWhere(query: BookingsQuery): Prisma.BookingWhereInput {
 
   const term = q?.trim();
   if (term) {
-    where.OR = [
+    const matches: Prisma.BookingWhereInput[] = [
       { name:  { contains: term, mode: "insensitive" } },
       { email: { contains: term, mode: "insensitive" } },
       { phone: { contains: term } },
     ];
+
+    // Pasted phone numbers often contain spaces or punctuation while stored
+    // values are compact (for example, "+20 100 008 7322" vs "+201000087322").
+    const phoneDigits = term.replace(/\D/g, "");
+    const isPhoneLike = phoneDigits.length >= 4 && /^[+\d\s().-]+$/.test(term);
+    if (isPhoneLike && phoneDigits !== term) {
+      matches.push({ phone: { contains: phoneDigits } });
+    }
+
+    where.OR = matches;
   }
 
   const todayStart = utcDayStart(new Date());
