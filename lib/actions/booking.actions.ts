@@ -5,7 +5,15 @@ import { isRedirectError } from "next/dist/client/components/redirect-error";
 import { revalidatePath } from "next/cache";
 import { BookingDepositData, bookingDepositSchema, BookingFormData, bookingFormSchema, bulkEmailSchema, CorporateBookingData, corporateBookingSchema, UpdateBookingData, updateBookingSchema } from "../validators";
 import { sendBookingEmail, sendStaffNotificationEmail, sendFullyBookedEmail, sendBulkEmail } from "@/emails/index";
-import { Booking, BookingStatus, PaymentMethod, Prisma, Role } from "@prisma/client";
+import {
+  Booking,
+  BookingContactChannel,
+  BookingContactOutcome,
+  BookingStatus,
+  PaymentMethod,
+  Prisma,
+  Role,
+} from "@prisma/client";
 
 export type BookingWithAgent = Booking & {
   agent: { id: string; name: string | null; email: string } | null;
@@ -26,6 +34,11 @@ const FLASH_MIN_CENTS = 500; // Flash rejects orders below 5 EGP
 // A booking in WAITING_PAYMENT auto-cancels this long after it entered the
 // status (i.e. after `waitingPaymentAt`) if it hasn't been paid/confirmed.
 const WAITING_PAYMENT_WINDOW_MS = 24 * 60 * 60 * 1000; // 24 hours
+const BUSINESS_TIME_ZONE = "Africa/Cairo";
+const CAPACITY_STATUSES: BookingStatus[] = [
+  BookingStatus.CONFIRMED,
+  BookingStatus.ARRIVED,
+];
 
 // Booking dates and closed dates are stored as UTC midnights; all calendar-day
 // math in this module works in UTC to stay server-timezone independent.
@@ -36,6 +49,25 @@ function utcDayStart(d: Date): Date {
 /** Dates are UTC midnights, so day arithmetic is plain millisecond arithmetic. */
 function addUtcDays(d: Date, days: number): Date {
   return new Date(d.getTime() + days * 24 * 60 * 60 * 1000);
+}
+
+/**
+ * Booking dates are stored as UTC midnights, but "today" belongs to the venue's
+ * Cairo calendar. Convert Cairo's current date key into that storage format.
+ */
+function cairoBusinessDayStart(now = new Date()): Date {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: BUSINESS_TIME_ZONE,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(now);
+  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  return new Date(Date.UTC(
+    Number(values.year),
+    Number(values.month) - 1,
+    Number(values.day),
+  ));
 }
 
 
@@ -1043,16 +1075,22 @@ async function applyBookingStatusChange(
       },
     });
     revalidatePath('/bookings', 'layout');
+    revalidatePath('/reception');
 
     // Auto-close the date if confirmed people reach the 80-person limit
     if (status === BookingStatus.CONFIRMED) {
       const dayStart = utcDayStart(booking.date);
       const dayEnd = new Date(dayStart.getTime() + 24 * 60 * 60 * 1000 - 1);
       const { _sum } = await prisma.booking.aggregate({
-        where: { date: { gte: dayStart, lte: dayEnd }, bookingStatus: BookingStatus.CONFIRMED },
-        _sum: { numberOfPeople: true },
+        where: {
+          date: { gte: dayStart, lte: dayEnd },
+          bookingStatus: { in: CAPACITY_STATUSES },
+        },
+        _sum: { numberOfPeople: true, numberOfKids: true },
       });
-      if ((_sum.numberOfPeople ?? 0) >= DAILY_CAPACITY) {
+      const capacityPeople =
+        (_sum.numberOfPeople ?? 0) + (_sum.numberOfKids ?? 0);
+      if (capacityPeople >= DAILY_CAPACITY) {
         await upsertClosedDate(dayStart, `Auto-closed: ${DAILY_CAPACITY}-person daily capacity reached`);
       }
     }
@@ -1126,6 +1164,7 @@ export async function createBookingPaymentLink(bookingId: string) {
     });
     revalidatePath('/bookings', 'layout');
     revalidatePath(`/bookings/${bookingId}`);
+    revalidatePath('/reception');
 
     return { success: true as const, paymentLink: result.paymentLink };
   } catch (error) {
@@ -1586,79 +1625,189 @@ export async function createCorporateBooking(data: CorporateBookingData) {
 /*  Reception dashboard                                                       */
 /* -------------------------------------------------------------------------- */
 
+const RECEPTION_ACTIVE_STATUSES: BookingStatus[] = [
+  BookingStatus.PENDING,
+  BookingStatus.REQUEST_SENT,
+  BookingStatus.UNDER_REVIEW,
+  BookingStatus.WAITING_PAYMENT,
+  BookingStatus.CONFIRMED,
+  BookingStatus.ARRIVED,
+];
+
+const RECEPTION_REVIEW_STATUSES: BookingStatus[] = [
+  BookingStatus.PENDING,
+  BookingStatus.UNDER_REVIEW,
+];
+
+const RECEPTION_CONTACT_STATUSES: BookingStatus[] = [
+  BookingStatus.REQUEST_SENT,
+  BookingStatus.WAITING_PAYMENT,
+];
+
+const receptionBookingInclude = {
+  agent: { select: { id: true, name: true, email: true } },
+  contacts: {
+    orderBy: { createdAt: "desc" as const },
+    take: 1,
+    include: { actor: { select: { name: true, email: true } } },
+  },
+} as const;
+
+type ReceptionBookingSource = Prisma.BookingGetPayload<{
+  include: typeof receptionBookingInclude;
+}>;
+
+export type ReceptionBookingRow = BookingWithAgent & {
+  dueCents: number | null;
+  paymentState: "DUE" | "PAID" | "UNKNOWN";
+  lastContact: {
+    createdAt: Date;
+    channel: BookingContactChannel;
+    outcome: BookingContactOutcome;
+    nextContactAt: Date | null;
+    actorName: string | null;
+  } | null;
+};
+
 export type ReceptionDashboardData = {
-  /** PENDING bookings awaiting review, oldest first. */
-  pending: BookingWithAgent[];
-  /** WAITING_PAYMENT bookings with their 24h deadline, soonest first. */
-  awaitingPayment: Array<BookingWithAgent & { paymentExpiresAt: Date | null }>;
-  /** Today's CONFIRMED / ARRIVED bookings with the balance still due. */
-  arrivals: Array<BookingWithAgent & { dueCents: number }>;
-  /** Confirmed headcount vs the 80-person cap for today + next 6 days. */
+  businessDate: string;
+  generatedAt: Date;
+  summary: {
+    todayBookings: number;
+    todayGuests: number;
+    reviewToday: number;
+    contactUpcoming: number;
+    arrivedToday: number;
+  };
+  todayBookings: ReceptionBookingRow[];
+  reviewToday: ReceptionBookingRow[];
+  reviewTotal: number;
+  contactUpcoming: Array<
+    ReceptionBookingRow & {
+      contactReason: string;
+      paymentExpiresAt: Date | null;
+    }
+  >;
+  contactTotal: number;
   capacity: Array<{ date: string; people: number; closed: boolean }>;
 };
+
+function toReceptionBookingRow(
+  source: ReceptionBookingSource,
+): ReceptionBookingRow {
+  const { contacts, ...booking } = source;
+  const dueCents =
+    booking.totalPriceCents == null
+      ? null
+      : Math.max(booking.totalPriceCents - booking.amountPaidCents, 0);
+  const latest = contacts[0] ?? null;
+
+  return {
+    ...booking,
+    dueCents,
+    paymentState:
+      dueCents == null ? "UNKNOWN" : dueCents > 0 ? "DUE" : "PAID",
+    lastContact: latest
+      ? {
+          createdAt: latest.createdAt,
+          channel: latest.channel,
+          outcome: latest.outcome,
+          nextContactAt: latest.nextContactAt,
+          actorName: latest.actor?.name ?? latest.actor?.email ?? null,
+        }
+      : null,
+  };
+}
+
+function contactReason(source: ReceptionBookingSource): string {
+  if (source.bookingStatus === BookingStatus.REQUEST_SENT) {
+    return "Guest information required";
+  }
+  if (!source.paymentLink) return "Payment link needs attention";
+  return "Payment reminder";
+}
 
 export async function getReceptionDashboard(): Promise<ReceptionDashboardData> {
   await requireCapability("bookings:manage");
 
-  // Sweep expired payment windows first so the queues are accurate.
+  // Sweep expired payment windows first so every queue starts from live state.
   await cancelExpiredWaitingPayments();
 
-  const todayStart = utcDayStart(new Date());
+  const todayStart = cairoBusinessDayStart();
   const todayEnd = new Date(todayStart.getTime() + 24 * 60 * 60 * 1000 - 1);
   const weekEnd = new Date(todayStart.getTime() + 7 * 24 * 60 * 60 * 1000 - 1);
-  const agentInclude = {
-    agent: { select: { id: true, name: true, email: true } },
-  } as const;
+  const todayWhere: Prisma.BookingWhereInput = {
+    date: { gte: todayStart, lte: todayEnd },
+    bookingStatus: { in: RECEPTION_ACTIVE_STATUSES },
+  };
+  const reviewWhere: Prisma.BookingWhereInput = {
+    date: { gte: todayStart, lte: todayEnd },
+    bookingStatus: { in: RECEPTION_REVIEW_STATUSES },
+  };
+  const contactWhere: Prisma.BookingWhereInput = {
+    date: { gte: todayStart },
+    bookingStatus: { in: RECEPTION_CONTACT_STATUSES },
+  };
 
-  const [pending, waiting, arrivals, weekConfirmed, closedDates] =
-    await Promise.all([
-      prisma.booking.findMany({
-        where: { bookingStatus: BookingStatus.PENDING },
-        orderBy: { createdAt: "asc" },
-        include: agentInclude,
-        take: 50,
-      }),
-      prisma.booking.findMany({
-        where: { bookingStatus: BookingStatus.WAITING_PAYMENT },
-        orderBy: { waitingPaymentAt: "asc" },
-        include: agentInclude,
-        take: 50,
-      }),
-      prisma.booking.findMany({
-        where: {
-          bookingStatus: { in: [BookingStatus.CONFIRMED, BookingStatus.ARRIVED] },
-          date: { gte: todayStart, lte: todayEnd },
-        },
-        orderBy: [{ time: "asc" }, { createdAt: "asc" }],
-        include: agentInclude,
-      }),
-      prisma.booking.findMany({
-        where: {
-          date: { gte: todayStart, lte: weekEnd },
-          bookingStatus: { in: [BookingStatus.CONFIRMED, BookingStatus.ARRIVED] },
-        },
-        select: { date: true, numberOfPeople: true, numberOfKids: true },
-      }),
-      prisma.closedDate.findMany({
-        where: { date: { gte: todayStart, lte: weekEnd } },
-        select: { date: true },
-      }),
-    ]);
+  const [
+    todayBookings,
+    reviewToday,
+    reviewTotal,
+    contactUpcoming,
+    contactTotal,
+    weekConfirmed,
+    closedDates,
+  ] = await Promise.all([
+    prisma.booking.findMany({
+      where: todayWhere,
+      orderBy: [
+        { time: { sort: "asc", nulls: "last" } },
+        { createdAt: "asc" },
+      ],
+      include: receptionBookingInclude,
+    }),
+    prisma.booking.findMany({
+      where: reviewWhere,
+      orderBy: { createdAt: "asc" },
+      include: receptionBookingInclude,
+      take: 20,
+    }),
+    prisma.booking.count({ where: reviewWhere }),
+    prisma.booking.findMany({
+      where: contactWhere,
+      orderBy: { createdAt: "asc" },
+      include: receptionBookingInclude,
+      take: 30,
+    }),
+    prisma.booking.count({ where: contactWhere }),
+    prisma.booking.findMany({
+      where: {
+        date: { gte: todayStart, lte: weekEnd },
+        bookingStatus: { in: CAPACITY_STATUSES },
+      },
+      select: { date: true, numberOfPeople: true, numberOfKids: true },
+    }),
+    prisma.closedDate.findMany({
+      where: { date: { gte: todayStart, lte: weekEnd } },
+      select: { date: true },
+    }),
+  ]);
 
   const peopleByDay = new Map<string, number>();
-  for (const b of weekConfirmed) {
-    const key = b.date.toISOString().split("T")[0];
+  for (const booking of weekConfirmed) {
+    const key = booking.date.toISOString().split("T")[0];
     peopleByDay.set(
       key,
-      (peopleByDay.get(key) ?? 0) + b.numberOfPeople + (b.numberOfKids ?? 0),
+      (peopleByDay.get(key) ?? 0) +
+        booking.numberOfPeople +
+        (booking.numberOfKids ?? 0),
     );
   }
   const closedSet = new Set(
-    closedDates.map((c) => c.date.toISOString().split("T")[0]),
+    closedDates.map((date) => date.date.toISOString().split("T")[0]),
   );
-
-  const capacity = Array.from({ length: 7 }, (_, i) => {
-    const day = new Date(todayStart.getTime() + i * 24 * 60 * 60 * 1000);
+  const capacity = Array.from({ length: 7 }, (_, index) => {
+    const day = new Date(todayStart.getTime() + index * 24 * 60 * 60 * 1000);
     const key = day.toISOString().split("T")[0];
     return {
       date: key,
@@ -1667,18 +1816,66 @@ export async function getReceptionDashboard(): Promise<ReceptionDashboardData> {
     };
   });
 
+  const todayRows = todayBookings.map(toReceptionBookingRow);
   return {
-    pending,
-    awaitingPayment: waiting.map((b) => ({
-      ...b,
-      paymentExpiresAt: b.waitingPaymentAt
-        ? new Date(b.waitingPaymentAt.getTime() + WAITING_PAYMENT_WINDOW_MS)
+    businessDate: todayStart.toISOString().split("T")[0],
+    generatedAt: new Date(),
+    summary: {
+      todayBookings: todayRows.length,
+      todayGuests: todayRows.reduce(
+        (sum, booking) =>
+          sum + booking.numberOfPeople + (booking.numberOfKids ?? 0),
+        0,
+      ),
+      reviewToday: reviewTotal,
+      contactUpcoming: contactTotal,
+      arrivedToday: todayRows.filter(
+        (booking) => booking.bookingStatus === BookingStatus.ARRIVED,
+      ).length,
+    },
+    todayBookings: todayRows,
+    reviewToday: reviewToday.map(toReceptionBookingRow),
+    reviewTotal,
+    contactUpcoming: contactUpcoming.map((booking) => ({
+      ...toReceptionBookingRow(booking),
+      contactReason: contactReason(booking),
+      paymentExpiresAt: booking.waitingPaymentAt
+        ? new Date(booking.waitingPaymentAt.getTime() + WAITING_PAYMENT_WINDOW_MS)
         : null,
     })),
-    arrivals: arrivals.map((b) => ({
-      ...b,
-      dueCents: Math.max((b.totalPriceCents ?? 0) - b.amountPaidCents, 0),
-    })),
+    contactTotal,
     capacity,
   };
+}
+
+export async function logBookingContact(
+  bookingId: string,
+  channel: BookingContactChannel,
+  outcome: BookingContactOutcome = BookingContactOutcome.ATTEMPTED,
+) {
+  await requireCapability("bookings:manage");
+  const session = await getServerSession(authOptions);
+  const actorId = (session?.user as { id?: string } | undefined)?.id;
+
+  if (!Object.values(BookingContactChannel).includes(channel)) {
+    return { success: false as const, message: "Invalid contact channel." };
+  }
+  if (!Object.values(BookingContactOutcome).includes(outcome)) {
+    return { success: false as const, message: "Invalid contact outcome." };
+  }
+
+  try {
+    const contact = await prisma.bookingContact.create({
+      data: { bookingId, actorId: actorId ?? null, channel, outcome },
+      select: { id: true, createdAt: true },
+    });
+    revalidatePath("/reception");
+    return { success: true as const, contact };
+  } catch (error) {
+    console.error("Booking contact log error", error);
+    return {
+      success: false as const,
+      message: "Could not record the contact attempt. Please try again.",
+    };
+  }
 }
