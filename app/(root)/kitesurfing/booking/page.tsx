@@ -15,6 +15,7 @@ import Image from "next/image";
 import {
   KitesurfingBookingFormData,
   kitesurfingBookingFormSchema,
+  toFieldErrors,
 } from "@/lib/validators";
 import { PhoneInput } from "./phoneInput";
 import { useForm } from "@tanstack/react-form";
@@ -49,8 +50,7 @@ function KitesurfingBookingForm() {
       onSubmit: ({ value }) => {
         const result = kitesurfingBookingFormSchema.safeParse(value);
         if (result.success) return;
-        const fieldErrors = result.error.flatten().fieldErrors;
-        return fieldErrors as any;
+        return toFieldErrors(result.error);
       },
     },
     onSubmit: async ({ value }) => {
@@ -158,7 +158,7 @@ function KitesurfingBookingForm() {
                   />
                   {isInvalid && (
                     <p className="text-red-400 text-[0.62rem] mt-1.5 font-[family-name:var(--font-raleway)]">
-                      {String(field.state.meta.errors[0])}
+                      {field.state.meta.errors[0]?.message}
                     </p>
                   )}
                 </div>
@@ -198,7 +198,7 @@ function KitesurfingBookingForm() {
                   />
                   {isInvalid && (
                     <p className="text-red-400 text-[0.62rem] mt-1.5 font-[family-name:var(--font-raleway)]">
-                      {String(field.state.meta.errors[0])}
+                      {field.state.meta.errors[0]?.message}
                     </p>
                   )}
                 </div>
@@ -256,7 +256,7 @@ function KitesurfingBookingForm() {
                   </div>
                   {isInvalid && (
                     <p className="text-red-400 text-[0.62rem] mt-1.5 font-[family-name:var(--font-raleway)]">
-                      {String(field.state.meta.errors[0])}
+                      {field.state.meta.errors[0]?.message}
                     </p>
                   )}
                 </div>
@@ -322,7 +322,7 @@ function KitesurfingBookingForm() {
                   </Popover>
                   {isInvalid && (
                     <p className="text-red-400 text-[0.62rem] mt-1.5 font-[family-name:var(--font-raleway)]">
-                      {String(field.state.meta.errors[0])}
+                      {field.state.meta.errors[0]?.message}
                     </p>
                   )}
                 </div>
@@ -366,7 +366,7 @@ function KitesurfingBookingForm() {
                   </div>
                   {isInvalid && (
                     <p className="text-red-400 text-[0.62rem] mt-2 font-[family-name:var(--font-raleway)]">
-                      {String(field.state.meta.errors[0])}
+                      {field.state.meta.errors[0]?.message}
                     </p>
                   )}
                 </div>

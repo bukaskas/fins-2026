@@ -1,10 +1,10 @@
 # AGENTS.md
 
-This file provides guidance to Codex (Codex.ai/code) when working with code in this repository.
+This file provides guidance to coding agents when working with code in this repository.
 
 ## Design system
 
-UI work must follow `.Codex/design-system/MASTER.md` (Neumorphism / Soft UI tokens and rules). Before building or restyling a page, check `.Codex/design-system/pages/[page-name].md` — if it exists, its rules override MASTER.md.
+UI work must follow `.claude/design-system/MASTER.md` (Neumorphism / Soft UI tokens and rules). Before building or restyling a page, check `.claude/design-system/pages/[page-name].md` — if it exists, its rules override MASTER.md.
 
 ## Commands
 
@@ -32,7 +32,7 @@ No test runner is configured.
 
 **Money is always stored in integer cents** (`*Cents` suffix on fields). The `WalletLedger` table is append-only — never delete or update rows, only insert.
 
-**Auth** is NextAuth v4 with a credentials provider (bcryptjs) and Prisma adapter. Session strategy is JWT (30-day max age). Role enum: `ADMIN | MEMBER | STAFF | ACCOUNTANT | INSTRUCTOR | KITER | OWNER | DAYPASS`.
+**Auth** is NextAuth v4 with a credentials provider (bcryptjs) and Prisma adapter. Session strategy is JWT (30-day max age). Role enum: `ADMIN | MEMBER | STAFF | ACCOUNTANT | INSTRUCTOR | KITER | OWNER | DAYPASS | RECEPTION`.
 
 **UI** is shadcn/ui (new-york style) + Radix UI primitives + Tailwind v4. Components are in `components/ui/`. Feature components live in subdirectories: `components/bookings/`, `components/kitesurfing/`, `components/lessons/`, etc. Toast notifications use `sonner`.
 

@@ -294,3 +294,28 @@ export const bulkEmailSchema = z.object({
 });
 
 export type BulkEmailData = z.infer<typeof bulkEmailSchema>;
+
+/**
+ * Convert a Zod error into the shape TanStack Form and shadcn's `FieldError`
+ * both need.
+ *
+ * Two things have to be true for a field-level message to reach the screen:
+ *
+ * 1. TanStack only distributes a form-validator error to individual fields when
+ *    the returned object has a `fields` key — see `isGlobalFormValidationError`
+ *    in @tanstack/form-core. Returning `flatten().fieldErrors` directly files
+ *    the whole map as one *form-level* error, so no field is ever marked, and
+ *    `handleSubmit` bails before `onSubmit` runs with nothing rendered anywhere.
+ * 2. `FieldError` reads `.message` off each entry, so Zod's plain strings have
+ *    to be wrapped as objects or it renders null.
+ */
+export function toFieldErrors(error: z.ZodError) {
+  const flattened = error.flatten().fieldErrors as Record<string, string[] | undefined>;
+  const fields: Record<string, { message: string }[]> = {};
+  for (const [name, messages] of Object.entries(flattened)) {
+    if (messages?.length) {
+      fields[name] = messages.map((message) => ({ message }));
+    }
+  }
+  return { fields };
+}

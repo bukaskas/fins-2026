@@ -1,5 +1,54 @@
 {
-  "generated_at": "2026-08-20T18:29:51.465012+00:00",
-  "nodes": {},
+  "generated_at": "2026-08-26T17:24:10.315985+00:00",
+  "nodes": {
+    "app_api_payments_flash_webhook_route": {
+      "code_fingerprint": "062c82c99b7551a852bf2b216b661fc65b4e92bcdc67473f32d6a004d93a01fe",
+      "label": "webhook/route.ts",
+      "last": "2026-08-24T07:47:43.117520+00:00",
+      "provenance": [
+        {
+          "date": "2026-08-24T07:47:43.117520+00:00",
+          "outcome": "useful",
+          "q": "for the online flash payment method, where is the callback url?"
+        }
+      ],
+      "score": 0.946050766,
+      "source_file": "app/api/payments/flash/webhook/route.ts",
+      "status": "tentative",
+      "uses": 1
+    },
+    "app_api_payments_flash_webhook_route_post": {
+      "code_fingerprint": "062c82c99b7551a852bf2b216b661fc65b4e92bcdc67473f32d6a004d93a01fe",
+      "label": "POST()",
+      "last": "2026-08-24T07:47:43.117520+00:00",
+      "provenance": [
+        {
+          "date": "2026-08-24T07:47:43.117520+00:00",
+          "outcome": "useful",
+          "q": "for the online flash payment method, where is the callback url?"
+        }
+      ],
+      "score": 0.946050766,
+      "source_file": "app/api/payments/flash/webhook/route.ts",
+      "status": "tentative",
+      "uses": 1
+    },
+    "lib_flash_createpaymentorder": {
+      "code_fingerprint": "225b228ba794b79afb7afeedaa92d3d9046cb1c1e76f334c478fa9321d06290e",
+      "label": "createPaymentOrder()",
+      "last": "2026-08-24T07:47:43.117520+00:00",
+      "provenance": [
+        {
+          "date": "2026-08-24T07:47:43.117520+00:00",
+          "outcome": "useful",
+          "q": "for the online flash payment method, where is the callback url?"
+        }
+      ],
+      "score": 0.946050766,
+      "source_file": "lib/flash.ts",
+      "status": "tentative",
+      "uses": 1
+    }
+  },
   "version": 1
 }

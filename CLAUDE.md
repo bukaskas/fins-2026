@@ -32,7 +32,7 @@ No test runner is configured.
 
 **Money is always stored in integer cents** (`*Cents` suffix on fields). The `WalletLedger` table is append-only — never delete or update rows, only insert.
 
-**Auth** is NextAuth v4 with a credentials provider (bcryptjs) and Prisma adapter. Session strategy is JWT (30-day max age). Role enum: `ADMIN | MEMBER | STAFF | ACCOUNTANT | INSTRUCTOR | KITER | OWNER | DAYPASS`.
+**Auth** is NextAuth v4 with a credentials provider (bcryptjs) and Prisma adapter. Session strategy is JWT (30-day max age). Role enum: `ADMIN | MEMBER | STAFF | ACCOUNTANT | INSTRUCTOR | KITER | OWNER | DAYPASS | RECEPTION`.
 
 **UI** is shadcn/ui (new-york style) + Radix UI primitives + Tailwind v4. Components are in `components/ui/`. Feature components live in subdirectories: `components/bookings/`, `components/kitesurfing/`, `components/lessons/`, etc. Toast notifications use `sonner`.
 

@@ -16,7 +16,6 @@ import gamesExperienceImage from "@/public/images/day_use/games.webp";
 import {
   Umbrella,
   WavesLadder,
-  Wind,
   Volleyball,
   UtensilsCrossed,
   Armchair,
@@ -72,8 +71,8 @@ function DayUsePage() {
           eyebrow="04 · Activities"
           title="Sports & Games"
           subtitle="Beach fun for everyone"
-          body="Challenge friends to beach volleyball on our dedicated courts or gather around a ping-pong table. The kitesurfing school and watersports centre are right on site for those who want to hit the water."
-          tags={["Volleyball", "Kitesurfing", "Ping-Pong"]}
+          body="Challenge friends to beach volleyball on our dedicated courts or gather around a ping-pong table for a casual tournament."
+          tags={["Volleyball", "Ping-Pong", "Beach Games"]}
           imageLeft={false}
           tinted
         />
@@ -201,7 +200,6 @@ function HeroSection() {
 const ACTIVITIES = [
   { icon: Umbrella, label: "Beach" },
   { icon: WavesLadder, label: "Pool" },
-  { icon: Wind, label: "Kitesurfing" },
   { icon: Volleyball, label: "Volleyball" },
   { icon: UtensilsCrossed, label: "Restaurant" },
   { icon: Armchair, label: "Lounge" },
@@ -308,7 +306,6 @@ const INCLUSIONS = [
   "Swimming pool access",
   "Locker & changing room",
   "Access to games & sports area",
-  "Kitesurfing centre on site",
 ];
 
 function WhatsIncluded() {

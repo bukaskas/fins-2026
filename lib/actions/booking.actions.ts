@@ -171,7 +171,12 @@ export async function createBooking(data: BookingFormData) {
 
     return ({
       success: true,
-      message: `Booking created at ${validatedData.date.toISOString()}`,
+      message: `Booking received for ${validatedData.date.toLocaleDateString("en-GB", {
+        weekday: "long",
+        day: "numeric",
+        month: "long",
+        timeZone: "UTC",
+      })}`,
       bookingId: booking.id,
       date: booking.date,
       bookingType: booking.service,
