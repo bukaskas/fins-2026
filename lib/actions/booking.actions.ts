@@ -23,7 +23,7 @@ import { authOptions } from "@/lib/auth";
 import { hasCapability, requireCapability } from "@/lib/auth-guard";
 import { roleHasCapability } from "@/lib/permissions";
 import { upsertClosedDate } from "@/lib/closed-dates";
-import { computeBookingTotalCents } from "@/lib/pricing";
+import { calculateDayUsePrice, computeBookingTotalCents } from "@/lib/pricing";
 import { createPaymentOrder, getFlashOrder, verifyWebhookSignature } from "@/lib/flash";
 import { getAutoConfirmBookings } from "./settings.actions";
 import { BOOKINGS_PAGE_SIZE, DAILY_CAPACITY, WAITING_PAYMENT_WINDOW_MS } from "@/lib/constants";
@@ -93,12 +93,26 @@ export async function createBooking(data: BookingFormData) {
     // Never trust the client's price: recompute for services with known
     // pricing (day-use, pharaoh-airstyle). The client value is only a display
     // hint, kept solely for services without server-side pricing.
-    const serverTotalCents = computeBookingTotalCents(
-      validatedData.service,
-      validatedData.date,
-      validatedData.numberOfPeople,
-      validatedData.numberOfKids ?? 0,
-    );
+    //
+    // Day use keeps the whole breakdown rather than just the total, so the
+    // confirmation email can print line items that are guaranteed to sum to
+    // the number stored on the row.
+    const dayUseBreakdown =
+      validatedData.service === "day-use"
+        ? calculateDayUsePrice(
+            validatedData.date,
+            validatedData.numberOfPeople,
+            validatedData.numberOfKids ?? 0,
+          )
+        : null;
+    const serverTotalCents =
+      dayUseBreakdown?.totalCents ??
+      computeBookingTotalCents(
+        validatedData.service,
+        validatedData.date,
+        validatedData.numberOfPeople,
+        validatedData.numberOfKids ?? 0,
+      );
     const totalPriceCents = serverTotalCents ?? validatedData.totalPriceCents ?? null;
 
     // Returning customers (matched by email or phone) skip the availability
@@ -150,11 +164,16 @@ export async function createBooking(data: BookingFormData) {
         validatedData.email,
         validatedData.name,
         validatedData.date,
-        validatedData.service,
-        isDayUse ? validatedData.numberOfPeople : undefined,
-        isDayUse ? (validatedData.numberOfKids ?? 0) : undefined,
-        isDayUse ? (totalPriceCents ?? undefined) : undefined,
-        booking.id,
+        {
+          bookingType: validatedData.service,
+          numberOfPeople: isDayUse ? validatedData.numberOfPeople : undefined,
+          numberOfKids: isDayUse ? (validatedData.numberOfKids ?? 0) : undefined,
+          priceBreakdown: dayUseBreakdown ?? undefined,
+          bookingId: booking.id,
+          // These rows are PENDING until someone reviews them, so the guest
+          // gets a receipt, not a confirmation.
+          confirmed: false,
+        },
       );
     }
     await sendStaffNotificationEmail(

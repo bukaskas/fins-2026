@@ -49,27 +49,23 @@ const PharaohAirstyleEmail = ({ username }: PharaohAirstyleEmailProps) => {
             <Hr className="my-4 border-gray-200" />
 
             <Text className="text-sm font-semibold mb-1">📅 EVENT HIGHLIGHTS</Text>
-            <Text className="text-sm leading-relaxed">
-              🪁 Airstyle Kitesurfing Competition{"\n"}
-              🧘 SUKUN Pop-Up Classes – SUP Yoga • Vinyasa Flow • Glow Yoga • Headphone Yoga{"\n"}
-              🎈 Kids Entertainment by Il Campo{"\n"}
-              🎵 DJ &amp; Live Music by the Beach{"\n"}
-              🍽️ Food Pass Arounds
-            </Text>
+            <Text className="text-sm leading-relaxed m-0">🪁 Airstyle Kitesurfing Competition</Text>
+            <Text className="text-sm leading-relaxed m-0">🧘 SUKUN Pop-Up Classes – SUP Yoga • Vinyasa Flow • Glow Yoga • Headphone Yoga</Text>
+            <Text className="text-sm leading-relaxed m-0">🎈 Kids Entertainment by Il Campo</Text>
+            <Text className="text-sm leading-relaxed m-0">🎵 DJ &amp; Live Music by the Beach</Text>
+            <Text className="text-sm leading-relaxed m-0">🍽️ Food Pass Arounds</Text>
 
             <Hr className="my-4 border-gray-200" />
 
             <Text className="text-sm font-semibold mb-1">🗓️ EVENT SCHEDULE</Text>
-            <Text className="text-sm leading-relaxed">
-              10:00 AM — Skippers Meeting + SUKUN Class{"\n"}
-              11:00 AM – 1:00 PM — Airstyle Competition Round 1{"\n"}
-              1:00 – 3:00 PM — Airstyle Competition Round 2 + Kids Entertainment + Food Pass Arounds{"\n"}
-              2:00 – 3:00 PM — Semi Finals{"\n"}
-              3:00 – 4:00 PM — Kite Show + SUKUN Class + Food Pass Arounds{"\n"}
-              4:00 – 5:00 PM — Finals{"\n"}
-              6:00 PM onwards — Prize Giving &amp; Anniversary Celebration 🏆{"\n\n"}
-              Background music all day long! 🎶
-            </Text>
+            <Text className="text-sm leading-relaxed m-0">10:00 AM — Skippers Meeting + SUKUN Class</Text>
+            <Text className="text-sm leading-relaxed m-0">11:00 AM – 1:00 PM — Airstyle Competition Round 1</Text>
+            <Text className="text-sm leading-relaxed m-0">1:00 – 3:00 PM — Airstyle Competition Round 2 + Kids Entertainment + Food Pass Arounds</Text>
+            <Text className="text-sm leading-relaxed m-0">2:00 – 3:00 PM — Semi Finals</Text>
+            <Text className="text-sm leading-relaxed m-0">3:00 – 4:00 PM — Kite Show + SUKUN Class + Food Pass Arounds</Text>
+            <Text className="text-sm leading-relaxed m-0">4:00 – 5:00 PM — Finals</Text>
+            <Text className="text-sm leading-relaxed m-0">6:00 PM onwards — Prize Giving &amp; Anniversary Celebration 🏆</Text>
+            <Text className="text-sm leading-relaxed mt-3 mb-0">Background music all day long! 🎶</Text>
 
             <Hr className="my-4 border-gray-200" />
 
@@ -78,7 +74,8 @@ const PharaohAirstyleEmail = ({ username }: PharaohAirstyleEmailProps) => {
             </Text>
             <Text className="text-sm">See you on the beach! 🌊☀️</Text>
             <Text className="text-sm">
-              Warm regards,{"\n"}
+              Warm regards,
+              <br />
               The Fins Team
             </Text>
           </Container>

@@ -417,7 +417,12 @@ export async function createKitesurfingBookingFromPublic(
         validated.email,
         validated.name,
         startsAt,
-        "kitesurfing-course"
+        {
+          bookingType: "kitesurfing-course",
+          // Unlike createBooking's PENDING rows, this one holds a real seat on
+          // a real session (LessonBookingStatus.RESERVED), so it may say so.
+          confirmed: true,
+        },
       );
     } catch (emailError) {
       console.error("Failed to send booking confirmation email:", emailError);

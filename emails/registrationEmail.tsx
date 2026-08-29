@@ -24,7 +24,7 @@ function RegistrationEmail({ username, date }: RegistrationEmailProps) {
       <Head />
       <Preview>{previewText}</Preview>
       <Tailwind>
-        <Body className=" m-auto font-sans">
+        <Body className="m-auto bg-white font-sans text-[#22303F]">
           <Container className="mb-10 mx-auto p-5 max-w-[465px]">
             <Heading className="text-2xl  font-normal text-center p-0 my-8 mx-0">
               Thank you for signing up, {username}!
@@ -43,7 +43,7 @@ function RegistrationEmail({ username, date }: RegistrationEmailProps) {
                 Contact us on Whatsapp
               </Button>
             </Section>
-            <Text className="text-start text-sm text-white">
+            <Text className="text-start text-sm text-[#22303F]">
               Cheers,
               <br />
               The Fins kitesurfing Team
