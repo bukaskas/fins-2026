@@ -7,6 +7,14 @@ import { Users, Pencil, Phone, MoreHorizontal, ExternalLink, Clock, Instagram } 
 import { format } from "date-fns";
 import { instagramHref } from "@/lib/utils";
 import { SERVER_URL } from "@/lib/constants";
+import {
+  FOCUS_RING,
+  MUTED,
+  SERVICE_META,
+  STATUS_BORDER,
+  STATUS_LABEL,
+  STATUS_TEXT,
+} from "@/lib/bookings/status";
 import { toast } from "sonner";
 import {
   DropdownMenu,
@@ -38,59 +46,8 @@ function WhatsAppIcon({ className }: { className?: string }) {
   );
 }
 
-const STATUS_BORDER: Record<BookingStatus, string> = {
-  PENDING:             "#f59e0b",
-  REQUEST_SENT:        "#38bdf8",
-  UNDER_REVIEW:        "#fb923c",
-  WAITING_PAYMENT:     "#a78bfa",
-  CONFIRMED:           "#22c55e",
-  ARRIVED:             "#14b8a6",
-  DECLINED:            "#ef4444",
-  NO_RESPONSE_EXPIRED: "#9ca3af",
-  CANCELED:            "#d1d5db",
-};
-
-// STATUS_BORDER drives dots and the left strip, where saturation is fine.
-// Label text needs ≥4.5:1 on white, so it uses these darker pairs instead.
-const STATUS_TEXT: Record<BookingStatus, string> = {
-  PENDING:             "#b45309",
-  REQUEST_SENT:        "#0369a1",
-  UNDER_REVIEW:        "#c2410c",
-  WAITING_PAYMENT:     "#6d28d9",
-  CONFIRMED:           "#15803d",
-  ARRIVED:             "#0f766e",
-  DECLINED:            "#b91c1c",
-  NO_RESPONSE_EXPIRED: "#4b5563",
-  CANCELED:            "#6b7280",
-};
-
-// Muted foreground that still clears 4.5:1 on white (the old #b0a89f is 2.3:1).
-const MUTED = "#6b6460";
-
-const STATUS_LABEL: Record<BookingStatus, string> = {
-  PENDING:             "Pending",
-  REQUEST_SENT:        "Request Sent",
-  UNDER_REVIEW:        "Under Review",
-  WAITING_PAYMENT:     "Waiting Payment",
-  CONFIRMED:           "Confirmed",
-  ARRIVED:             "Arrived",
-  DECLINED:            "Declined",
-  NO_RESPONSE_EXPIRED: "No Response",
-  CANCELED:            "Canceled",
-};
-
 const ALL_STATUSES = Object.values(BookingStatus);
 
-const SERVICE_META: Record<string, { dot: string; text: string; label: string }> = {
-  "kitesurfing-course": { dot: "#38bdf8", text: "#0369a1", label: "Kitesurfing" },
-  "day-use":            { dot: "#fbbf24", text: "#b45309", label: "Day Use" },
-  "restaurant":         { dot: "#fb923c", text: "#c2410c", label: "Restaurant" },
-  "pharaoh-airstyle":   { dot: "#e879f9", text: "#a21caf", label: "Pharaoh" },
-};
-
-// Shared focus ring — the rows are keyboard-navigable and had none.
-const FOCUS_RING =
-  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1a1614] focus-visible:ring-offset-2";
 
 type UserStub = { id: string; name: string | null; email: string };
 

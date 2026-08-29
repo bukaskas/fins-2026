@@ -59,9 +59,9 @@ export default function PayDepositOnline({
           {loading ? "Preparing secure checkout…" : "Pay deposit online"}
         </span>
       </button>
-      <div className="mt-3 flex items-center justify-center gap-1.5 text-[#8a8480]">
+      <div className="mt-3 flex items-center justify-center gap-1.5 text-[#6b6460]">
         <ShieldCheck className="h-3 w-3" strokeWidth={1.6} />
-        <span className="font-[family-name:var(--font-raleway)] text-[0.7rem] font-[400]">
+        <span className="font-[family-name:var(--font-raleway)] text-[0.72rem] sm:text-[0.7rem] font-[400]">
           Secure card payment · powered by Flash
         </span>
       </div>

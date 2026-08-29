@@ -3,31 +3,27 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { format } from "date-fns";
 import { getServerSession } from "next-auth/next";
-import {
-  ArrowLeft,
-  ArrowUpRight,
-  Clock3,
-  Pencil,
-  Phone,
-  Mail,
-  MapPin,
-  MessageCircle,
-  Instagram,
-} from "lucide-react";
+import { ArrowUpRight, Clock3, MapPin, SlidersHorizontal } from "lucide-react";
 import { BookingStatus, Role } from "@prisma/client";
 
 import { authOptions } from "@/lib/auth";
-import { LOCATION_ADDRESS } from "@/lib/constants";
-import { instagramHref } from "@/lib/utils";
+import { roleHasCapability } from "@/lib/permissions";
+import { LOCATION_ADDRESS, VISIT_WORKING_HOURS } from "@/lib/constants";
 import { getBookingById } from "@/lib/actions/booking.actions";
 import { buildMetadata } from "@/lib/metadata";
-import PartyEditDialog from "./PartyEditDialog";
-import StatusEditDialog from "./StatusEditDialog";
+import { FOCUS_RING, MUTED, serviceLabel } from "@/lib/bookings/status";
 import NextStepCard from "./NextStepCard";
-import PaymentLinkCard from "./PaymentLinkCard";
-import PayDepositDialog from "@/components/bookings/PayDepositDialog";
 
-const STAFF_ROLES: Role[] = [Role.ADMIN, Role.STAFF, Role.OWNER];
+/**
+ * The guest's booking page — the private link reception sends over WhatsApp.
+ *
+ * This surface has exactly one audience. Staff controls used to live here
+ * behind `isStaff` branches, which meant staff read second-person guest copy
+ * about themselves and the guest's checkout button outshouted the desk's own
+ * actions. Those moved to ./desk. The only staff affordance left is a quiet
+ * link across to it, so reception can still turn the screen around and show a
+ * guest exactly what the guest sees.
+ */
 
 const STATUS_TONE: Record<
   BookingStatus,
@@ -44,19 +40,8 @@ const STATUS_TONE: Record<
   CANCELED:            { label: "Canceled",        bg: "#F2F1EE", ring: "#DCD9D3", text: "#615C55", dot: "#A8A39B" },
 };
 
-const SERVICE_LABEL: Record<string, string> = {
-  "kitesurfing-course": "Kitesurfing course",
-  "day-use":            "Day use",
-  "restaurant":         "Restaurant",
-  "pharaoh-airstyle":   "Pharaoh Airstyle",
-};
-
 function fmtEGP(cents: number): string {
   return new Intl.NumberFormat("en-EG").format(Math.round(cents / 100));
-}
-
-function digits(s: string): string {
-  return s.replace(/\D/g, "");
 }
 
 export async function generateMetadata({
@@ -68,8 +53,7 @@ export async function generateMetadata({
   const booking = await getBookingById(id);
   if (!booking) return { title: "Booking" };
 
-  const service =
-    SERVICE_LABEL[booking.service] ?? booking.service.replace(/-/g, " ");
+  const service = serviceLabel(booking.service);
 
   return {
     ...buildMetadata({
@@ -96,11 +80,10 @@ export default async function BookingDetailPage({
   if (!booking) notFound();
 
   const role = (session?.user as { role?: Role } | undefined)?.role;
-  const isStaff = !!role && STAFF_ROLES.includes(role);
+  const canManage = roleHasCapability(role, "bookings:manage");
 
   const status = STATUS_TONE[booking.bookingStatus];
-  const service =
-    SERVICE_LABEL[booking.service] ?? booking.service.replace(/-/g, " ");
+  const service = serviceLabel(booking.service);
 
   const date = new Date(booking.date);
   const dayName = format(date, "EEEE");
@@ -117,8 +100,6 @@ export default async function BookingDetailPage({
     total > 0 ? Math.min(100, Math.round((paid / total) * 100)) : 0;
   const balance = Math.max(0, total - paid);
 
-  const phoneDigits = digits(booking.phone);
-
   return (
     <div className="min-h-screen bg-[#FBF8F3]">
       {/* soft beach ambience: layered pastel gradient washes */}
@@ -133,124 +114,84 @@ export default async function BookingDetailPage({
 
       <div className="mx-auto max-w-3xl px-5 pt-7 pb-20 sm:px-6 sm:pt-10">
         {/* top utility bar */}
-        <div className="flex items-center justify-between mb-8 sm:mb-10">
-          {isStaff ? (
+        <div className="mb-8 flex items-center justify-between gap-4 sm:mb-10">
+          {canManage ? (
             <Link
-              href="/bookings"
-              className="group inline-flex items-center gap-2 text-[#5b5650] hover:text-[#1a1614] transition-colors"
+              href={`/bookings/${booking.id}/desk`}
+              className={`group inline-flex min-h-11 items-center gap-2 rounded-full border border-[#ece8e3] bg-white/70 px-4 py-2 text-[#3a3531] backdrop-blur-sm transition-colors hover:border-[#d6d0c8] hover:bg-white ${FOCUS_RING}`}
             >
-              <span className="grid h-8 w-8 place-items-center rounded-full border border-[#ece8e3] bg-white/70 backdrop-blur-sm transition-colors group-hover:border-[#d6d0c8]">
-                <ArrowLeft className="size-3.5" strokeWidth={1.5} />
-              </span>
-              <span className="font-[family-name:var(--font-raleway)] text-[0.7rem] tracking-[0.22em] uppercase font-[600]">
-                Bookings
+              <SlidersHorizontal className="size-3.5" strokeWidth={1.6} aria-hidden="true" />
+              <span className="font-[family-name:var(--font-raleway)] text-[0.72rem] font-[600] uppercase tracking-[0.18em]">
+                Desk view
               </span>
             </Link>
           ) : (
             <span />
           )}
 
-          <span className="font-[family-name:var(--font-roboto-mono)] text-[0.62rem] tracking-[0.12em] uppercase text-[#b0a89f]">
+          <span
+            className="font-[family-name:var(--font-roboto-mono)] text-[0.72rem] uppercase tracking-[0.12em] sm:text-[0.68rem]"
+            style={{ color: MUTED }}
+          >
             #{booking.id.slice(0, 8)}
           </span>
         </div>
 
-        {/* hero: guest is the headline — date sits compact to the right */}
+        {/* hero: the guest's own reservation, their name as the headline */}
         <header className="mb-8">
-          <div className="flex items-start justify-between gap-5 flex-wrap-reverse">
-            {/* left: guest identity + contacts */}
+          <div className="flex flex-wrap-reverse items-start justify-between gap-5">
             <div className="min-w-0 flex-1">
-              <span className="font-[family-name:var(--font-raleway)] text-[0.62rem] tracking-[0.28em] uppercase font-[600] text-[#b0a89f]">
-                Guest
-              </span>
               <h1
-                className="mt-2 font-[family-name:var(--font-raleway)] font-[200] tracking-[-0.015em] text-[#1a1614] leading-[1.04]"
+                className="font-[family-name:var(--font-raleway)] font-[300] leading-[1.04] tracking-[-0.015em] text-[#1a1614]"
                 style={{ fontSize: "clamp(2.1rem, 7vw, 3.25rem)" }}
               >
                 {booking.name}
               </h1>
-
-              {isStaff && (
-              <div className="mt-4 flex flex-wrap gap-2">
-                {phoneDigits && (
-                  <ContactLink
-                    href={`tel:${phoneDigits}`}
-                    icon={<Phone className="size-3" strokeWidth={1.5} />}
-                    label={booking.phone}
-                  />
-                )}
-                {phoneDigits && (
-                  <ContactLink
-                    href={`https://wa.me/${phoneDigits}`}
-                    icon={<MessageCircle className="size-3" strokeWidth={1.5} />}
-                    label="WhatsApp"
-                    external
-                  />
-                )}
-                {booking.email && (
-                  <ContactLink
-                    href={`mailto:${booking.email}`}
-                    icon={<Mail className="size-3" strokeWidth={1.5} />}
-                    label={booking.email}
-                  />
-                )}
-                {booking.instagram && (
-                  <ContactLink
-                    href={instagramHref(booking.instagram)}
-                    icon={<Instagram className="size-3" strokeWidth={1.5} />}
-                    label={booking.instagram}
-                    external
-                  />
-                )}
-              </div>
-              )}
             </div>
 
-            {/* right: status + compact date card */}
-            <div className="flex flex-col items-end gap-3 shrink-0">
-              {isStaff ? (
-                <StatusEditDialog
-                  bookingId={booking.id}
-                  status={booking.bookingStatus}
-                  tones={STATUS_TONE}
-                />
-              ) : (
-                <div
-                  className="inline-flex items-center gap-2 rounded-full px-4 py-1.5 border"
+            {/* status + compact date card */}
+            <div className="flex shrink-0 flex-col items-end gap-3">
+              <div
+                className="inline-flex items-center gap-2 rounded-full border px-4 py-1.5"
+                style={{
+                  background: status.bg,
+                  borderColor: status.ring,
+                  color: status.text,
+                }}
+              >
+                <span
+                  className="h-1.5 w-1.5 rounded-full"
                   style={{
-                    background: status.bg,
-                    borderColor: status.ring,
-                    color: status.text,
+                    background: status.dot,
+                    boxShadow: `0 0 0 3px ${status.bg}, 0 0 0 4px ${status.dot}30`,
                   }}
-                >
-                  <span
-                    className="h-1.5 w-1.5 rounded-full"
-                    style={{ background: status.dot, boxShadow: `0 0 0 3px ${status.bg}, 0 0 0 4px ${status.dot}30` }}
-                  />
-                  <span className="font-[family-name:var(--font-raleway)] text-[0.65rem] tracking-[0.2em] uppercase font-[700]">
-                    {status.label}
-                  </span>
-                </div>
-              )}
+                />
+                <span className="font-[family-name:var(--font-raleway)] text-[0.72rem] font-[700] uppercase tracking-[0.2em] sm:text-[0.65rem]">
+                  {status.label}
+                </span>
+              </div>
 
               <div className="text-right">
-                <div className="font-[family-name:var(--font-raleway)] text-[0.68rem] tracking-[0.18em] uppercase font-[600] text-[#b0a89f]">
+                <div
+                  className="font-[family-name:var(--font-raleway)] text-[0.72rem] font-[600] uppercase tracking-[0.18em] sm:text-[0.68rem]"
+                  style={{ color: MUTED }}
+                >
                   {dayName}
                 </div>
                 <div className="mt-0.5 flex items-baseline justify-end gap-1.5">
-                  <span className="font-[family-name:var(--font-raleway)] text-[2.1rem] font-[100] leading-none tracking-[-0.03em] text-[#1a1614]">
+                  <span className="font-[family-name:var(--font-raleway)] text-[2.1rem] font-[300] leading-none tracking-[-0.03em] text-[#1a1614]">
                     {dayNum}
                   </span>
-                  <span className="font-[family-name:var(--font-raleway)] text-[0.85rem] font-[300] tracking-[0.02em] text-[#5b5650]">
+                  <span className="font-[family-name:var(--font-raleway)] text-[0.85rem] font-[400] tracking-[0.02em] text-[#3a3531]">
                     {monthYear}
                   </span>
                 </div>
-                <div className="mt-1.5 flex items-center justify-end gap-2 font-[family-name:var(--font-raleway)] text-[0.72rem] font-[400] text-[#5b5650]">
+                <div className="mt-1.5 flex items-center justify-end gap-2 font-[family-name:var(--font-raleway)] text-[0.78rem] font-[400] text-[#3a3531]">
                   <span>{service}</span>
                   {booking.time && (
                     <>
                       <span className="h-1 w-1 rounded-full bg-[#d6d0c8]" />
-                      <span className="font-[family-name:var(--font-roboto-mono)] text-[0.68rem] tracking-[0.04em]">
+                      <span className="font-[family-name:var(--font-roboto-mono)] text-[0.75rem] tabular-nums tracking-[0.04em]">
                         {booking.time}
                       </span>
                     </>
@@ -264,18 +205,21 @@ export default async function BookingDetailPage({
         {booking.bookingStatus === BookingStatus.CONFIRMED && (
           <section
             aria-label="Visit information"
-            className="grid grid-cols-2 gap-3"
+            className="grid grid-cols-1 gap-3 sm:grid-cols-2"
           >
             <div className="flex min-w-0 items-center gap-3 rounded-2xl border border-[#ece8e3] bg-white/70 px-4 py-4 shadow-[0_8px_24px_-16px_rgba(40,32,24,0.22)] backdrop-blur-sm">
               <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-[#FFF4E0] text-[#7A5414]">
                 <Clock3 className="size-4" strokeWidth={1.7} aria-hidden="true" />
               </span>
               <span className="min-w-0">
-                <span className="block font-[family-name:var(--font-raleway)] text-[0.58rem] font-[600] uppercase tracking-[0.2em] text-[#b0a89f]">
+                <span
+                  className="block font-[family-name:var(--font-raleway)] text-[0.72rem] font-[600] uppercase tracking-[0.2em] sm:text-[0.6rem]"
+                  style={{ color: MUTED }}
+                >
                   Working time
                 </span>
-                <span className="mt-1 block font-[family-name:var(--font-roboto-mono)] text-[0.78rem] tracking-[0.01em] text-[#1a1614] sm:text-[0.86rem]">
-                  9:30 am – 12 pm
+                <span className="mt-1 block font-[family-name:var(--font-roboto-mono)] text-[0.8rem] tracking-[0.01em] text-[#1a1614] sm:text-[0.86rem]">
+                  {VISIT_WORKING_HOURS}
                 </span>
               </span>
             </div>
@@ -284,21 +228,24 @@ export default async function BookingDetailPage({
               href={LOCATION_ADDRESS}
               target="_blank"
               rel="noopener noreferrer"
-              className="group flex min-w-0 items-center gap-3 rounded-2xl border border-[#ece8e3] bg-white/70 px-4 py-4 shadow-[0_8px_24px_-16px_rgba(40,32,24,0.22)] backdrop-blur-sm transition-colors hover:border-[#d6d0c8] hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#62B07F]"
+              className={`group flex min-w-0 items-center gap-3 rounded-2xl border border-[#ece8e3] bg-white/70 px-4 py-4 shadow-[0_8px_24px_-16px_rgba(40,32,24,0.22)] backdrop-blur-sm transition-colors hover:border-[#d6d0c8] hover:bg-white ${FOCUS_RING}`}
             >
               <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-[#E4F1FA] text-[#1E4F72]">
                 <MapPin className="size-4" strokeWidth={1.7} aria-hidden="true" />
               </span>
               <span className="min-w-0 flex-1">
-                <span className="block font-[family-name:var(--font-raleway)] text-[0.58rem] font-[600] uppercase tracking-[0.2em] text-[#b0a89f]">
+                <span
+                  className="block font-[family-name:var(--font-raleway)] text-[0.72rem] font-[600] uppercase tracking-[0.2em] sm:text-[0.6rem]"
+                  style={{ color: MUTED }}
+                >
                   Location
                 </span>
-                <span className="mt-1 block font-[family-name:var(--font-raleway)] text-[0.78rem] font-[500] text-[#1a1614] sm:text-[0.86rem]">
+                <span className="mt-1 block font-[family-name:var(--font-raleway)] text-[0.8rem] font-[500] text-[#1a1614] sm:text-[0.86rem]">
                   Open in Google Maps
                 </span>
               </span>
               <ArrowUpRight
-                className="size-3.5 shrink-0 text-[#b0a89f] transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5"
+                className="size-3.5 shrink-0 text-[#6b6460] transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5"
                 strokeWidth={1.7}
                 aria-hidden="true"
               />
@@ -306,7 +253,7 @@ export default async function BookingDetailPage({
           </section>
         )}
 
-        {/* next step — conditional on status, sits right under the date */}
+        {/* next step — conditional on status */}
         <NextStepCard
           status={booking.bookingStatus}
           totalPriceCents={total}
@@ -317,59 +264,52 @@ export default async function BookingDetailPage({
         />
 
         {/* hairline */}
-        <div className="h-px bg-gradient-to-r from-transparent via-[#ece8e3] to-transparent mb-8" />
+        <div className="mb-8 h-px bg-gradient-to-r from-transparent via-[#ece8e3] to-transparent" />
 
-        {/* grid: party + deposit */}
-        <section className="grid grid-cols-2 gap-x-8 gap-y-9">
+        <section className="grid grid-cols-1 gap-x-8 gap-y-9 sm:grid-cols-2">
           {/* party */}
           <div>
             <SectionLabel>Party</SectionLabel>
-            {isStaff ? (
-              <PartyEditDialog
-                bookingId={booking.id}
-                adults={adults}
-                kids={kids}
-                service={booking.service}
-                dateIso={date.toISOString()}
-              />
-            ) : (
-              <>
-                <div className="flex items-baseline gap-2">
-                  <span className="font-[family-name:var(--font-raleway)] text-[2.75rem] sm:text-[3.5rem] font-[100] leading-none tracking-[-0.03em] text-[#1a1614]">
-                    {totalPeople}
-                  </span>
-                  <span className="font-[family-name:var(--font-raleway)] text-[0.78rem] font-[400] text-[#8a8480]">
-                    {totalPeople === 1 ? "person" : "people"}
-                  </span>
-                </div>
-                <div className="mt-3 font-[family-name:var(--font-raleway)] text-[0.78rem] text-[#5b5650] font-[400]">
-                  {adults} {adults === 1 ? "adult" : "adults"}
-                  {kids > 0 && (
-                    <>
-                      <span className="mx-1.5 text-[#d6d0c8]">·</span>
-                      {kids} {kids === 1 ? "kid" : "kids"}
-                    </>
-                  )}
-                </div>
-              </>
-            )}
+            <div className="flex items-baseline gap-2">
+              <span className="font-[family-name:var(--font-raleway)] text-[2.5rem] font-[300] leading-none tracking-[-0.03em] text-[#1a1614] sm:text-[3.5rem]">
+                {totalPeople}
+              </span>
+              <span
+                className="font-[family-name:var(--font-raleway)] text-[0.82rem] font-[400]"
+                style={{ color: MUTED }}
+              >
+                {totalPeople === 1 ? "person" : "people"}
+              </span>
+            </div>
+            <div className="mt-3 font-[family-name:var(--font-raleway)] text-[0.82rem] font-[400] text-[#3a3531]">
+              {adults} {adults === 1 ? "adult" : "adults"}
+              {kids > 0 && (
+                <>
+                  <span className="mx-1.5 text-[#d6d0c8]">·</span>
+                  {kids} {kids === 1 ? "kid" : "kids"}
+                </>
+              )}
+            </div>
           </div>
 
           {/* deposit */}
-          <div>
+          <div className="min-w-0">
             <SectionLabel>Deposit paid</SectionLabel>
-            <div className="flex items-baseline gap-2">
-              <span className="font-[family-name:var(--font-raleway)] text-[3.5rem] font-[100] leading-none tracking-[-0.03em] text-[#1a1614]">
+            <div className="flex min-w-0 flex-wrap items-baseline gap-2">
+              <span className="font-[family-name:var(--font-raleway)] text-[2.5rem] font-[300] leading-none tracking-[-0.03em] tabular-nums text-[#1a1614] sm:text-[3.5rem]">
                 {fmtEGP(paid)}
               </span>
-              <span className="font-[family-name:var(--font-raleway)] text-[0.78rem] font-[400] text-[#8a8480]">
+              <span
+                className="font-[family-name:var(--font-raleway)] text-[0.82rem] font-[400]"
+                style={{ color: MUTED }}
+              >
                 EGP
               </span>
             </div>
 
             {total > 0 ? (
               <>
-                <div className="mt-4 h-[3px] rounded-full bg-[#ece8e3] overflow-hidden">
+                <div className="mt-4 h-[3px] overflow-hidden rounded-full bg-[#ece8e3]">
                   <div
                     className="h-full rounded-full transition-all"
                     style={{
@@ -381,21 +321,24 @@ export default async function BookingDetailPage({
                     }}
                   />
                 </div>
-                <div className="mt-2 flex items-center justify-between font-[family-name:var(--font-raleway)] text-[0.72rem] text-[#8a8480]">
+                <div
+                  className="mt-2 flex flex-wrap items-center justify-between gap-x-3 gap-y-1 font-[family-name:var(--font-raleway)] text-[0.78rem]"
+                  style={{ color: MUTED }}
+                >
                   <span>
                     of{" "}
-                    <span className="font-[family-name:var(--font-roboto-mono)] text-[0.7rem] text-[#5b5650]">
+                    <span className="font-[family-name:var(--font-roboto-mono)] text-[0.75rem] tabular-nums text-[#3a3531]">
                       {fmtEGP(total)} EGP
                     </span>
                   </span>
                   <span>
                     {paidPct >= 100 ? (
-                      <span className="text-[#1F5B36] font-[600] tracking-[0.06em] uppercase text-[0.62rem]">
+                      <span className="text-[0.72rem] font-[600] uppercase tracking-[0.06em] text-[#15803d]">
                         Settled
                       </span>
                     ) : (
                       <>
-                        <span className="font-[family-name:var(--font-roboto-mono)] text-[0.7rem] text-[#5b5650]">
+                        <span className="font-[family-name:var(--font-roboto-mono)] text-[0.75rem] tabular-nums text-[#3a3531]">
                           {fmtEGP(balance)} EGP
                         </span>{" "}
                         remaining
@@ -405,41 +348,18 @@ export default async function BookingDetailPage({
                 </div>
               </>
             ) : (
-              <div className="mt-3 font-[family-name:var(--font-raleway)] text-[0.78rem] text-[#8a8480]">
+              <div
+                className="mt-3 font-[family-name:var(--font-raleway)] text-[0.82rem]"
+                style={{ color: MUTED }}
+              >
                 Total price not set
               </div>
             )}
-
-            {isStaff && (
-              <PayDepositDialog
-                bookingId={booking.id}
-                totalPriceCents={total || null}
-                amountPaidCents={paid}
-                trigger={
-                  <button
-                    type="button"
-                    className="mt-5 inline-flex items-center gap-2 rounded-full bg-[#1a1614] px-5 py-2.5 text-white font-[family-name:var(--font-raleway)] text-[0.68rem] tracking-[0.18em] uppercase font-[600] transition-all hover:-translate-y-px hover:bg-[#2a2522]"
-                  >
-                    Pay deposit
-                  </button>
-                }
-              />
-            )}
           </div>
-
-          {/* payment link — staff only, when awaiting payment or a link already exists */}
-          {isStaff &&
-            (booking.bookingStatus === BookingStatus.WAITING_PAYMENT ||
-              booking.paymentLink) && (
-              <PaymentLinkCard
-                bookingId={booking.id}
-                paymentLink={booking.paymentLink}
-              />
-            )}
 
           {/* assignment (only if relevant) */}
           {(booking.agent || booking.instructor) && (
-            <div className="col-span-2 pt-6 border-t border-[#ece8e3] grid grid-cols-2 gap-8">
+            <div className="grid grid-cols-1 gap-8 border-t border-[#ece8e3] pt-6 sm:col-span-2 sm:grid-cols-2">
               {booking.instructor && (
                 <div>
                   <SectionLabel>Instructor</SectionLabel>
@@ -460,23 +380,13 @@ export default async function BookingDetailPage({
           )}
         </section>
 
-        {/* edit action — staff only */}
-        {isStaff && (
-          <div className="mt-12 flex justify-end">
-            <Link
-              href={`/bookings/${booking.id}/edit`}
-              className="group inline-flex items-center gap-2 rounded-full bg-[#1a1614] px-6 py-3 text-white font-[family-name:var(--font-raleway)] text-[0.72rem] tracking-[0.18em] uppercase font-[600] transition-transform hover:-translate-y-px hover:bg-[#2a2522]"
-            >
-              <Pencil className="size-3.5" strokeWidth={1.5} />
-              Edit booking
-            </Link>
-          </div>
-        )}
-
         {/* footer mono detail */}
         <div className="mt-12 flex items-center justify-center gap-2">
           <span className="h-px w-8 bg-[#ece8e3]" />
-          <span className="font-[family-name:var(--font-roboto-mono)] text-[0.6rem] tracking-[0.2em] uppercase text-[#b0a89f]">
+          <span
+            className="font-[family-name:var(--font-roboto-mono)] text-[0.72rem] uppercase tracking-[0.2em] sm:text-[0.68rem]"
+            style={{ color: MUTED }}
+          >
             Booked {format(new Date(booking.createdAt), "d MMM yyyy")}
           </span>
           <span className="h-px w-8 bg-[#ece8e3]" />
@@ -488,33 +398,11 @@ export default async function BookingDetailPage({
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
-    <div className="mb-3 font-[family-name:var(--font-raleway)] text-[0.62rem] tracking-[0.22em] uppercase font-[600] text-[#b0a89f]">
+    <div
+      className="mb-3 font-[family-name:var(--font-raleway)] text-[0.72rem] font-[600] uppercase tracking-[0.22em] sm:text-[0.62rem]"
+      style={{ color: MUTED }}
+    >
       {children}
     </div>
-  );
-}
-
-function ContactLink({
-  href,
-  icon,
-  label,
-  external,
-}: {
-  href: string;
-  icon: React.ReactNode;
-  label: string;
-  external?: boolean;
-}) {
-  return (
-    <a
-      href={href}
-      {...(external ? { target: "_blank", rel: "noopener noreferrer" } : {})}
-      className="inline-flex items-center gap-2 rounded-full border border-[#ece8e3] bg-white/70 backdrop-blur-sm px-3.5 py-1.5 text-[#5b5650] hover:border-[#d6d0c8] hover:text-[#1a1614] transition-colors"
-    >
-      <span className="text-[#b0a89f]">{icon}</span>
-      <span className="font-[family-name:var(--font-raleway)] text-[0.78rem] font-[400]">
-        {label}
-      </span>
-    </a>
   );
 }

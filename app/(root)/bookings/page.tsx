@@ -16,11 +16,10 @@ import Link from "next/link";
 import { getServerSession } from "next-auth/next";
 import { redirect } from "next/navigation";
 import { authOptions } from "@/lib/auth";
+import { roleHasCapability } from "@/lib/permissions";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
-
-const STAFF_ROLES: Role[] = [Role.ADMIN, Role.STAFF, Role.OWNER];
 
 const NAV_LINKS: { label: string; href: string; variant: "secondary" | "outline" }[] = [
   { label: "Dashboard",   href: "/bookings/dashboard",   variant: "secondary" },
@@ -110,7 +109,7 @@ async function BookingsPage({
   if (!session) {
     redirect("/signin?callbackUrl=/bookings");
   }
-  if (!role || !STAFF_ROLES.includes(role)) {
+  if (!roleHasCapability(role, "bookings:manage")) {
     redirect("/");
   }
 

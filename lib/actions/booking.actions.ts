@@ -26,14 +26,14 @@ import { upsertClosedDate } from "@/lib/closed-dates";
 import { computeBookingTotalCents } from "@/lib/pricing";
 import { createPaymentOrder, getFlashOrder, verifyWebhookSignature } from "@/lib/flash";
 import { getAutoConfirmBookings } from "./settings.actions";
-import { BOOKINGS_PAGE_SIZE, DAILY_CAPACITY } from "@/lib/constants";
+import { BOOKINGS_PAGE_SIZE, DAILY_CAPACITY, WAITING_PAYMENT_WINDOW_MS } from "@/lib/constants";
 
 const FLASH_CURRENCY = process.env.FLASH_CURRENCY || "EGP";
 const FLASH_MIN_CENTS = 500; // Flash rejects orders below 5 EGP
 
 // A booking in WAITING_PAYMENT auto-cancels this long after it entered the
 // status (i.e. after `waitingPaymentAt`) if it hasn't been paid/confirmed.
-const WAITING_PAYMENT_WINDOW_MS = 24 * 60 * 60 * 1000; // 24 hours
+
 const BUSINESS_TIME_ZONE = "Africa/Cairo";
 const CAPACITY_STATUSES: BookingStatus[] = [
   BookingStatus.CONFIRMED,
@@ -1882,5 +1882,45 @@ export async function logBookingContact(
       success: false as const,
       message: "Could not record the contact attempt. Please try again.",
     };
+  }
+}
+
+/**
+ * Booking read for the staff desk view: the record plus the two histories the
+ * desk needs to answer "what has already happened" — the payment ledger and
+ * the contact log. Capability-gated, unlike the public getBookingById.
+ */
+export async function getBookingForDesk(id: string) {
+  if (!(await hasCapability("bookings:manage"))) return null;
+  try {
+    // Same idempotent single-row expiry as the public read, so the desk never
+    // shows a live countdown for a booking the cron has already let lapse.
+    await prisma.booking.updateMany({
+      where: {
+        id,
+        bookingStatus: BookingStatus.WAITING_PAYMENT,
+        waitingPaymentAt: {
+          not: null,
+          lt: new Date(Date.now() - WAITING_PAYMENT_WINDOW_MS),
+        },
+      },
+      data: { bookingStatus: BookingStatus.CANCELED },
+    });
+
+    return await prisma.booking.findUnique({
+      where: { id },
+      include: {
+        agent: { select: { id: true, name: true, email: true } },
+        payments: { orderBy: { createdAt: "desc" } },
+        contacts: {
+          orderBy: { createdAt: "desc" },
+          take: 20,
+          include: { actor: { select: { id: true, name: true, email: true } } },
+        },
+      },
+    });
+  } catch (e) {
+    console.error("Error fetching booking for desk", e);
+    return null;
   }
 }

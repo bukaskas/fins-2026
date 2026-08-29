@@ -72,6 +72,9 @@ export default function PayDepositDialog({
 
   const amountCents = Math.round(parseFloat(amount || "0") * 100);
   const remainingAfter = Math.max(0, total - (amountPaidCents + amountCents));
+  // A clamped "0 EGP remaining" used to make a mistyped 5000 look calm.
+  const overpayCents =
+    total > 0 ? Math.max(0, amountPaidCents + amountCents - total) : 0;
 
   const onSubmit = async () => {
     if (!Number.isFinite(amountCents) || amountCents <= 0) {
@@ -103,7 +106,7 @@ export default function PayDepositDialog({
 
       <DialogPrimitive.Portal>
         <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-[#1a1614]/35 backdrop-blur-md data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 duration-200" />
-        <DialogPrimitive.Content className="fixed left-1/2 top-1/2 z-50 w-full max-w-[22rem] -translate-x-1/2 -translate-y-1/2 outline-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 duration-200">
+        <DialogPrimitive.Content className="fixed left-1/2 top-1/2 z-50 max-h-[85dvh] w-[calc(100%-2rem)] max-w-[22rem] -translate-x-1/2 -translate-y-1/2 overflow-y-auto outline-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 duration-200">
           <div
             className="relative overflow-hidden rounded-[28px] ring-1 ring-white/60"
             style={{
@@ -147,10 +150,16 @@ export default function PayDepositDialog({
                   </span>
                 </div>
                 {total > 0 && (
-                  <div className="mt-2 font-[family-name:var(--font-roboto-mono)] text-[0.7rem] tracking-[0.04em] text-[#8a8480]">
+                  <div className="mt-2 font-[family-name:var(--font-roboto-mono)] text-[0.75rem] tracking-[0.04em] text-[#6b6460]">
                     {fmtEGP(remainingAfter)}
-                    <span className="ml-1 text-[#b0a89f]">EGP remaining after</span>
+                    <span className="ml-1">EGP remaining after</span>
                   </div>
+                )}
+                {overpayCents > 0 && (
+                  <p className="mt-2 rounded-xl bg-[#FBE3E1] px-3 py-2 font-[family-name:var(--font-raleway)] text-[0.78rem] font-[500] text-[#7E2A23]">
+                    That is {fmtEGP(overpayCents)} EGP more than the total owed.
+                    Check the amount before saving.
+                  </p>
                 )}
               </div>
 
@@ -215,7 +224,13 @@ export default function PayDepositDialog({
               </div>
 
               {/* Buttons */}
-              <div className="mt-6 grid grid-cols-2 gap-2.5">
+              {/* The one thing that matters most used to be sr-only, so the
+                  sighted majority never saw it. */}
+              <p className="mt-6 font-[family-name:var(--font-raleway)] text-[0.78rem] leading-snug text-[#6b6460]">
+                Saving records this payment against the booking and confirms it.
+              </p>
+
+              <div className="mt-3 grid grid-cols-1 gap-2.5 sm:grid-cols-2">
                 <DialogPrimitive.Close asChild>
                   <button
                     type="button"
@@ -231,7 +246,7 @@ export default function PayDepositDialog({
                   disabled={isSubmitting}
                   className="h-11 rounded-full bg-[#1a1614] font-[family-name:var(--font-raleway)] text-[0.78rem] tracking-[0.08em] uppercase font-[700] text-white shadow-[0_4px_14px_-4px_rgba(26,22,20,0.45)] transition-all duration-150 hover:bg-[#2a2522] active:scale-[0.985] disabled:opacity-50"
                 >
-                  {isSubmitting ? "Saving…" : "Confirm & pay"}
+                  {isSubmitting ? "Saving…" : "Record & confirm"}
                 </button>
               </div>
             </div>

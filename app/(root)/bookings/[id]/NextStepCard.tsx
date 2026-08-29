@@ -4,9 +4,7 @@ import { Instagram, Check, MessageCircle } from "lucide-react";
 import { CopyButton } from "./CopyButton";
 import PayDepositOnline from "./PayDepositOnline";
 import PaymentCountdown from "./PaymentCountdown";
-
-// Keep in sync with WAITING_PAYMENT_WINDOW_MS in lib/actions/booking.actions.ts
-const WAITING_PAYMENT_WINDOW_MS = 24 * 60 * 60 * 1000;
+import { WAITING_PAYMENT_WINDOW_MS } from "@/lib/constants";
 
 const INSTAGRAM_URL = "https://ig.me/m/finskitesurfing";
 const INSTAGRAM_DISPLAY = "@finskitesurfing";
@@ -110,7 +108,7 @@ export default function NextStepCard({
 
 function Eyebrow({ children }: { children: React.ReactNode }) {
   return (
-    <span className="font-[family-name:var(--font-raleway)] text-[0.6rem] tracking-[0.28em] uppercase font-[600] text-[#b0a89f]">
+    <span className="font-[family-name:var(--font-raleway)] text-[0.72rem] sm:text-[0.6rem] tracking-[0.28em] uppercase font-[600] text-[#6b6460]">
       {children}
     </span>
   );
@@ -134,7 +132,7 @@ function Body({ children }: { children: React.ReactNode }) {
 
 function MicroLabel({ children }: { children: React.ReactNode }) {
   return (
-    <div className="font-[family-name:var(--font-raleway)] text-[0.58rem] tracking-[0.24em] uppercase font-[600] text-[#b0a89f]">
+    <div className="font-[family-name:var(--font-raleway)] text-[0.72rem] sm:text-[0.58rem] tracking-[0.24em] uppercase font-[600] text-[#6b6460]">
       {children}
     </div>
   );
@@ -152,7 +150,7 @@ function InstagramButton({ caption }: { caption: string }) {
         <Instagram className="h-4 w-4" strokeWidth={1.6} />
       </span>
       <span className="flex flex-col items-start leading-tight">
-        <span className="font-[family-name:var(--font-raleway)] text-[0.6rem] tracking-[0.22em] uppercase font-[600] text-white/55">
+        <span className="font-[family-name:var(--font-raleway)] text-[0.72rem] sm:text-[0.6rem] tracking-[0.22em] uppercase font-[600] text-white/55">
           {caption}
         </span>
         <span className="mt-0.5 font-[family-name:var(--font-roboto-mono)] text-[0.95rem] tracking-[0.04em]">
@@ -175,7 +173,7 @@ function WhatsAppButton({ caption }: { caption: string }) {
         <MessageCircle className="h-4 w-4" strokeWidth={1.6} />
       </span>
       <span className="flex flex-col items-start leading-tight">
-        <span className="font-[family-name:var(--font-raleway)] text-[0.6rem] tracking-[0.22em] uppercase font-[600] text-white/55">
+        <span className="font-[family-name:var(--font-raleway)] text-[0.72rem] sm:text-[0.6rem] tracking-[0.22em] uppercase font-[600] text-white/55">
           {caption}
         </span>
         <span className="mt-0.5 font-[family-name:var(--font-roboto-mono)] text-[0.95rem] tracking-[0.04em]">
@@ -216,7 +214,7 @@ function ConfirmedBody({ remainingCents }: { remainingCents: number }) {
                 <span className="font-[family-name:var(--font-raleway)] text-[1.6rem] font-[200] leading-none tracking-[-0.02em] text-[#1a1614]">
                   {fmtEGP(remainingCents)}
                 </span>
-                <span className="font-[family-name:var(--font-raleway)] text-[0.7rem] font-[400] text-[#8a8480]">
+                <span className="font-[family-name:var(--font-raleway)] text-[0.72rem] sm:text-[0.7rem] font-[400] text-[#6b6460]">
                   EGP
                 </span>
               </div>
@@ -294,7 +292,7 @@ function PaymentBody({
       {deadline && (
         <div className="mt-5">
           <PaymentCountdown deadline={deadline} />
-          <p className="mt-2 font-[family-name:var(--font-raleway)] text-[0.78rem] font-[400] text-[#8a8480] leading-[1.5]">
+          <p className="mt-2 font-[family-name:var(--font-raleway)] text-[0.78rem] font-[400] text-[#6b6460] leading-[1.5]">
             Pay within 24 hours or this reservation is released automatically.
           </p>
         </div>
@@ -308,11 +306,11 @@ function PaymentBody({
               <span className="font-[family-name:var(--font-raleway)] text-[1.6rem] font-[200] leading-none tracking-[-0.02em] text-[#1a1614]">
                 {fmtEGP(depositDueCents)}
               </span>
-              <span className="font-[family-name:var(--font-raleway)] text-[0.7rem] font-[400] text-[#8a8480]">
+              <span className="font-[family-name:var(--font-raleway)] text-[0.72rem] sm:text-[0.7rem] font-[400] text-[#6b6460]">
                 EGP
               </span>
             </div>
-            <div className="mt-1 font-[family-name:var(--font-raleway)] text-[0.68rem] font-[400] text-[#8a8480]">
+            <div className="mt-1 font-[family-name:var(--font-raleway)] text-[0.72rem] sm:text-[0.68rem] font-[400] text-[#6b6460]">
               50% deposit
             </div>
           </div>
@@ -323,11 +321,11 @@ function PaymentBody({
               <span className="font-[family-name:var(--font-raleway)] text-[1.6rem] font-[200] leading-none tracking-[-0.02em] text-[#1a1614]">
                 {fmtEGP(remainingCents)}
               </span>
-              <span className="font-[family-name:var(--font-raleway)] text-[0.7rem] font-[400] text-[#8a8480]">
+              <span className="font-[family-name:var(--font-raleway)] text-[0.72rem] sm:text-[0.7rem] font-[400] text-[#6b6460]">
                 EGP
               </span>
             </div>
-            <div className="mt-1 font-[family-name:var(--font-raleway)] text-[0.68rem] font-[400] text-[#8a8480]">
+            <div className="mt-1 font-[family-name:var(--font-raleway)] text-[0.72rem] sm:text-[0.68rem] font-[400] text-[#6b6460]">
               Remaining balance
             </div>
           </div>
@@ -353,7 +351,7 @@ function PaymentBody({
       <details className="group">
         <summary className="flex cursor-pointer list-none items-center justify-between font-[family-name:var(--font-raleway)] text-[0.82rem] font-[500] text-[#5b5650] transition-colors hover:text-[#1a1614]">
           <span>Prefer to pay by bank transfer?</span>
-          <span className="text-[1.1rem] leading-none text-[#b0a89f] transition-transform group-open:rotate-45">
+          <span className="text-[1.1rem] leading-none text-[#6b6460] transition-transform group-open:rotate-45">
             +
           </span>
         </summary>
