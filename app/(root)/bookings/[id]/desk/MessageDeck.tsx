@@ -153,7 +153,7 @@ export default function MessageDeck({
                       {m.label}
                     </span>
                     {m.suggested && (
-                      <span className="rounded-full bg-[#e2f0e6] px-2 py-0.5 font-[family-name:var(--font-raleway)] text-[0.68rem] font-[700] uppercase tracking-[0.12em] text-[#15803d]">
+                      <span className="rounded-full bg-[#e2f0e6] px-2 py-0.5 font-[family-name:var(--font-raleway)] text-[0.72rem] font-[700] uppercase tracking-[0.12em] text-[#15803d] sm:text-[0.68rem]">
                         Suggested
                       </span>
                     )}

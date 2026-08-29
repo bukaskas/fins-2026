@@ -91,7 +91,7 @@ export default function StatusDialog({
         <button
           type="button"
           aria-label="Change booking status"
-          className={`rounded-full transition-opacity hover:opacity-80 ${FOCUS_RING}`}
+          className={`inline-flex min-h-11 items-center rounded-full transition-opacity hover:opacity-80 ${FOCUS_RING}`}
         >
           {trigger}
         </button>

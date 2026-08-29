@@ -121,7 +121,7 @@ export default function PartyDialog({
         <button
           type="button"
           aria-label="Edit party size"
-          className={`group flex w-full items-baseline gap-2 rounded-xl text-left ${FOCUS_RING}`}
+          className={`group flex min-h-11 w-full items-baseline gap-2 rounded-xl text-left ${FOCUS_RING}`}
         >
           <span className="font-[family-name:var(--font-raleway)] text-[2rem] font-[500] leading-none tabular-nums text-[#1a1614]">
             {adults + kids}
