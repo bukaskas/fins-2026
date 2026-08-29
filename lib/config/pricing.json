@@ -1,5 +1,8 @@
 {
+  "adultPriceCents": 150000,
   "kidsPriceCents": 60000,
+  "holidaySurchargeCents": 10000,
+  "discountMultiplier": 0.75,
   "holidayDates": [
     "2026-05-26",
     "2026-05-27",

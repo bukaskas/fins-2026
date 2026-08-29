@@ -1099,7 +1099,7 @@ function DayUseBookingForm() {
                 )}
                 style={{ background: SKY, color: NAVY }}
               >
-                {isSubmitting ? "Reserving…" : "Reserve my day"}
+                {isSubmitting ? "Sending…" : "Request my day"}
               </Button>
             )}
           </div>

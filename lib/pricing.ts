@@ -1,14 +1,14 @@
 import pricingConfig from "@/lib/config/pricing.json";
 
-const ADULT_PRICE_CENTS = 150000;      // 1,500 EGP
-const HOLIDAY_SURCHARGE_CENTS = 10000; // +100 EGP flat on holiday → 1,600 EGP total
-const DISCOUNT_MULTIPLIER = 0.75;      // -25%
-
-// Kids (5–8) are a configured base rate, not a percentage of the adult rate.
-// The 5–8 price is advertised as a flat number on /day-use, so it has to be the
-// same number in both places — deriving it from the adult rate produced
-// 750 EGP against an advertised 600 EGP.
-const KIDS_PRICE_CENTS = pricingConfig.kidsPriceCents;
+// Every day-use rate lives in lib/config/pricing.json and is read from there by
+// both the advertised figures on /day-use and the checkout calculation. Nothing
+// on the guest path may hardcode a price: deriving or restating one produced a
+// 750-vs-600 EGP contradiction between the ad and the checkout, and later a
+// 1,600-vs-1,500 one on holiday dates.
+export const ADULT_PRICE_CENTS = pricingConfig.adultPriceCents;
+export const KIDS_PRICE_CENTS = pricingConfig.kidsPriceCents;
+const HOLIDAY_SURCHARGE_CENTS = pricingConfig.holidaySurchargeCents; // flat, on holiday dates
+const DISCOUNT_MULTIPLIER = pricingConfig.discountMultiplier;
 
 export const PHARAOH_ADULT_PRICE_CENTS = 120000; // 1,200 EGP
 export const PHARAOH_KIDS_PRICE_CENTS = 60000;   // 600 EGP
@@ -73,6 +73,30 @@ export function calculateDayUsePrice(
 
 export function formatEGP(cents: number): string {
   return `${(cents / 100).toLocaleString("en-EG")} EGP`;
+}
+
+/**
+ * Per-person day-use rates for one date. This is what /day-use advertises, so
+ * the page never restates a number — a holiday date shows the holiday rate
+ * rather than the standard one the guest would otherwise be quoted at checkout.
+ */
+export function getDayUseRates(date: Date): {
+  adultUnitCents: number;
+  kidsUnitCents: number;
+  rateType: RateType;
+} {
+  const { adultUnitCents, kidsUnitCents, rateType } = calculateDayUsePrice(date, 1, 1);
+  return { adultUnitCents, kidsUnitCents, rateType };
+}
+
+/** Upcoming holiday dates, so the page can name them instead of surprising the guest. */
+export function getUpcomingHolidayDates(from: Date, limit = 3): Date[] {
+  const today = toDateString(from);
+  return (pricingConfig.holidayDates as string[])
+    .filter((d) => d >= today)
+    .sort()
+    .slice(0, limit)
+    .map((d) => new Date(`${d}T00:00:00.000Z`));
 }
 
 export function computeBookingTotalCents(
