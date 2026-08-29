@@ -4,6 +4,7 @@ import Footer from "@/components/shared/footer";
 import Header from "@/components/shared/header";
 import { Toaster } from "@/components/ui/sonner";
 import { EmailVerificationBanner } from "@/components/auth/EmailVerificationBanner";
+import { StaffChromeGate } from "@/components/shared/StaffChromeGate";
 
 export default function RootLayout({
   children,
@@ -16,7 +17,10 @@ export default function RootLayout({
       <EmailVerificationBanner />
       <main className="flex-1 ">{children}</main>
       <Toaster />
-      <Footer />
+      {/* Marketing footer is ~960px; it belongs on guest pages, not on a tool. */}
+      <StaffChromeGate>
+        <Footer />
+      </StaffChromeGate>
     </div>
   );
 }

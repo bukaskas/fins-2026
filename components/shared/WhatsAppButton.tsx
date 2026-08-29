@@ -1,7 +1,10 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { usePathname } from "next/navigation";
 import { FaWhatsapp } from "react-icons/fa";
+
+import { isStaffPath } from "@/lib/routes";
 
 const contacts = [
   {
@@ -17,6 +20,7 @@ const contacts = [
 ];
 
 export default function WhatsAppButton() {
+  const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -41,6 +45,11 @@ export default function WhatsAppButton() {
       document.removeEventListener("keydown", handleKeyDown);
     };
   }, []);
+
+  // Guest widget only. On back-office pages it floats over fixed action bars
+  // (it covered half the desk view's check-in button) and offers a member of
+  // the public a way to contact reception, which reception does not need.
+  if (isStaffPath(pathname)) return null;
 
   return (
     <div ref={containerRef} className="fixed bottom-6 right-6 z-50">
