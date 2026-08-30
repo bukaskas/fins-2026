@@ -29,8 +29,9 @@ export function bookingUrl(bookingId: string): string {
   return `${SERVER_URL}/bookings/${bookingId}`;
 }
 
-export function whatsappHref(phone: string, text: string): string {
-  return `https://wa.me/${whatsappDigits(phone)}?text=${encodeURIComponent(text)}`;
+export function whatsappHref(phone: string, text?: string): string {
+  const base = `https://wa.me/${whatsappDigits(phone)}`;
+  return text ? `${base}?text=${encodeURIComponent(text)}` : base;
 }
 
 const egp = new Intl.NumberFormat("en-EG");
@@ -62,6 +63,7 @@ export type MessageBookingInput = {
   totalPriceCents: number | null;
   amountPaidCents: number;
   paymentLink: string | null;
+  instagram?: string | null;
 };
 
 function partyLine(adults: number, kids: number): string {
@@ -93,9 +95,7 @@ export function buildBookingMessages(b: MessageBookingInput): BookingMessage[] {
       id: "deposit",
       label: "Ask for the deposit",
       when: "The guest needs to pay to hold the booking.",
-      suggested:
-        status === BookingStatus.WAITING_PAYMENT ||
-        status === BookingStatus.UNDER_REVIEW,
+      suggested: status === BookingStatus.UNDER_REVIEW,
       body:
         `Hello ${b.name},\n` +
         `To confirm your booking, please follow this link to complete your deposit payment: ${url}\n` +
@@ -105,7 +105,7 @@ export function buildBookingMessages(b: MessageBookingInput): BookingMessage[] {
       id: "reminder",
       label: "Chase the payment",
       when: "The hold is running out and nothing has arrived yet.",
-      suggested: status === BookingStatus.WAITING_PAYMENT && b.amountPaidCents === 0,
+      suggested: status === BookingStatus.WAITING_PAYMENT && balance > 0,
       body:
         `Hello ${b.name},\n` +
         `Just a reminder about your ${serviceLabel(b.service).toLowerCase()} booking on ${dateLine(b.date, b.time)}.\n` +
@@ -118,7 +118,9 @@ export function buildBookingMessages(b: MessageBookingInput): BookingMessage[] {
       id: "instagram",
       label: "Ask for Instagram",
       when: "A first-time booking still needs to be vetted.",
-      suggested: status === BookingStatus.PENDING || status === BookingStatus.REQUEST_SENT,
+      suggested:
+        !b.instagram &&
+        (status === BookingStatus.PENDING || status === BookingStatus.REQUEST_SENT),
       body:
         `Hello,\n` +
         `Thank you for booking with Fins Kitesurfing & Beach Club! We're excited to have you with us.\n` +
@@ -156,4 +158,36 @@ export function buildBookingMessages(b: MessageBookingInput): BookingMessage[] {
   ];
 
   return [...messages.filter((m) => m.suggested), ...messages.filter((m) => !m.suggested)];
+}
+
+/**
+ * The one message a compact booking row may promote. Closed/arrived states and
+ * contradictory money states deliberately return null so the UI falls back to
+ * a neutral WhatsApp action instead of recommending the wrong promise.
+ */
+export function recommendedBookingMessage(
+  booking: MessageBookingInput,
+): BookingMessage | null {
+  if (
+    booking.bookingStatus === BookingStatus.ARRIVED ||
+    booking.bookingStatus === BookingStatus.DECLINED ||
+    booking.bookingStatus === BookingStatus.NO_RESPONSE_EXPIRED ||
+    booking.bookingStatus === BookingStatus.CANCELED
+  ) {
+    return null;
+  }
+
+  const dueCents =
+    booking.totalPriceCents == null
+      ? null
+      : Math.max(booking.totalPriceCents - booking.amountPaidCents, 0);
+
+  if (
+    booking.bookingStatus === BookingStatus.WAITING_PAYMENT &&
+    (dueCents == null || dueCents === 0)
+  ) {
+    return null;
+  }
+
+  return buildBookingMessages(booking).find((message) => message.suggested) ?? null;
 }

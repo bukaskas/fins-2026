@@ -20,7 +20,7 @@ import DeskCommandBar from "./DeskCommandBar";
 import MessageDeck from "./MessageDeck";
 import PaymentPanel from "./PaymentPanel";
 import PartyDialog from "./PartyDialog";
-import StatusDialog from "./StatusDialog";
+import StatusDialog from "@/components/bookings/BookingStatusDialog";
 import ContactLog from "./ContactLog";
 
 /*
@@ -83,6 +83,7 @@ export default async function BookingDeskPage({
     totalPriceCents: booking.totalPriceCents,
     amountPaidCents: paid,
     paymentLink: booking.paymentLink,
+    instagram: booking.instagram,
   });
 
   const partyLabel = `${adults + kids} ${adults + kids === 1 ? "person" : "people"}`;

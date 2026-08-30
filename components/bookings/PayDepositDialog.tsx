@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { PaymentMethod } from "@prisma/client";
 
 import { payBookingDeposit } from "@/lib/actions/booking.actions";
+import { FOCUS_RING, MUTED } from "@/lib/bookings/status";
 
 type Props = {
   bookingId: string;
@@ -54,18 +55,22 @@ export default function PayDepositDialog({
   );
 
   const total = totalPriceCents ?? 0;
+  const balance = Math.max(0, total - amountPaidCents);
   const suggestedDeposit = Math.max(0, Math.round(total / 2) - amountPaidCents);
 
   const [amount, setAmount] = React.useState("");
   const [method, setMethod] = React.useState<PaymentMethod>(PaymentMethod.CASH);
   const [reference, setReference] = React.useState("");
   const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const [amountError, setAmountError] = React.useState<string | null>(null);
+  const amountInputRef = React.useRef<HTMLInputElement>(null);
 
   React.useEffect(() => {
     if (isOpen) {
       setAmount(suggestedDeposit > 0 ? String(suggestedDeposit / 100) : "");
       setMethod(PaymentMethod.CASH);
       setReference("");
+      setAmountError(null);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen]);
@@ -75,182 +80,212 @@ export default function PayDepositDialog({
   // A clamped "0 EGP remaining" used to make a mistyped 5000 look calm.
   const overpayCents =
     total > 0 ? Math.max(0, amountPaidCents + amountCents - total) : 0;
+  const amountHelpId = `deposit-amount-help-${bookingId}`;
+  const amountErrorId = `deposit-amount-error-${bookingId}`;
+  const amountDescribedBy = [
+    total > 0 ? amountHelpId : null,
+    amountError ? amountErrorId : null,
+  ]
+    .filter(Boolean)
+    .join(" ") || undefined;
 
   const onSubmit = async () => {
+    if (isSubmitting) return;
     if (!Number.isFinite(amountCents) || amountCents <= 0) {
-      toast.error("Enter an amount greater than 0");
+      setAmountError("Enter an amount greater than 0 EGP.");
+      amountInputRef.current?.focus();
       return;
     }
+    setAmountError(null);
     setIsSubmitting(true);
-    const res = await payBookingDeposit(bookingId, {
-      amountCents,
-      method,
-      reference: reference.trim() || null,
-    });
-    setIsSubmitting(false);
-    if (res.success) {
-      toast.success("Deposit recorded — booking confirmed");
-      setOpen(false);
-      onPaid?.(res.amountPaidCents ?? amountPaidCents + amountCents);
-      router.refresh();
-    } else {
-      toast.error(res.message ?? "Failed to record deposit");
+    try {
+      const res = await payBookingDeposit(bookingId, {
+        amountCents,
+        method,
+        reference: reference.trim() || null,
+      });
+      if (res.success) {
+        toast.success("Payment recorded — booking confirmed");
+        setOpen(false);
+        onPaid?.(res.amountPaidCents ?? amountPaidCents + amountCents);
+        router.refresh();
+      } else {
+        toast.error(res.message ?? "Could not record the payment. Check the details and try again.");
+      }
+    } catch {
+      toast.error("Could not reach the server. Your payment details are still here—try again.");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   return (
-    <DialogPrimitive.Root open={isOpen} onOpenChange={setOpen}>
+    <DialogPrimitive.Root
+      open={isOpen}
+      onOpenChange={(nextOpen) => {
+        if (!isSubmitting) setOpen(nextOpen);
+      }}
+    >
       {trigger && (
         <DialogPrimitive.Trigger asChild>{trigger}</DialogPrimitive.Trigger>
       )}
 
       <DialogPrimitive.Portal>
-        <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-[#1a1614]/35 backdrop-blur-md data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 duration-200" />
-        <DialogPrimitive.Content className="fixed left-1/2 top-1/2 z-50 max-h-[85dvh] w-[calc(100%-2rem)] max-w-[22rem] -translate-x-1/2 -translate-y-1/2 overflow-y-auto outline-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 duration-200">
-          <div
-            className="relative overflow-hidden rounded-[28px] ring-1 ring-white/60"
-            style={{
-              background: "linear-gradient(180deg, #FDFBF7 0%, #F4EFE6 100%)",
-              boxShadow:
-                "0 30px 80px -20px rgba(40, 32, 24, 0.35), 0 8px 24px -8px rgba(40, 32, 24, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.9)",
+        <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-[#1a1614]/35 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 duration-200" />
+        <DialogPrimitive.Content
+          aria-busy={isSubmitting}
+          className="fixed left-1/2 top-1/2 z-50 max-h-[85dvh] w-[calc(100%-2rem)] max-w-[24rem] -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-2xl border border-[#ece8e3] bg-white shadow-[0_24px_60px_-24px_rgba(26,22,20,0.45)] outline-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 duration-200"
+        >
+          <form
+            onSubmit={(event) => {
+              event.preventDefault();
+              void onSubmit();
             }}
           >
-            <div
-              aria-hidden
-              className="pointer-events-none absolute inset-0"
-              style={{
-                background:
-                  "radial-gradient(40rem 22rem at 50% -20%, rgba(237, 230, 248, 0.7) 0%, transparent 60%)",
-              }}
-            />
-
-            <div className="relative px-7 pt-7 pb-6">
-              <DialogPrimitive.Title className="sr-only">
-                Pay deposit
+            <header className="border-b border-[#ece8e3] px-5 py-4">
+              <DialogPrimitive.Title className="font-[family-name:var(--font-raleway)] text-xl font-[600] tracking-[-0.01em] text-[#1a1614]">
+                Record payment
               </DialogPrimitive.Title>
-              <DialogPrimitive.Description className="sr-only">
-                Record a deposit payment for this booking. Submitting confirms
-                the booking.
+              <DialogPrimitive.Description
+                className="mt-1 font-[family-name:var(--font-raleway)] text-[0.82rem]"
+                style={{ color: MUTED }}
+              >
+                {total > 0
+                  ? `${fmtEGP(balance)} EGP due`
+                  : "Add the amount and payment method."}
               </DialogPrimitive.Description>
+            </header>
 
-              {/* Hero — deposit amount */}
-              <div className="flex flex-col items-center text-center">
-                <span className="font-[family-name:var(--font-raleway)] text-[0.6rem] tracking-[0.28em] uppercase font-[600] text-[#b0a89f]">
-                  Pay deposit
-                </span>
-                <div className="mt-3 flex items-baseline gap-2">
-                  <span
-                    className="font-[family-name:var(--font-raleway)] font-[100] leading-none tracking-[-0.04em] text-[#1a1614] tabular-nums"
-                    style={{ fontSize: "clamp(2.75rem, 12vw, 3.75rem)" }}
-                  >
-                    {amountCents > 0 ? fmtEGP(amountCents) : "—"}
-                  </span>
-                  <span className="pb-1 font-[family-name:var(--font-raleway)] text-[0.82rem] font-[400] text-[#8a8480]">
-                    EGP
-                  </span>
-                </div>
+            <div className="space-y-4 px-5 py-5">
+              <div className="space-y-1.5">
+                <label
+                  htmlFor={`deposit-amount-${bookingId}`}
+                  className="font-[family-name:var(--font-raleway)] text-[0.75rem] tracking-[0.14em] uppercase font-[600] text-[#6b6460]"
+                >
+                  Amount (EGP)
+                </label>
+                <input
+                  ref={amountInputRef}
+                  id={`deposit-amount-${bookingId}`}
+                  type="number"
+                  inputMode="decimal"
+                  min="0.01"
+                  step="0.01"
+                  required
+                  value={amount}
+                  onChange={(e) => {
+                    setAmount(e.target.value);
+                    if (amountError) setAmountError(null);
+                  }}
+                  placeholder="0"
+                  autoFocus
+                  disabled={isSubmitting}
+                  aria-invalid={amountError ? "true" : undefined}
+                  aria-describedby={amountDescribedBy}
+                  className={`w-full rounded-xl border border-[#ece8e3] bg-white/70 px-3.5 py-2.5 text-[1rem] text-[#1a1614] font-[family-name:var(--font-roboto)] transition-colors disabled:opacity-50 ${FOCUS_RING}`}
+                />
                 {total > 0 && (
-                  <div className="mt-2 font-[family-name:var(--font-roboto-mono)] text-[0.75rem] tracking-[0.04em] text-[#6b6460]">
-                    {fmtEGP(remainingAfter)}
-                    <span className="ml-1">EGP remaining after</span>
-                  </div>
+                  <p
+                    id={amountHelpId}
+                    className="font-[family-name:var(--font-raleway)] text-[0.78rem] text-[#6b6460]"
+                  >
+                    {fmtEGP(remainingAfter)} EGP remains after this payment.
+                  </p>
+                )}
+                {amountError && (
+                  <p
+                    id={amountErrorId}
+                    role="alert"
+                    className="text-[0.78rem] font-[500] text-[#b91c1c]"
+                  >
+                    {amountError}
+                  </p>
                 )}
                 {overpayCents > 0 && (
-                  <p className="mt-2 rounded-xl bg-[#FBE3E1] px-3 py-2 font-[family-name:var(--font-raleway)] text-[0.78rem] font-[500] text-[#7E2A23]">
-                    That is {fmtEGP(overpayCents)} EGP more than the total owed.
-                    Check the amount before saving.
+                  <p className="rounded-xl bg-[#FBE3E1] px-3 py-2 font-[family-name:var(--font-raleway)] text-[0.78rem] font-[500] text-[#7E2A23]">
+                    {fmtEGP(overpayCents)} EGP above the amount due. Check before saving.
                   </p>
                 )}
               </div>
 
-              {/* Amount input */}
-              <div className="mt-7 space-y-1.5">
-                <label className="font-[family-name:var(--font-raleway)] text-[0.6rem] tracking-[0.18em] uppercase font-[600] text-[#8a8480]">
-                  Amount (EGP)
-                </label>
-                <input
-                  type="number"
-                  min="0"
-                  step="1"
-                  value={amount}
-                  onChange={(e) => setAmount(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") onSubmit();
-                  }}
-                  placeholder="0"
-                  autoFocus
-                  className="w-full rounded-xl border border-[#ece8e3] bg-white/70 px-3.5 py-2.5 text-[1rem] text-[#1a1614] font-[family-name:var(--font-roboto)] focus:outline-none focus:border-[#1a1614] transition-colors"
-                />
+              <div>
+                <fieldset disabled={isSubmitting}>
+                  <legend className="font-[family-name:var(--font-raleway)] text-[0.75rem] tracking-[0.14em] uppercase font-[600] text-[#6b6460]">
+                    Method
+                  </legend>
+                  <div className="mt-1.5 grid grid-cols-2 gap-1.5 sm:grid-cols-4">
+                    {METHODS.map((m) => {
+                      const active = method === m.value;
+                      return (
+                        <label key={m.value} className="cursor-pointer rounded-xl">
+                          <input
+                            type="radio"
+                            name={`payment-method-${bookingId}`}
+                            value={m.value}
+                            checked={active}
+                            onChange={() => setMethod(m.value)}
+                            className="peer sr-only"
+                          />
+                          <span
+                            className={`flex min-h-11 items-center justify-center rounded-xl border px-2 py-2 font-[family-name:var(--font-raleway)] text-[0.75rem] font-[600] transition-colors peer-focus-visible:outline-none peer-focus-visible:ring-2 peer-focus-visible:ring-[#1a1614] peer-focus-visible:ring-offset-2 peer-disabled:opacity-50 ${
+                              active
+                                ? "border-[#1a1614] bg-[#1a1614] text-white"
+                                : "border-[#ece8e3] bg-white/60 text-[#5b5650] hover:border-[#d6d0c8]"
+                            }`}
+                          >
+                            {m.label}
+                          </span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                </fieldset>
               </div>
 
-              {/* Method selector */}
-              <div className="mt-4 space-y-1.5">
-                <label className="font-[family-name:var(--font-raleway)] text-[0.6rem] tracking-[0.18em] uppercase font-[600] text-[#8a8480]">
-                  Method
-                </label>
-                <div className="grid grid-cols-4 gap-1.5">
-                  {METHODS.map((m) => {
-                    const active = method === m.value;
-                    return (
-                      <button
-                        key={m.value}
-                        type="button"
-                        onClick={() => setMethod(m.value)}
-                        className={`rounded-xl border py-2 font-[family-name:var(--font-raleway)] text-[0.72rem] font-[600] transition-all ${
-                          active
-                            ? "border-[#1a1614] bg-[#1a1614] text-white"
-                            : "border-[#ece8e3] bg-white/60 text-[#5b5650] hover:border-[#d6d0c8]"
-                        }`}
-                      >
-                        {m.label}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Reference */}
-              <div className="mt-4 space-y-1.5">
-                <label className="font-[family-name:var(--font-raleway)] text-[0.6rem] tracking-[0.18em] uppercase font-[600] text-[#8a8480]">
-                  Reference <span className="text-[#b0a89f]">(optional)</span>
+              <div className="space-y-1.5">
+                <label
+                  htmlFor={`deposit-reference-${bookingId}`}
+                  className="font-[family-name:var(--font-raleway)] text-[0.75rem] tracking-[0.14em] uppercase font-[600] text-[#6b6460]"
+                >
+                  Reference <span className="normal-case tracking-normal">(optional)</span>
                 </label>
                 <input
+                  id={`deposit-reference-${bookingId}`}
                   type="text"
                   value={reference}
                   onChange={(e) => setReference(e.target.value)}
                   placeholder="e.g. transfer ref, note"
-                  className="w-full rounded-xl border border-[#ece8e3] bg-white/70 px-3.5 py-2.5 text-[0.92rem] text-[#1a1614] font-[family-name:var(--font-roboto)] focus:outline-none focus:border-[#1a1614] transition-colors"
+                  disabled={isSubmitting}
+                  className={`w-full rounded-xl border border-[#ece8e3] bg-white/70 px-3.5 py-2.5 text-[1rem] text-[#1a1614] font-[family-name:var(--font-roboto)] transition-colors disabled:opacity-50 ${FOCUS_RING}`}
                 />
               </div>
+            </div>
 
-              {/* Buttons */}
-              {/* The one thing that matters most used to be sr-only, so the
-                  sighted majority never saw it. */}
-              <p className="mt-6 font-[family-name:var(--font-raleway)] text-[0.78rem] leading-snug text-[#6b6460]">
-                Saving records this payment against the booking and confirms it.
+            <footer className="border-t border-[#ece8e3] bg-[#faf9f7] px-5 py-4">
+              <p className="mb-3 font-[family-name:var(--font-raleway)] text-[0.78rem] leading-snug text-[#6b6460]">
+                Recording this payment confirms the booking.
               </p>
 
-              <div className="mt-3 grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+              <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
                 <DialogPrimitive.Close asChild>
                   <button
                     type="button"
                     disabled={isSubmitting}
-                    className="h-11 rounded-full bg-white/60 backdrop-blur-sm border border-[#ece8e3] font-[family-name:var(--font-raleway)] text-[0.78rem] tracking-[0.08em] uppercase font-[600] text-[#5b5650] transition-all duration-150 hover:bg-white hover:border-[#d6d0c8] active:scale-[0.985] disabled:opacity-40"
+                    className={`h-11 rounded-full bg-white/60 border border-[#ece8e3] font-[family-name:var(--font-raleway)] text-[0.78rem] tracking-[0.08em] uppercase font-[600] text-[#5b5650] transition-colors duration-150 hover:bg-white hover:border-[#d6d0c8] disabled:opacity-40 ${FOCUS_RING}`}
                   >
                     Cancel
                   </button>
                 </DialogPrimitive.Close>
                 <button
-                  type="button"
-                  onClick={onSubmit}
+                  type="submit"
                   disabled={isSubmitting}
-                  className="h-11 rounded-full bg-[#1a1614] font-[family-name:var(--font-raleway)] text-[0.78rem] tracking-[0.08em] uppercase font-[700] text-white shadow-[0_4px_14px_-4px_rgba(26,22,20,0.45)] transition-all duration-150 hover:bg-[#2a2522] active:scale-[0.985] disabled:opacity-50"
+                  className={`h-11 rounded-full bg-[#1a1614] font-[family-name:var(--font-raleway)] text-[0.78rem] tracking-[0.08em] uppercase font-[700] text-white shadow-[0_4px_14px_-4px_rgba(26,22,20,0.45)] transition-colors duration-150 hover:bg-[#2a2522] disabled:opacity-50 ${FOCUS_RING}`}
                 >
                   {isSubmitting ? "Saving…" : "Record & confirm"}
                 </button>
               </div>
-            </div>
-          </div>
+            </footer>
+          </form>
         </DialogPrimitive.Content>
       </DialogPrimitive.Portal>
     </DialogPrimitive.Root>

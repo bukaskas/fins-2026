@@ -3,13 +3,16 @@
 import * as React from "react";
 import { Copy, Check } from "lucide-react";
 import { toast } from "sonner";
+import { FOCUS_RING } from "@/lib/bookings/status";
 
 export function CopyButton({
   value,
   toastLabel = "Copied",
+  accessibleLabel = "Copy value",
 }: {
   value: string;
   toastLabel?: string;
+  accessibleLabel?: string;
 }) {
   const [copied, setCopied] = React.useState(false);
 
@@ -28,13 +31,14 @@ export function CopyButton({
     <button
       type="button"
       onClick={onCopy}
-      aria-label={`Copy ${value}`}
-      className="group flex w-full items-center justify-between gap-3 rounded-2xl bg-white/70 backdrop-blur-sm border border-[#ece8e3] px-5 py-4 transition-all duration-150 ease-out hover:bg-white hover:border-[#d6d0c8] active:scale-[0.99] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#d6d0c8]"
+      aria-label={accessibleLabel}
+      className={`group flex min-h-12 w-full items-center justify-between gap-3 rounded-2xl bg-white/70 border border-[#ece8e3] px-5 py-4 transition-colors duration-150 hover:bg-white hover:border-[#d6d0c8] ${FOCUS_RING}`}
     >
       <span className="font-[family-name:var(--font-roboto-mono)] text-[1.05rem] tracking-[0.06em] text-[#1a1614] tabular-nums">
         {value}
       </span>
       <span
+        aria-hidden="true"
         className={`grid h-8 w-8 shrink-0 place-items-center rounded-full transition-all duration-200 ${
           copied
             ? "bg-[#1a1614] text-white scale-105"
@@ -46,6 +50,9 @@ export function CopyButton({
         ) : (
           <Copy className="h-3.5 w-3.5" strokeWidth={1.75} />
         )}
+      </span>
+      <span className="sr-only" role="status" aria-live="polite">
+        {copied ? toastLabel : ""}
       </span>
     </button>
   );

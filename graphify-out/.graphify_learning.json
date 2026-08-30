@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-08-26T17:24:10.315985+00:00",
+  "generated_at": "2026-08-30T13:03:22.348240+00:00",
   "nodes": {
     "app_api_payments_flash_webhook_route": {
       "code_fingerprint": "062c82c99b7551a852bf2b216b661fc65b4e92bcdc67473f32d6a004d93a01fe",
@@ -12,7 +12,7 @@
           "q": "for the online flash payment method, where is the callback url?"
         }
       ],
-      "score": 0.946050766,
+      "score": 0.866152642,
       "source_file": "app/api/payments/flash/webhook/route.ts",
       "status": "tentative",
       "uses": 1
@@ -28,8 +28,172 @@
           "q": "for the online flash payment method, where is the callback url?"
         }
       ],
-      "score": 0.946050766,
+      "score": 0.866152642,
       "source_file": "app/api/payments/flash/webhook/route.ts",
+      "status": "tentative",
+      "uses": 1
+    },
+    "app_root_bookings_page": {
+      "code_fingerprint": "46e98f35d33ee5dfb8d79ea181f85218cc4921814873d17e803fe836a3312f82",
+      "label": "bookings/page.tsx",
+      "last": "2026-08-29T16:22:55.383311+00:00",
+      "provenance": [
+        {
+          "date": "2026-08-29T16:22:55.383311+00:00",
+          "outcome": "useful",
+          "q": "What files and components define the bookings page and its UI flows?"
+        }
+      ],
+      "score": 0.980293657,
+      "source_file": "app/(root)/bookings/page.tsx",
+      "status": "tentative",
+      "uses": 1
+    },
+    "app_root_day_use_booking_page_dayusebookingform": {
+      "code_fingerprint": "0a759129b4f7054b6ff82f2ccc1987448f4124cd7c466304ea69e8d5b705de8d",
+      "label": "DayUseBookingForm()",
+      "last": "2026-08-26T17:27:14.836520+00:00",
+      "provenance": [
+        {
+          "date": "2026-08-26T17:27:14.836520+00:00",
+          "outcome": "useful",
+          "q": "Create a plan for a coffee shop QR partnership that gives day-use bookings a 25% discount and stores a coffee-shop reference"
+        }
+      ],
+      "score": 0.915590805,
+      "source_file": "app/(root)/day-use/booking/page.tsx",
+      "status": "tentative",
+      "uses": 1
+    },
+    "components_bookings_bookingsfilters_bookingsfilters": {
+      "code_fingerprint": "a9679e10e54312b82f293df7b3ab6f8f544371b0720544f6da723bea29a7c873",
+      "label": "BookingsFilters()",
+      "last": "2026-08-29T16:22:55.383311+00:00",
+      "provenance": [
+        {
+          "date": "2026-08-29T16:22:55.383311+00:00",
+          "outcome": "useful",
+          "q": "What files and components define the bookings page and its UI flows?"
+        }
+      ],
+      "score": 0.980293657,
+      "source_file": "components/bookings/BookingsFilters.tsx",
+      "status": "tentative",
+      "uses": 1
+    },
+    "components_bookings_bookingsheaderactions_bookingsheaderactions": {
+      "code_fingerprint": "9819af306a443389dfa1d3885dfd76f71db7d13d4a697ef8e8244162f84fa518",
+      "label": "BookingsHeaderActions()",
+      "last": "2026-08-29T16:22:55.383311+00:00",
+      "provenance": [
+        {
+          "date": "2026-08-29T16:22:55.383311+00:00",
+          "outcome": "useful",
+          "q": "What files and components define the bookings page and its UI flows?"
+        }
+      ],
+      "score": 0.980293657,
+      "source_file": "components/bookings/BookingsHeaderActions.tsx",
+      "status": "tentative",
+      "uses": 1
+    },
+    "components_bookings_paydepositdialog": {
+      "code_fingerprint": "2d84cf4194ca8b4e7fee98d3af574694d6dea41705e6feb1f2e0f23b2c9d008e",
+      "label": "PayDepositDialog.tsx",
+      "last": "2026-08-30T12:56:48.775630+00:00",
+      "provenance": [
+        {
+          "date": "2026-08-30T12:56:48.775630+00:00",
+          "outcome": "useful",
+          "q": "How should the shared booking decision row be hardened around status, balance, messages, payments, contacts, and errors?"
+        }
+      ],
+      "score": 0.999894757,
+      "source_file": "components/bookings/PayDepositDialog.tsx",
+      "status": "tentative",
+      "uses": 1
+    },
+    "components_kitesurfing_bookingcomponent": {
+      "code_fingerprint": "7ff4cf4adc672e50993a560ea7b6e0a47cbf93983163fcfabbe6e353c874df13",
+      "label": "BookingComponent.tsx",
+      "last": "2026-08-30T12:56:48.775630+00:00",
+      "provenance": [
+        {
+          "date": "2026-08-30T12:56:48.775630+00:00",
+          "outcome": "useful",
+          "q": "How should the shared booking decision row be hardened around status, balance, messages, payments, contacts, and errors?"
+        },
+        {
+          "date": "2026-08-30T07:56:54.054454+00:00",
+          "outcome": "useful",
+          "q": "How should the booking row combine status, balance due, and the next WhatsApp action using current data and actions?"
+        },
+        {
+          "date": "2026-08-29T16:22:55.383311+00:00",
+          "outcome": "useful",
+          "q": "What files and components define the bookings page and its UI flows?"
+        }
+      ],
+      "score": 2.975283126,
+      "source_file": "components/kitesurfing/BookingComponent.tsx",
+      "status": "preferred",
+      "uses": 3
+    },
+    "lib_actions_booking_actions": {
+      "code_fingerprint": "63f7912f479c0270c341f09d6ea725c3d4cad6180b6a6dfc8dc82e5ff168bb98",
+      "label": "booking.actions.ts",
+      "last": "2026-08-30T12:56:48.775630+00:00",
+      "provenance": [
+        {
+          "date": "2026-08-30T12:56:48.775630+00:00",
+          "outcome": "useful",
+          "q": "How should the shared booking decision row be hardened around status, balance, messages, payments, contacts, and errors?"
+        },
+        {
+          "date": "2026-08-30T07:56:54.054454+00:00",
+          "outcome": "useful",
+          "q": "How should the booking row combine status, balance due, and the next WhatsApp action using current data and actions?"
+        },
+        {
+          "date": "2026-08-29T16:22:55.383311+00:00",
+          "outcome": "useful",
+          "q": "What files and components define the bookings page and its UI flows?"
+        }
+      ],
+      "score": 2.975283126,
+      "source_file": "lib/actions/booking.actions.ts",
+      "status": "preferred",
+      "uses": 3
+    },
+    "lib_actions_booking_actions_createbooking": {
+      "code_fingerprint": "63f7912f479c0270c341f09d6ea725c3d4cad6180b6a6dfc8dc82e5ff168bb98",
+      "label": "createBooking()",
+      "last": "2026-08-26T17:27:14.836520+00:00",
+      "provenance": [
+        {
+          "date": "2026-08-26T17:27:14.836520+00:00",
+          "outcome": "useful",
+          "q": "Create a plan for a coffee shop QR partnership that gives day-use bookings a 25% discount and stores a coffee-shop reference"
+        }
+      ],
+      "score": 0.915590805,
+      "source_file": "lib/actions/booking.actions.ts",
+      "status": "tentative",
+      "uses": 1
+    },
+    "lib_actions_booking_actions_getdayusemonthlyreport": {
+      "code_fingerprint": "63f7912f479c0270c341f09d6ea725c3d4cad6180b6a6dfc8dc82e5ff168bb98",
+      "label": "getDayUseMonthlyReport()",
+      "last": "2026-08-26T17:27:14.836520+00:00",
+      "provenance": [
+        {
+          "date": "2026-08-26T17:27:14.836520+00:00",
+          "outcome": "useful",
+          "q": "Create a plan for a coffee shop QR partnership that gives day-use bookings a 25% discount and stores a coffee-shop reference"
+        }
+      ],
+      "score": 0.915590805,
+      "source_file": "lib/actions/booking.actions.ts",
       "status": "tentative",
       "uses": 1
     },
@@ -44,8 +208,24 @@
           "q": "for the online flash payment method, where is the callback url?"
         }
       ],
-      "score": 0.946050766,
+      "score": 0.866152642,
       "source_file": "lib/flash.ts",
+      "status": "tentative",
+      "uses": 1
+    },
+    "lib_pricing_calculatedayuseprice": {
+      "code_fingerprint": "12079b914c7596da0b5bf9e4d056b931890504869d7bb43b354c293592d320de",
+      "label": "calculateDayUsePrice()",
+      "last": "2026-08-26T17:27:14.836520+00:00",
+      "provenance": [
+        {
+          "date": "2026-08-26T17:27:14.836520+00:00",
+          "outcome": "useful",
+          "q": "Create a plan for a coffee shop QR partnership that gives day-use bookings a 25% discount and stores a coffee-shop reference"
+        }
+      ],
+      "score": 0.915590805,
+      "source_file": "lib/pricing.ts",
       "status": "tentative",
       "uses": 1
     }

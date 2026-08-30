@@ -5,6 +5,7 @@ import { CopyButton } from "./CopyButton";
 import PayDepositOnline from "./PayDepositOnline";
 import PaymentCountdown from "./PaymentCountdown";
 import { WAITING_PAYMENT_WINDOW_MS } from "@/lib/constants";
+import { FOCUS_RING } from "@/lib/bookings/status";
 
 const INSTAGRAM_URL = "https://ig.me/m/finskitesurfing";
 const INSTAGRAM_DISPLAY = "@finskitesurfing";
@@ -20,13 +21,6 @@ const SCREENSHOT_STATUSES: BookingStatus[] = [
 ];
 
 type Variant = "pending" | "screenshots" | "payment" | "confirmed";
-
-const TINT: Record<Variant, string> = {
-  pending: "rgba(214, 234, 248, 0.55)",
-  payment: "rgba(237, 230, 248, 0.55)",
-  screenshots: "rgba(252, 230, 213, 0.55)",
-  confirmed: "rgba(226, 240, 230, 0.6)",
-};
 
 function getVariant(status: BookingStatus): Variant | null {
   if (status === BookingStatus.PENDING) return "pending";
@@ -69,23 +63,8 @@ export default function NextStepCard({
 
   return (
     <section className="mt-8">
-      <div
-        className="relative overflow-hidden rounded-[24px] ring-1 ring-white/60"
-        style={{
-          background: "linear-gradient(180deg, #FDFBF7 0%, #F4EFE6 100%)",
-          boxShadow:
-            "0 20px 50px -20px rgba(40, 32, 24, 0.18), 0 4px 16px -6px rgba(40, 32, 24, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.9)",
-        }}
-      >
-        <div
-          aria-hidden
-          className="pointer-events-none absolute inset-0"
-          style={{
-            background: `radial-gradient(40rem 22rem at 50% -20%, ${TINT[variant]} 0%, transparent 60%)`,
-          }}
-        />
-
-        <div className="relative px-6 py-6 md:px-8 md:py-7">
+      <div className="rounded-2xl border border-[#ece8e3] bg-white shadow-[0_1px_6px_rgba(26,22,20,0.08)]">
+        <div className="px-6 py-6 md:px-8 md:py-7">
           {variant === "pending" && <PendingBody />}
           {variant === "screenshots" && <ScreenshotsBody />}
           {variant === "payment" && (
@@ -106,17 +85,9 @@ export default function NextStepCard({
   );
 }
 
-function Eyebrow({ children }: { children: React.ReactNode }) {
-  return (
-    <span className="font-[family-name:var(--font-raleway)] text-[0.72rem] sm:text-[0.6rem] tracking-[0.28em] uppercase font-[600] text-[#6b6460]">
-      {children}
-    </span>
-  );
-}
-
 function Heading({ children }: { children: React.ReactNode }) {
   return (
-    <h2 className="mt-3 font-[family-name:var(--font-raleway)] text-[1.75rem] md:text-[2rem] font-[200] tracking-[-0.015em] text-[#1a1614] leading-[1.1]">
+    <h2 className="font-[family-name:var(--font-raleway)] text-[1.75rem] md:text-[2rem] font-[400] tracking-[-0.015em] text-[#1a1614] leading-[1.1]">
       {children}
     </h2>
   );
@@ -132,7 +103,7 @@ function Body({ children }: { children: React.ReactNode }) {
 
 function MicroLabel({ children }: { children: React.ReactNode }) {
   return (
-    <div className="font-[family-name:var(--font-raleway)] text-[0.72rem] sm:text-[0.58rem] tracking-[0.24em] uppercase font-[600] text-[#6b6460]">
+    <div className="font-[family-name:var(--font-raleway)] text-[0.75rem] tracking-[0.16em] uppercase font-[600] text-[#6b6460]">
       {children}
     </div>
   );
@@ -144,13 +115,13 @@ function InstagramButton({ caption }: { caption: string }) {
       href={INSTAGRAM_URL}
       target="_blank"
       rel="noopener noreferrer"
-      className="group flex items-center gap-4 rounded-2xl bg-[#1a1614] px-5 py-4 text-white transition-all duration-150 ease-out hover:bg-[#2a2522] active:scale-[0.99] shadow-[0_8px_24px_-10px_rgba(26,22,20,0.5)]"
+      className={`group flex min-h-12 items-center gap-4 rounded-2xl bg-[#1a1614] px-5 py-4 text-white transition-colors duration-150 hover:bg-[#2a2522] shadow-[0_8px_24px_-10px_rgba(26,22,20,0.5)] ${FOCUS_RING}`}
     >
       <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-white/10 ring-1 ring-white/15 transition-colors group-hover:bg-white/15">
-        <Instagram className="h-4 w-4" strokeWidth={1.6} />
+        <Instagram className="h-4 w-4" strokeWidth={1.6} aria-hidden="true" />
       </span>
       <span className="flex flex-col items-start leading-tight">
-        <span className="font-[family-name:var(--font-raleway)] text-[0.72rem] sm:text-[0.6rem] tracking-[0.22em] uppercase font-[600] text-white/55">
+        <span className="font-[family-name:var(--font-raleway)] text-[0.75rem] tracking-[0.16em] uppercase font-[600] text-white/70">
           {caption}
         </span>
         <span className="mt-0.5 font-[family-name:var(--font-roboto-mono)] text-[0.95rem] tracking-[0.04em]">
@@ -167,13 +138,13 @@ function WhatsAppButton({ caption }: { caption: string }) {
       href={WHATSAPP_URL}
       target="_blank"
       rel="noopener noreferrer"
-      className="group flex items-center gap-4 rounded-2xl bg-[#1a1614] px-5 py-4 text-white transition-all duration-150 ease-out hover:bg-[#2a2522] active:scale-[0.99] shadow-[0_8px_24px_-10px_rgba(26,22,20,0.5)]"
+      className={`group flex min-h-12 items-center gap-4 rounded-2xl bg-[#1a1614] px-5 py-4 text-white transition-colors duration-150 hover:bg-[#2a2522] shadow-[0_8px_24px_-10px_rgba(26,22,20,0.5)] ${FOCUS_RING}`}
     >
       <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-white/10 ring-1 ring-white/15 transition-colors group-hover:bg-white/15">
-        <MessageCircle className="h-4 w-4" strokeWidth={1.6} />
+        <MessageCircle className="h-4 w-4" strokeWidth={1.6} aria-hidden="true" />
       </span>
       <span className="flex flex-col items-start leading-tight">
-        <span className="font-[family-name:var(--font-raleway)] text-[0.72rem] sm:text-[0.6rem] tracking-[0.22em] uppercase font-[600] text-white/55">
+        <span className="font-[family-name:var(--font-raleway)] text-[0.75rem] tracking-[0.16em] uppercase font-[600] text-white/70">
           {caption}
         </span>
         <span className="mt-0.5 font-[family-name:var(--font-roboto-mono)] text-[0.95rem] tracking-[0.04em]">
@@ -184,14 +155,6 @@ function WhatsAppButton({ caption }: { caption: string }) {
   );
 }
 
-function HairlineDivider() {
-  return (
-    <div className="my-6 flex items-center gap-3">
-      <span className="h-px flex-1 bg-gradient-to-r from-transparent via-[#ece8e3] to-transparent" />
-    </div>
-  );
-}
-
 function ConfirmedBody({ remainingCents }: { remainingCents: number }) {
   return (
     <div className="flex items-start gap-4">
@@ -199,10 +162,9 @@ function ConfirmedBody({ remainingCents }: { remainingCents: number }) {
         className="mt-0.5 grid h-11 w-11 shrink-0 place-items-center rounded-full text-white shadow-[0_8px_20px_-8px_rgba(31,91,54,0.6)]"
         style={{ background: "linear-gradient(180deg, #62B07F, #4FAEA6)" }}
       >
-        <Check className="h-5 w-5" strokeWidth={2.25} />
+        <Check className="h-5 w-5" strokeWidth={2.25} aria-hidden="true" />
       </span>
       <div className="min-w-0">
-        <Eyebrow>Confirmed</Eyebrow>
         <Heading>Thank you for booking at Fins</Heading>
         <Body>Please show this reservation page on arrival.</Body>
 
@@ -211,10 +173,10 @@ function ConfirmedBody({ remainingCents }: { remainingCents: number }) {
             <div>
               <MicroLabel>Pay on arrival</MicroLabel>
               <div className="mt-1.5 flex items-baseline gap-1">
-                <span className="font-[family-name:var(--font-raleway)] text-[1.6rem] font-[200] leading-none tracking-[-0.02em] text-[#1a1614]">
+                <span className="font-[family-name:var(--font-raleway)] text-[1.6rem] font-[400] leading-none tracking-[-0.02em] text-[#1a1614]">
                   {fmtEGP(remainingCents)}
                 </span>
-                <span className="font-[family-name:var(--font-raleway)] text-[0.72rem] sm:text-[0.7rem] font-[400] text-[#6b6460]">
+                <span className="font-[family-name:var(--font-raleway)] text-[0.75rem] font-[400] text-[#6b6460]">
                   EGP
                 </span>
               </div>
@@ -229,7 +191,6 @@ function ConfirmedBody({ remainingCents }: { remainingCents: number }) {
 function PendingBody() {
   return (
     <>
-      <Eyebrow>Booking request received</Eyebrow>
       <Heading>Thank you for your booking request</Heading>
       <Body>
         Please let us check the availability and we&rsquo;ll get back to you as
@@ -245,7 +206,6 @@ function PendingBody() {
 function ScreenshotsBody() {
   return (
     <>
-      <Eyebrow>Next step</Eyebrow>
       <Heading>Send the guests&rsquo; Instagram handles</Heading>
       <Body>
         We&rsquo;re reviewing your booking. Please send us screenshots of the
@@ -279,57 +239,51 @@ function PaymentBody({
 
   return (
     <>
-      <Eyebrow>Complete your booking</Eyebrow>
-      <Heading>Pay a 50% deposit to confirm</Heading>
+      <Heading>Pay 50% to confirm</Heading>
       <Body>
-        Your reservation is on hold. Pay the deposit securely online to confirm
-        it instantly — the deposit is{" "}
-        <span className="text-[#1a1614] font-[500]">non-refundable</span> and
-        reservations{" "}
-        <span className="text-[#1a1614] font-[500]">cannot be postponed</span>.
+        Your booking is held for 24 hours. The deposit is non-refundable and
+        cannot be moved to another date.
       </Body>
 
       {deadline && (
         <div className="mt-5">
           <PaymentCountdown deadline={deadline} />
-          <p className="mt-2 font-[family-name:var(--font-raleway)] text-[0.78rem] font-[400] text-[#6b6460] leading-[1.5]">
-            Pay within 24 hours or this reservation is released automatically.
-          </p>
         </div>
       )}
 
       {totalCents > 0 && (
-        <div className="mt-6 grid grid-cols-2 gap-3">
-          <div className="rounded-2xl bg-white/70 ring-1 ring-[#ece8e3] px-4 py-3.5">
-            <MicroLabel>Pay now</MicroLabel>
-            <div className="mt-1.5 flex items-baseline gap-1">
-              <span className="font-[family-name:var(--font-raleway)] text-[1.6rem] font-[200] leading-none tracking-[-0.02em] text-[#1a1614]">
+        <dl className="mt-6 divide-y divide-[#ece8e3] border-y border-[#ece8e3]">
+          <div className="flex items-baseline justify-between gap-4 py-3">
+            <dt className="font-[family-name:var(--font-raleway)] text-[0.88rem] font-[500] text-[#3a3531]">
+              Pay now
+            </dt>
+            <dd className="flex items-baseline gap-1 text-right">
+              <span className="font-[family-name:var(--font-roboto-mono)] text-[1.35rem] font-[500] leading-none tabular-nums text-[#1a1614]">
                 {fmtEGP(depositDueCents)}
               </span>
-              <span className="font-[family-name:var(--font-raleway)] text-[0.72rem] sm:text-[0.7rem] font-[400] text-[#6b6460]">
+              <span className="font-[family-name:var(--font-raleway)] text-[0.75rem] font-[400] text-[#6b6460]">
                 EGP
               </span>
-            </div>
-            <div className="mt-1 font-[family-name:var(--font-raleway)] text-[0.72rem] sm:text-[0.68rem] font-[400] text-[#6b6460]">
-              50% deposit
-            </div>
+            </dd>
           </div>
 
-          <div className="rounded-2xl bg-white/40 ring-1 ring-[#ece8e3] px-4 py-3.5">
-            <MicroLabel>On arrival</MicroLabel>
-            <div className="mt-1.5 flex items-baseline gap-1">
-              <span className="font-[family-name:var(--font-raleway)] text-[1.6rem] font-[200] leading-none tracking-[-0.02em] text-[#1a1614]">
+          <div className="flex items-baseline justify-between gap-4 py-3">
+            <dt className="font-[family-name:var(--font-raleway)] text-[0.88rem] font-[500] text-[#3a3531]">
+              On arrival
+              <span className="mt-0.5 block text-[0.75rem] font-[400] text-[#6b6460]">
+                Cash or Visa
+              </span>
+            </dt>
+            <dd className="flex items-baseline gap-1 text-right">
+              <span className="font-[family-name:var(--font-roboto-mono)] text-[1.35rem] font-[500] leading-none tabular-nums text-[#1a1614]">
                 {fmtEGP(remainingCents)}
               </span>
-              <span className="font-[family-name:var(--font-raleway)] text-[0.72rem] sm:text-[0.7rem] font-[400] text-[#6b6460]">
+              <span className="font-[family-name:var(--font-raleway)] text-[0.75rem] font-[400] text-[#6b6460]">
                 EGP
               </span>
-            </div>
-            <div className="mt-1 font-[family-name:var(--font-raleway)] text-[0.72rem] sm:text-[0.68rem] font-[400] text-[#6b6460]">
-              Remaining balance
-            </div>
+            </dd>
           </div>
-        </div>
+        </dl>
       )}
 
       {/* Primary action: pay the deposit online */}
@@ -337,21 +291,11 @@ function PaymentBody({
         <PayDepositOnline bookingId={bookingId} paymentLink={paymentLink} />
       </div>
 
-      <p className="mt-4 font-[family-name:var(--font-raleway)] text-[0.82rem] font-[400] text-[#5b5650] leading-[1.55]">
-        The remaining balance is due{" "}
-        <span className="text-[#1a1614] font-[500]">
-          in cash or visa on arrival
-        </span>
-        .
-      </p>
-
-      <HairlineDivider />
-
       {/* Secondary fallback: manual bank transfer */}
-      <details className="group">
-        <summary className="flex cursor-pointer list-none items-center justify-between font-[family-name:var(--font-raleway)] text-[0.82rem] font-[500] text-[#5b5650] transition-colors hover:text-[#1a1614]">
-          <span>Prefer to pay by bank transfer?</span>
-          <span className="text-[1.1rem] leading-none text-[#6b6460] transition-transform group-open:rotate-45">
+      <details className="group mt-4 border-t border-[#ece8e3] pt-2">
+        <summary className={`flex min-h-11 cursor-pointer list-none items-center justify-between rounded-lg font-[family-name:var(--font-raleway)] text-[0.82rem] font-[500] text-[#5b5650] transition-colors hover:text-[#1a1614] ${FOCUS_RING}`}>
+          <span>Pay by bank transfer</span>
+          <span aria-hidden="true" className="text-[1.1rem] leading-none text-[#6b6460] transition-transform group-open:rotate-45">
             +
           </span>
         </summary>
@@ -370,6 +314,7 @@ function PaymentBody({
               <CopyButton
                 value={ACCOUNT_NUMBER}
                 toastLabel="Account number copied"
+                accessibleLabel="Copy bank account number"
               />
             </div>
           </div>

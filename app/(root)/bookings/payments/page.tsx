@@ -3,10 +3,12 @@ import { format } from "date-fns";
 import { getServerSession } from "next-auth/next";
 import { redirect } from "next/navigation";
 import { Role } from "@prisma/client";
+import { ArrowLeft } from "lucide-react";
 
 import { authOptions } from "@/lib/auth";
 import { getAllDepositPayments } from "@/lib/actions/booking.actions";
 import { DeletePaymentButton } from "./DeletePaymentButton";
+import { FOCUS_RING, MUTED } from "@/lib/bookings/status";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -35,20 +37,27 @@ export default async function DepositPaymentsPage() {
 
   const result = await getAllDepositPayments();
   if (!result.success) {
-    return <div className="p-6 max-w-5xl mx-auto">Error: {result.message}</div>;
+    return (
+      <div
+        role="alert"
+        className="mx-auto max-w-5xl p-6 font-[family-name:var(--font-raleway)] text-base text-[#b91c1c]"
+      >
+        Could not load booking payments: {result.message}
+      </div>
+    );
   }
   const payments = result.data;
   const totalCents = payments.reduce((s, p) => s + p.amountCents, 0);
 
   return (
-    <div className="p-6 max-w-5xl mx-auto">
+    <main className="mx-auto max-w-5xl p-4 sm:p-6">
       {/* Header */}
-      <div className="mb-6 flex items-center justify-between gap-4">
+      <div className="mb-6 flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
         <div>
-          <h1 className="font-[family-name:var(--font-raleway)] text-3xl font-[200] tracking-tight text-[#1a1614]">
+          <h1 className="font-[family-name:var(--font-raleway)] text-3xl font-[400] tracking-tight text-[#1a1614]">
             Deposit transfers
           </h1>
-          <p className="mt-1 font-[family-name:var(--font-raleway)] text-[0.8rem] text-[#8a8480]">
+          <p className="mt-1 font-[family-name:var(--font-raleway)] text-[0.8rem]" style={{ color: MUTED }}>
             {payments.length} {payments.length === 1 ? "payment" : "payments"} ·{" "}
             <span className="font-[family-name:var(--font-roboto-mono)] text-[#5b5650]">
               {fmtEGP(totalCents)} EGP
@@ -58,28 +67,38 @@ export default async function DepositPaymentsPage() {
         </div>
         <Link
           href="/bookings"
-          className="font-[family-name:var(--font-raleway)] text-[0.62rem] tracking-[0.22em] uppercase font-[600] text-[#b0a89f] hover:text-[#1a1614] transition-colors"
+          className={`inline-flex min-h-11 items-center gap-2 rounded-full px-3 font-[family-name:var(--font-raleway)] text-[0.75rem] tracking-[0.14em] uppercase font-[600] text-[#6b6460] transition-colors hover:bg-[#f5f2ef] hover:text-[#1a1614] ${FOCUS_RING}`}
         >
-          ← Bookings
+          <ArrowLeft className="size-4" strokeWidth={1.8} aria-hidden="true" />
+          Bookings
         </Link>
       </div>
 
       {payments.length === 0 ? (
-        <p className="text-[#8a8480] text-sm py-10 text-center font-[family-name:var(--font-raleway)]">
+        <p className="py-10 text-center font-[family-name:var(--font-raleway)] text-sm" style={{ color: MUTED }}>
           No deposit payments recorded yet.
         </p>
       ) : (
-        <div className="overflow-hidden rounded-xl border border-[#ece8e3] bg-white">
-          <table className="w-full text-left">
+        <div
+          role="region"
+          aria-label="Booking payments table"
+          tabIndex={0}
+          className={`overflow-x-auto rounded-xl border border-[#ece8e3] bg-white ${FOCUS_RING}`}
+        >
+          <table className="min-w-[52rem] w-full text-left">
+            <caption className="sr-only">
+              Recorded booking payments, including guest, amount, method, reference, and actions
+            </caption>
             <thead>
               <tr className="border-b border-[#ece8e3] bg-[#FBF8F3]">
-                {["Date", "Guest", "Agent", "Amount", "Method", "Reference", ""].map(
+                {["Date", "Guest", "Agent", "Amount", "Method", "Reference", "Actions"].map(
                   (h, i) => (
                     <th
-                      key={h || `col-${i}`}
-                      className="px-4 py-3 font-[family-name:var(--font-raleway)] text-[0.58rem] tracking-[0.18em] uppercase font-[700] text-[#8a8480]"
+                      key={`${h}-${i}`}
+                      scope="col"
+                      className="px-4 py-3 font-[family-name:var(--font-raleway)] text-[0.75rem] tracking-[0.12em] uppercase font-[700] text-[#6b6460]"
                     >
-                      {h}
+                      {h === "Actions" ? <span className="sr-only">Actions</span> : h}
                     </th>
                   )
                 )}
@@ -97,16 +116,16 @@ export default async function DepositPaymentsPage() {
                     key={p.id}
                     className="border-b border-[#f3f0ec] last:border-0 hover:bg-[#FBF8F3] transition-colors"
                   >
-                    <td className="px-4 py-3 font-[family-name:var(--font-roboto-mono)] text-[0.72rem] text-[#5b5650] whitespace-nowrap">
+                    <td className="px-4 py-3 font-[family-name:var(--font-roboto-mono)] text-[0.75rem] text-[#5b5650] whitespace-nowrap">
                       {format(new Date(p.createdAt), "d MMM yyyy")}
-                      <span className="block text-[0.62rem] text-[#b0a89f]">
+                      <span className="block text-[0.75rem] text-[#6b6460]">
                         {format(new Date(p.createdAt), "HH:mm")}
                       </span>
                     </td>
                     <td className="px-4 py-3">
                       <Link
                         href={`/bookings/${p.bookingId}`}
-                        className="font-[family-name:var(--font-raleway)] text-[0.88rem] font-[500] text-[#1a1614] hover:underline"
+                        className={`inline-flex min-h-11 items-center rounded-md font-[family-name:var(--font-raleway)] text-[0.88rem] font-[500] text-[#1a1614] hover:underline ${FOCUS_RING}`}
                       >
                         {p.booking?.name ?? "—"}
                       </Link>
@@ -121,18 +140,18 @@ export default async function DepositPaymentsPage() {
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
                       <span
-                        className="inline-flex items-center rounded-full px-2.5 py-0.5 font-[family-name:var(--font-raleway)] text-[0.6rem] tracking-[0.1em] uppercase font-[700]"
+                        className="inline-flex items-center rounded-full px-2.5 py-1 font-[family-name:var(--font-raleway)] text-[0.75rem] tracking-[0.08em] uppercase font-[700]"
                         style={{ background: tone.bg, color: tone.text }}
                       >
                         {p.method}
                       </span>
                       {isFlash && (
-                        <span className="ml-1.5 inline-flex items-center rounded-full bg-[#1a1614] px-2 py-0.5 font-[family-name:var(--font-raleway)] text-[0.55rem] tracking-[0.1em] uppercase font-[700] text-white">
+                        <span className="ml-1.5 inline-flex items-center rounded-full bg-[#1a1614] px-2 py-1 font-[family-name:var(--font-raleway)] text-[0.75rem] tracking-[0.08em] uppercase font-[700] text-white">
                           Flash
                         </span>
                       )}
                     </td>
-                    <td className="px-4 py-3 font-[family-name:var(--font-roboto-mono)] text-[0.68rem] text-[#b0a89f] max-w-[14rem] truncate">
+                    <td className="max-w-[14rem] truncate px-4 py-3 font-[family-name:var(--font-roboto-mono)] text-[0.75rem] text-[#6b6460]">
                       {p.reference ?? "—"}
                     </td>
                     <td className="px-4 py-3 text-right whitespace-nowrap">
@@ -149,7 +168,7 @@ export default async function DepositPaymentsPage() {
               <tr className="border-t border-[#ece8e3] bg-[#FBF8F3]">
                 <td
                   colSpan={3}
-                  className="px-4 py-3 font-[family-name:var(--font-raleway)] text-[0.62rem] tracking-[0.18em] uppercase font-[700] text-[#8a8480]"
+                  className="px-4 py-3 font-[family-name:var(--font-raleway)] text-[0.75rem] tracking-[0.12em] uppercase font-[700] text-[#6b6460]"
                 >
                   Total
                 </td>
@@ -162,6 +181,6 @@ export default async function DepositPaymentsPage() {
           </table>
         </div>
       )}
-    </div>
+    </main>
   );
 }

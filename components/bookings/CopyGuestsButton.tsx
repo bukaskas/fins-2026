@@ -40,13 +40,18 @@ export function useCopyGuests(loadGuests: () => Promise<Guest[]>) {
       }
 
       const text = guests
-        .map((g) => `${g.name}, ${format(new Date(g.date), "EEE d MMM")}, ${g.phone}`)
+        .map(
+          (g) =>
+            `${g.name}, ${format(new Date(g.date), "EEE d MMM")}, ${g.phone}`,
+        )
         .join("\n");
 
       try {
         await navigator.clipboard.writeText(text);
         setCopied(true);
-        toast.success(`Copied ${guests.length} guest${guests.length === 1 ? "" : "s"}`);
+        toast.success(
+          `Copied ${guests.length} guest${guests.length === 1 ? "" : "s"}`,
+        );
         setTimeout(() => setCopied(false), 1500);
       } catch {
         toast.error("Failed to copy to clipboard");
@@ -70,14 +75,14 @@ export function CopyGuestsButton({
     <Button
       variant="outline"
       size="sm"
-      className="rounded-full"
+      className="min-h-11 rounded-full border-[#ece8e3] bg-transparent px-4 font-[family-name:var(--font-raleway)] text-[0.75rem] font-[600] text-[#5a5450] shadow-none hover:border-[#d6d0c8] hover:bg-white hover:text-[#1a1614] focus-visible:ring-[#1a1614]"
       onClick={copyGuests}
       disabled={isPending}
     >
       {copied ? (
-        <Check className="h-4 w-4 mr-1" />
+        <Check className="mr-1 h-4 w-4 text-[#15803d]" aria-hidden="true" />
       ) : (
-        <Copy className="h-4 w-4 mr-1" />
+        <Copy className="mr-1 h-4 w-4" aria-hidden="true" />
       )}
       {isPending ? "Copying…" : label}
     </Button>

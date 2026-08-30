@@ -99,6 +99,16 @@ export const CLOSING_STATUSES: BookingStatus[] = [
   BookingStatus.CANCELED,
 ];
 
+/**
+ * Transitions that start machinery, make a promise to the guest, or close the
+ * booking. These always require an explicit second confirmation in staff UI.
+ */
+export const CONFIRMATION_STATUSES: BookingStatus[] = [
+  BookingStatus.WAITING_PAYMENT,
+  BookingStatus.CONFIRMED,
+  ...CLOSING_STATUSES,
+];
+
 /** What a status change actually triggers, shown before the user commits. */
 export const STATUS_CONSEQUENCE: Partial<Record<BookingStatus, string>> = {
   WAITING_PAYMENT:
