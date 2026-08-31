@@ -1,6 +1,6 @@
 {
   "adultPriceCents": 150000,
-  "kidsPriceCents": 60000,
+  "kidsRateMultiplier": 0.5,
   "holidaySurchargeCents": 10000,
   "discountMultiplier": 0.75,
   "holidayDates": [

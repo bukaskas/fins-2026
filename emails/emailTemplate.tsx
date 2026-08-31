@@ -401,10 +401,10 @@ BookingEmail.PreviewProps = {
   numberOfKids: 1,
   priceBreakdown: {
     adultUnitCents: 160000,
-    kidsUnitCents: 70000,
+    kidsUnitCents: 80000,
     adultTotalCents: 320000,
-    kidsTotalCents: 70000,
-    totalCents: 390000,
+    kidsTotalCents: 80000,
+    totalCents: 400000,
     rateType: "holiday",
   },
   bookingUrl: "https://www.finskitesurfing.com/bookings/preview",

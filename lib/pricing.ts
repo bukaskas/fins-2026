@@ -6,7 +6,10 @@ import pricingConfig from "@/lib/config/pricing.json";
 // 750-vs-600 EGP contradiction between the ad and the checkout, and later a
 // 1,600-vs-1,500 one on holiday dates.
 export const ADULT_PRICE_CENTS = pricingConfig.adultPriceCents;
-export const KIDS_PRICE_CENTS = pricingConfig.kidsPriceCents;
+// Children pay half the adult rate for the same date, so the rule lives here as
+// a multiplier rather than a second absolute price that has to be kept in step.
+export const KIDS_RATE_MULTIPLIER = pricingConfig.kidsRateMultiplier;
+export const KIDS_PRICE_CENTS = toWholeEgp(ADULT_PRICE_CENTS * KIDS_RATE_MULTIPLIER);
 const HOLIDAY_SURCHARGE_CENTS = pricingConfig.holidaySurchargeCents; // flat, on holiday dates
 const DISCOUNT_MULTIPLIER = pricingConfig.discountMultiplier;
 
@@ -14,6 +17,11 @@ export const PHARAOH_ADULT_PRICE_CENTS = 120000; // 1,200 EGP
 export const PHARAOH_KIDS_PRICE_CENTS = 60000;   // 600 EGP
 
 export type RateType = "standard" | "holiday" | "discounted";
+
+/** Prices are quoted in whole EGP, so a half rate never lands on a stray piastre. */
+function toWholeEgp(cents: number): number {
+  return Math.round(cents / 100) * 100;
+}
 
 function toDateString(date: Date): string {
   return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}-${String(date.getUTCDate()).padStart(2, "0")}`;
@@ -48,16 +56,16 @@ export function calculateDayUsePrice(
 ): PriceBreakdown {
   const rateType = getDateRate(date);
 
-  // Both rates get the same treatment so a holiday or discounted day reads
-  // consistently across the party.
   const applyRate = (baseCents: number) => {
     if (rateType === "holiday") return baseCents + HOLIDAY_SURCHARGE_CENTS;
     if (rateType === "discounted") return Math.round(baseCents * DISCOUNT_MULTIPLIER);
     return baseCents;
   };
 
+  // The child rate is taken off the adult rate for that same date, so a holiday
+  // or discounted day stays half price across the party instead of drifting.
   const adultUnitCents = applyRate(ADULT_PRICE_CENTS);
-  const kidsUnitCents = applyRate(KIDS_PRICE_CENTS);
+  const kidsUnitCents = toWholeEgp(adultUnitCents * KIDS_RATE_MULTIPLIER);
   const adultTotalCents = adultUnitCents * adults;
   const kidsTotalCents = kidsUnitCents * kids;
 

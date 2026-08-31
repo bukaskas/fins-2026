@@ -100,10 +100,12 @@ surface.
    says: no payment now, WhatsApp confirmation within 24 hours, payment link
    valid 24 hours. That last one is a real server behaviour
    (`waitingPaymentAt`) and guests must not meet it by surprise.
-3. **Prices have one source.** The kids rate lives in `lib/config/pricing.json`
-   and is read by both the landing page's advertised figure and the form's
-   calculation. Deriving one from the other produced a 600 vs 750 EGP
-   contradiction between the ad and the checkout.
+3. **Prices have one source.** Rates live in `lib/config/pricing.json` and are
+   read by both the landing page's advertised figures and the form's
+   calculation. The kids rate is half the adult rate for the same date
+   (`kidsRateMultiplier`), computed once in `lib/pricing.ts` — a surface that
+   derives or restates a figure produced a 600 vs 750 EGP contradiction between
+   the ad and the checkout.
 4. **The photograph is not decoration on mobile.** This route is reached by QR
    and Instagram link, so the brand rail stays visible at every breakpoint as a
    banner rather than being hidden below `md`.
