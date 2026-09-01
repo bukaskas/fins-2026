@@ -152,7 +152,7 @@ function DialogTitle({
         <div className="flex items-center gap-3">
           <span className="h-px w-7 flex-shrink-0" style={{ background: accentColor }} />
           <span
-            className="text-[0.58rem] tracking-[0.32em] uppercase font-[family-name:var(--font-raleway)] font-medium"
+            className="text-[0.75rem] tracking-[0.32em] uppercase font-[family-name:var(--font-raleway)] font-medium"
             style={{ color: accentColor }}
           >
             {eyebrow}

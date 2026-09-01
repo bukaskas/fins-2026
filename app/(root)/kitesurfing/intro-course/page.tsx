@@ -42,6 +42,7 @@ function IntroCoursePage() {
               { label: "Group size", value: "2 to 4 students" },
             ]}
             note="The intro session is not designed to get you riding the board — its goal is to give you the knowledge and feel needed to decide if you want to continue with a full beginner course."
+            course="intro"
             bookLabel="Book intro session"
           />
         }

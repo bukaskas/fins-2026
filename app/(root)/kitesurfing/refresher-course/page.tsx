@@ -42,6 +42,7 @@ function RefresherCoursePage() {
               { label: "Group size", value: "2 to 4 students" },
             ]}
             note="We check your current skills and work on exactly what you need to ride safely and independently — the pace depends on wind conditions and where you are in your progression."
+            course="refresher"
             bookLabel="Book refresher course"
           />
         }

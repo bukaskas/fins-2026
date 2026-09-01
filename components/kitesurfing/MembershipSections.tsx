@@ -30,7 +30,11 @@ const tiers = [
 
 function MembershipSections() {
   return (
-    <section id="member" className="bg-neu-base scroll-mt-40">
+    <section
+      id="member"
+      aria-label="Memberships and beach access"
+      className="bg-neu-base scroll-mt-[var(--section-scroll-mt)]"
+    >
       <div className="max-w-7xl mx-auto px-6 md:px-14 lg:px-20 py-20 md:py-28">
         <Reveal>
           {/* Header */}
@@ -39,7 +43,7 @@ function MembershipSections() {
               aria-hidden="true"
               className="h-px w-7 flex-shrink-0 bg-neu-primary"
             />
-            <span className="text-[0.7rem] tracking-[0.3em] uppercase font-[family-name:var(--font-raleway)] font-[600] text-neu-primary">
+            <span className="text-[0.75rem] tracking-[0.3em] uppercase font-[family-name:var(--font-raleway)] font-[600] text-neu-primary-ink">
               Beach Access
             </span>
           </div>
@@ -47,9 +51,9 @@ function MembershipSections() {
           <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4 mb-16">
             <h2 className="font-[family-name:var(--font-raleway)] leading-none">
               <span className="block text-[clamp(2.2rem,4.5vw,4rem)] font-[300] tracking-[-0.02em] text-neu-fg leading-[0.95]">
-                Memberships &amp;
+                Memberships &amp;{" "}
               </span>
-              <span className="block text-[clamp(2.2rem,4.5vw,4rem)] font-[800] tracking-[-0.02em] text-neu-primary leading-[0.95]">
+              <span className="block text-[clamp(2.2rem,4.5vw,4rem)] font-[800] tracking-[-0.02em] text-neu-primary-ink leading-[0.95]">
                 Beach Access
               </span>
             </h2>
@@ -68,14 +72,14 @@ function MembershipSections() {
                 <div
                   className={`flex flex-col flex-1 rounded-[2rem] p-8 transition-shadow duration-300 ${
                     featured
-                      ? "bg-neu-primary text-white shadow-neu"
+                      ? "bg-neu-primary text-neu-fg shadow-neu"
                       : "neu-raised-sm hover:shadow-neu"
                   }`}
                 >
                   {/* Tier name */}
                   <p
-                    className={`text-[0.7rem] tracking-[0.28em] uppercase font-[family-name:var(--font-raleway)] font-[600] mb-7 ${
-                      featured ? "text-white/80" : "text-neu-muted"
+                    className={`text-[0.75rem] tracking-[0.28em] uppercase font-[family-name:var(--font-raleway)] font-[600] mb-7 ${
+                      featured ? "text-neu-fg" : "text-neu-muted"
                     }`}
                   >
                     {name}
@@ -85,14 +89,14 @@ function MembershipSections() {
                   <div className="mb-6">
                     <span
                       className={`font-[family-name:var(--font-raleway)] text-[2.8rem] font-[300] leading-none tracking-tight ${
-                        featured ? "text-white" : "text-neu-fg"
+                        featured ? "text-neu-fg" : "text-neu-fg"
                       }`}
                     >
                       {price}
                     </span>
                     <span
                       className={`text-[0.75rem] tracking-wide font-[family-name:var(--font-raleway)] font-[400] ml-2 ${
-                        featured ? "text-white/75" : "text-neu-muted"
+                        featured ? "text-neu-fg" : "text-neu-muted"
                       }`}
                     >
                       EGP {period}
@@ -103,14 +107,14 @@ function MembershipSections() {
                   <div
                     aria-hidden="true"
                     className={`h-px w-8 mb-5 ${
-                      featured ? "bg-white/30" : "bg-[#8898aa]/30"
+                      featured ? "bg-neu-fg/30" : "bg-[#8898aa]/30"
                     }`}
                   />
 
                   {/* Description */}
                   <p
                     className={`text-[0.85rem] font-[family-name:var(--font-raleway)] font-[400] leading-relaxed mb-6 ${
-                      featured ? "text-white/85" : "text-neu-muted"
+                      featured ? "text-neu-fg" : "text-neu-muted"
                     }`}
                   >
                     {description}
@@ -122,13 +126,13 @@ function MembershipSections() {
                       <li
                         key={f}
                         className={`flex items-center gap-2.5 text-[0.8rem] font-[family-name:var(--font-raleway)] font-[400] ${
-                          featured ? "text-white/85" : "text-neu-fg"
+                          featured ? "text-neu-fg" : "text-neu-fg"
                         }`}
                       >
                         <span
                           aria-hidden="true"
                           className={`w-[5px] h-[5px] rounded-full flex-shrink-0 ${
-                            featured ? "bg-white" : "bg-neu-primary"
+                            featured ? "bg-neu-fg" : "bg-neu-primary"
                           }`}
                         />
                         {f}
@@ -140,11 +144,11 @@ function MembershipSections() {
                   <div className="mt-auto">
                     <Link
                       href="/day-use/booking"
-                      className={`group inline-flex items-center gap-2 text-[0.72rem] tracking-[0.18em] uppercase font-[family-name:var(--font-raleway)] font-[600] transition-opacity duration-200 hover:opacity-70 ${
-                        featured ? "text-white" : "text-neu-primary"
+                      className={`group inline-flex items-center gap-2 text-[0.75rem] tracking-[0.18em] uppercase font-[family-name:var(--font-raleway)] font-[600] transition-opacity duration-200 hover:opacity-70 ${
+                        featured ? "text-neu-fg" : "text-neu-primary-ink"
                       }`}
                     >
-                      Book now
+                      Reserve beach access
                       <span
                         aria-hidden="true"
                         className="group-hover:translate-x-1 transition-transform duration-200"

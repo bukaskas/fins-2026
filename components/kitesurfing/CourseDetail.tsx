@@ -1,7 +1,8 @@
 import Image, { StaticImageData } from "next/image";
 import Link from "next/link";
 import Reveal from "@/components/kitesurfing/Reveal";
-import { KITESURFING_BOOKING_URL } from "@/lib/constants";
+import BookCourseLink from "@/components/kitesurfing/BookCourseLink";
+import type { CourseSlug } from "@/lib/booking-url";
 
 /**
  * Shared building blocks for the course detail pages
@@ -26,7 +27,7 @@ export function CourseHero({
 }) {
   return (
     <section className="bg-neu-base overflow-hidden">
-      <div className="max-w-6xl mx-auto px-4 md:px-6 lg:px-8 pt-24 md:pt-32 pb-12 md:pb-16 grid lg:grid-cols-[1fr_1.1fr] gap-10 lg:gap-14 items-center">
+      <div className="max-w-7xl mx-auto px-6 md:px-14 lg:px-20 pt-24 md:pt-32 pb-12 md:pb-16 grid lg:grid-cols-[1fr_1.1fr] gap-10 lg:gap-14 items-center">
         <div>
           <Reveal>
             <div className="flex items-center gap-3 mb-6">
@@ -34,7 +35,7 @@ export function CourseHero({
                 aria-hidden="true"
                 className="h-px w-7 flex-shrink-0 bg-neu-primary"
               />
-              <span className="text-[0.7rem] tracking-[0.3em] uppercase font-[family-name:var(--font-raleway)] font-[600] text-neu-primary">
+              <span className="text-[0.75rem] tracking-[0.3em] uppercase font-[family-name:var(--font-raleway)] font-[600] text-neu-primary-ink">
                 {eyebrow}
               </span>
             </div>
@@ -45,7 +46,7 @@ export function CourseHero({
               <span className="block text-[clamp(2.6rem,5.5vw,4.8rem)] font-[300] tracking-[-0.02em] text-neu-fg leading-[0.95]">
                 {titleLight}
               </span>
-              <span className="block text-[clamp(2.6rem,5.5vw,4.8rem)] font-[800] tracking-[-0.02em] text-neu-primary leading-[0.95]">
+              <span className="block text-[clamp(2.6rem,5.5vw,4.8rem)] font-[800] tracking-[-0.02em] text-neu-primary-ink leading-[0.95]">
                 {titleBold}
               </span>
             </h1>
@@ -88,7 +89,7 @@ export function CourseIntro({
 }) {
   return (
     <div className="space-y-4">
-      <p className="text-[0.7rem] font-[600] uppercase tracking-[0.3em] text-neu-primary">
+      <p className="text-[0.75rem] font-[600] uppercase tracking-[0.3em] text-neu-primary-ink">
         {eyebrow}
       </p>
       <h2 className="max-w-3xl text-3xl md:text-4xl font-[600] leading-tight tracking-[-0.01em] text-neu-fg">
@@ -133,7 +134,7 @@ export function CourseFlow({
       <div className="mt-6 grid gap-4 md:grid-cols-3">
         {steps.map(({ step, title: stepTitle, description }) => (
           <div key={step} className="rounded-2xl bg-neu-inset/45 p-5">
-            <p className="text-[0.75rem] font-[600] tracking-[0.3em] text-neu-primary">
+            <p className="text-[0.75rem] font-[600] tracking-[0.3em] text-neu-primary-ink">
               {step}
             </p>
             <h3 className="mt-3 text-lg font-[600] text-neu-fg">{stepTitle}</h3>
@@ -152,11 +153,14 @@ export function CourseAside({
   rows,
   note,
   bookLabel,
+  course,
 }: {
   title: string;
   rows: { label: string; value: string }[];
   note: string;
   bookLabel: string;
+  /** Sent to the school app so the guest arrives with this course chosen. */
+  course: CourseSlug;
 }) {
   return (
     <aside className="h-fit neu-raised rounded-3xl p-6 md:sticky md:top-32 md:p-8">
@@ -176,12 +180,12 @@ export function CourseAside({
       <p className="mt-6 text-sm leading-7 text-neu-muted font-[400]">{note}</p>
 
       <div className="mt-8 flex flex-col gap-3">
-        <Link
-          href={KITESURFING_BOOKING_URL}
-          className="neu-btn inline-flex items-center justify-center rounded-2xl bg-neu-primary text-white text-[0.8rem] font-[700] tracking-[0.1em] uppercase px-6 py-3.5 shadow-neu-sm"
+        <BookCourseLink
+          course={course}
+          className="neu-btn inline-flex items-center justify-center gap-2 rounded-2xl bg-neu-primary text-neu-fg text-[0.8rem] font-[700] tracking-[0.1em] uppercase px-6 py-3.5 shadow-neu-sm"
         >
           {bookLabel}
-        </Link>
+        </BookCourseLink>
         <Link
           href="/kitesurfing"
           className="neu-btn neu-raised-sm inline-flex items-center justify-center rounded-2xl text-neu-fg text-[0.8rem] font-[600] tracking-[0.1em] uppercase px-6 py-3.5"
@@ -201,7 +205,12 @@ export function CourseLayout({
   aside: React.ReactNode;
 }) {
   return (
-    <section className="mx-auto grid max-w-6xl gap-8 px-4 py-12 md:grid-cols-[1.35fr_0.85fr] md:px-6 lg:px-8">
+    /* Measure is set by the grid ratio, not a max-width: at max-w-7xl the
+       reading column resolves to 653px, which is ~59ch against the 18px body.
+       A `max-w-[68ch]` guard was tried here and removed — `ch` resolves against
+       this element's inherited 16px, so it computed to the same 653px and never
+       bound. */
+    <section className="mx-auto grid max-w-7xl gap-8 px-6 py-12 md:grid-cols-[1.35fr_0.85fr] md:px-14 lg:gap-14 lg:px-20">
       <div className="space-y-8">{children}</div>
       {aside}
     </section>

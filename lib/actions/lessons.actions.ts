@@ -5,20 +5,13 @@ import { Prisma, WalletType } from "@prisma/client";
 import { LessonType, LessonBookingStatus, OrderStatus, ProductType } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import bcryptjs from "bcryptjs";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { hasCapability, requireCapability } from "@/lib/auth-guard";
-import { sendBookingEmail, sendStaffNotificationEmail } from "@/emails";
-import {
-  KitesurfingBookingFormData,
-  kitesurfingBookingFormSchema,
-  newLessonFormSchema,
-} from "@/lib/validators";
+import { newLessonFormSchema } from "@/lib/validators";
 import { ensureCommissionForSession } from "@/lib/actions/commission.actions";
 import { ensureSessionRevenue } from "@/lib/actions/session-revenue";
 import {
-  LESSON_CANONICAL_MINUTES,
   LESSON_TYPE_SKU,
   getDefaultProductForLessonType,
   referenceMinutesFor,
@@ -360,103 +353,18 @@ export async function createLessonSessionQuick(data: {
   }
 }
 
-export async function createKitesurfingBookingFromPublic(
-  data: KitesurfingBookingFormData
-) {
-  try {
-    const validated = kitesurfingBookingFormSchema.parse(data);
-
-    const [h, m] = validated.time.split(":").map(Number);
-    const startsAt = new Date(validated.date);
-    startsAt.setUTCHours(h, m, 0, 0);
-    const endsAt = new Date(
-      startsAt.getTime() +
-      LESSON_CANONICAL_MINUTES[LessonType.PRIVATE] * 60 * 1000
-    );
-
-    let user = await prisma.user.findUnique({
-      where: { email: validated.email },
-      select: { id: true },
-    });
-    if (!user) {
-      const hashedPassword = await bcryptjs.hash(crypto.randomUUID(), 10);
-      user = await prisma.user.create({
-        data: {
-          email: validated.email,
-          name: validated.name,
-          phone: validated.phone,
-          password: hashedPassword,
-        },
-        select: { id: true },
-      });
-    }
-
-    const { session, booking } = await prisma.$transaction(async (tx) => {
-      const session = await tx.lessonSession.create({
-        data: {
-          startsAt,
-          endsAt,
-          lessonType: LessonType.PRIVATE,
-          capacity: 1,
-          instructorId: null,
-          notes: validated.notes,
-        },
-      });
-      const booking = await tx.lessonBooking.create({
-        data: {
-          sessionId: session.id,
-          guestId: user!.id,
-          status: LessonBookingStatus.RESERVED,
-        },
-      });
-      return { session, booking };
-    });
-
-    try {
-      await sendBookingEmail(
-        validated.email,
-        validated.name,
-        startsAt,
-        {
-          bookingType: "kitesurfing-course",
-          // Unlike createBooking's PENDING rows, this one holds a real seat on
-          // a real session (LessonBookingStatus.RESERVED), so it may say so.
-          confirmed: true,
-        },
-      );
-    } catch (emailError) {
-      console.error("Failed to send booking confirmation email:", emailError);
-    }
-
-    try {
-      await sendStaffNotificationEmail(
-        validated.name,
-        validated.email,
-        validated.phone,
-        startsAt,
-        "kitesurfing-course",
-        1,
-      );
-    } catch (emailError) {
-      console.error("Failed to send staff notification email:", emailError);
-    }
-
-    return {
-      success: true,
-      message: `Booking received for ${startsAt.toDateString()}`,
-      bookingId: booking.id,
-      date: startsAt,
-      bookingType: "kitesurfing-course" as string,
-    };
-  } catch (error) {
-    console.error("Kitesurfing booking error:", error);
-    // Public action: never echo internal error details to anonymous callers.
-    return {
-      success: false,
-      message: "Failed to create booking. Please try again or contact us.",
-    };
-  }
-}
+// createKitesurfingBookingFromPublic was removed on 2026-09-01.
+//
+// It backed the public form at /kitesurfing/booking, which nothing linked to.
+// Kitesurfing is owned by the school management app on its own database, so a
+// public write here produced a booking no one worked from: it created a
+// LessonSession + LessonBooking (delivery, not sales), hardcoded PRIVATE and
+// capacity 1, silently created a User with a random password for any new
+// email, and emailed both guest and staff. The route was public and
+// canonical-tagged, so a stale link or a crawler could still fire all of it.
+//
+// See app/(root)/kitesurfing/booking-form.md for the full review and the
+// Phase 1 plan (write through to the school app's API instead).
 
 export async function updateLessonSession(
   id: string,

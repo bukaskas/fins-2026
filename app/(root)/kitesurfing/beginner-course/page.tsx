@@ -43,6 +43,7 @@ function BeginnerCoursePage() {
               { label: "Group size", value: "2 to 4 students" },
             ]}
             note="The exact pace depends on wind conditions and student progress. The goal is not to rush through the hours, but to build the right habits and confidence step by step."
+            course="beginner"
             bookLabel="Book beginner course"
           />
         }

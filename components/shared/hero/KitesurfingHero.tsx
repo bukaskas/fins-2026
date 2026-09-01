@@ -2,7 +2,7 @@ import Link from "next/link";
 import Image, { StaticImageData } from "next/image";
 import kiteMobile from "@/public/images/hero_images/hero_mobile2.webp";
 import kiteDesktop from "@/public/images/hero_images/kitesurfing_desktop2.webp";
-import { KITESURFING_BOOKING_URL } from "@/lib/constants";
+import BookCourseLink from "@/components/kitesurfing/BookCourseLink";
 
 type KitesurfingHeroProps = {
   mobileSrc?: StaticImageData;
@@ -103,16 +103,15 @@ export function KitesurfingHero({
 
         {/* CTAs */}
         <div className="flex items-center gap-7">
-          <Link
-            href={KITESURFING_BOOKING_URL}
-            className="group inline-flex items-center gap-2 text-black text-[0.75rem] font-[700] tracking-[0.14em] uppercase px-6 py-3 font-[family-name:var(--font-raleway)] transition-opacity duration-200 hover:opacity-85"
+          {/* Goes through BookCourseLink like every other booking CTA, so the
+              homepage slide cannot drift from the rest: same label, same
+              external handling, same source attribution. */}
+          <BookCourseLink
+            className="group inline-flex min-h-[44px] items-center gap-2 text-black text-[0.75rem] font-[700] tracking-[0.14em] uppercase px-6 font-[family-name:var(--font-raleway)] transition-opacity duration-200 hover:opacity-85"
             style={{ background: accent }}
           >
-            Book a Lesson
-            <span className="group-hover:translate-x-1 transition-transform duration-200 text-sm">
-              →
-            </span>
-          </Link>
+            Book a course
+          </BookCourseLink>
           <Link
             href="/kitesurfing#courses"
             className="text-white/55 hover:text-white text-[0.68rem] tracking-[0.22em] uppercase font-[family-name:var(--font-raleway)] transition-colors duration-200"

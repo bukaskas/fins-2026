@@ -28,7 +28,7 @@ function NavLink({ href, children }: { href: string; children: React.ReactNode }
   return (
     <Link
       href={href}
-      className="group relative text-neu-fg hover:text-neu-primary text-[0.72rem] font-[500] tracking-[0.18em] uppercase font-[family-name:var(--font-raleway)] transition-colors duration-200"
+      className="group relative text-neu-fg hover:text-neu-primary-ink text-[0.75rem] font-[500] tracking-[0.18em] uppercase font-[family-name:var(--font-raleway)] transition-colors duration-200"
     >
       {children}
       <span
@@ -68,7 +68,7 @@ async function Menu() {
             height={80}
             alt={APP_NAME}
           />
-          <span className="hidden lg:block text-[0.55rem] tracking-[0.28em] uppercase text-neu-muted font-[400] -mt-1 whitespace-nowrap">
+          <span className="hidden lg:block text-[0.75rem] tracking-[0.28em] uppercase text-neu-muted font-[400] -mt-1 whitespace-nowrap">
             kite surfing center
           </span>
         </Link>
@@ -84,7 +84,7 @@ async function Menu() {
           {isInstructor && role !== "ADMIN" && (
             <Link
               href="/my-schedule"
-              className="text-[0.72rem] font-[500] tracking-[0.18em] uppercase font-[family-name:var(--font-raleway)] text-neu-fg hover:text-neu-primary transition-colors"
+              className="text-[0.75rem] font-[500] tracking-[0.18em] uppercase font-[family-name:var(--font-raleway)] text-neu-fg hover:text-neu-primary-ink transition-colors"
             >
               My Schedule
             </Link>
@@ -107,7 +107,7 @@ async function Menu() {
         </Link>
 
         <Sheet>
-          <SheetTrigger className="absolute right-4 p-1 text-neu-fg hover:text-neu-primary transition-colors cursor-pointer">
+          <SheetTrigger className="absolute right-4 p-1 text-neu-fg hover:text-neu-primary-ink transition-colors cursor-pointer">
             <MenuIcon size={26} strokeWidth={1.5} />
           </SheetTrigger>
 
@@ -135,7 +135,7 @@ async function Menu() {
                   <SheetClose asChild key={link.href}>
                     <Link
                       href={link.href}
-                      className="flex items-center px-3 py-3 text-lg font-[400] tracking-[0.1em] text-neu-fg hover:text-neu-primary hover:bg-neu-inset rounded-xl transition-colors font-[family-name:var(--font-raleway)]"
+                      className="flex items-center px-3 py-3 text-lg font-[400] tracking-[0.1em] text-neu-fg hover:text-neu-primary-ink hover:bg-neu-inset rounded-xl transition-colors font-[family-name:var(--font-raleway)]"
                     >
                       {link.title}
                     </Link>
@@ -149,7 +149,7 @@ async function Menu() {
                   <SheetClose asChild>
                     <Link
                       href="/my-schedule"
-                      className="flex items-center px-3 py-3 text-lg font-[400] tracking-[0.1em] text-neu-fg hover:text-neu-primary hover:bg-neu-inset rounded-xl transition-colors font-[family-name:var(--font-raleway)]"
+                      className="flex items-center px-3 py-3 text-lg font-[400] tracking-[0.1em] text-neu-fg hover:text-neu-primary-ink hover:bg-neu-inset rounded-xl transition-colors font-[family-name:var(--font-raleway)]"
                     >
                       My Schedule
                     </Link>
@@ -165,7 +165,7 @@ async function Menu() {
             <div className="border-t border-[#8898aa]/20 px-4 py-5">
               <UserAuthButton
                 session={session}
-                className="w-full justify-start text-base font-[400] tracking-wide text-neu-fg hover:text-neu-primary hover:bg-neu-inset h-11 px-3"
+                className="w-full justify-start text-base font-[400] tracking-wide text-neu-fg hover:text-neu-primary-ink hover:bg-neu-inset h-11 px-3"
               />
             </div>
 

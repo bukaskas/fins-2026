@@ -76,7 +76,7 @@ export function AdminLinks({ role }: { role: string | null | undefined }) {
         <Button
           suppressHydrationWarning
           variant="outline"
-          className="h-8 rounded-xl border-[#8898aa]/30 bg-transparent text-neu-fg hover:bg-neu-inset hover:text-neu-fg text-[0.68rem] tracking-[0.15em] uppercase font-[500] font-[family-name:var(--font-raleway)] px-4"
+          className="h-8 rounded-xl border-[#8898aa]/30 bg-transparent text-neu-fg hover:bg-neu-inset hover:text-neu-fg text-[0.75rem] tracking-[0.15em] uppercase font-[500] font-[family-name:var(--font-raleway)] px-4"
         >
           {label}
         </Button>
@@ -109,20 +109,20 @@ export function AdminLinksMobile({ role }: { role: string | null | undefined }) 
   const label = role === "RECEPTION" ? "Desk" : "Admin";
   return (
     <div className="flex flex-col border-t border-[#8898aa]/20 pt-4 px-4 pb-2">
-      <p className="px-3 pb-2 text-[0.62rem] tracking-[0.35em] uppercase text-neu-muted font-[family-name:var(--font-raleway)] font-[500]">
+      <p className="px-3 pb-2 text-[0.75rem] tracking-[0.35em] uppercase text-neu-muted font-[family-name:var(--font-raleway)] font-[500]">
         {label}
       </p>
       {groups.map((group, groupIndex) => (
         <div key={group.label}>
           {groupIndex > 0 && <div className="my-1 border-t border-[#8898aa]/15" />}
-          <p className="px-3 pt-1.5 pb-0.5 text-[0.62rem] tracking-[0.25em] uppercase text-neu-muted/80 font-[family-name:var(--font-raleway)] font-[500]">
+          <p className="px-3 pt-1.5 pb-0.5 text-[0.75rem] tracking-[0.25em] uppercase text-neu-muted/80 font-[family-name:var(--font-raleway)] font-[500]">
             {group.label}
           </p>
           {group.links.map((link) => (
             <SheetClose asChild key={link.href}>
               <Link
                 href={link.href}
-                className="flex w-full items-center px-3 py-2 text-sm font-[400] tracking-wide text-neu-fg hover:text-neu-primary hover:bg-neu-inset rounded-xl transition-colors font-[family-name:var(--font-raleway)]"
+                className="flex w-full items-center px-3 py-2 text-sm font-[400] tracking-wide text-neu-fg hover:text-neu-primary-ink hover:bg-neu-inset rounded-xl transition-colors font-[family-name:var(--font-raleway)]"
               >
                 {link.title}
               </Link>

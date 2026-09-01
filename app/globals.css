@@ -12,8 +12,32 @@
   --color-neu-base: #e3ebf3;
   --color-neu-inset: #d6e0ea;
   --color-neu-fg: #22303f;
-  --color-neu-muted: #5b6b7c;
+  /* Muted was #5b6b7c, which is 4.54:1 on the base but only 4.09:1 on the inset
+     and 4.10:1 on a bg-neu-inset/45 chip — MASTER.md quoted the base figure as
+     if it held everywhere. This clears AA on all three (5.34 / 4.81 / 4.82) and
+     stays clearly secondary to the foreground. */
+  --color-neu-muted: #526070;
+  /*
+   * The accent lives at three steps of one sky ramp, each with a fixed job.
+   * Splitting it this way is not decoration: #0ea5e9 is 2.30:1 on the base and
+   * 2.07:1 on the inset, so it fails WCAG AA as text and even the 3:1 large-text
+   * bar. It stays, but only where contrast does not apply to it.
+   *
+   *   primary      sky-500  FILLS AND DECORATION ONLY — never a text colour.
+   *   primary-ink  sky-800  every accent TEXT: eyebrows, links, table headers,
+   *                         display headings. 6.28:1 on base, 5.66:1 on inset.
+   *   focus        sky-900  the focus ring. 7.86:1 base, 7.08:1 inset, and
+   *                         3.41:1 on a #0ea5e9 fill, so one ring works on every
+   *                         surface with no exception.
+   *
+   * Text ON a #0ea5e9 fill is --color-neu-fg at full opacity (4.85:1). That is
+   * the only passing option: white is 2.77:1, and dark text drops below 4.5:1 as
+   * soon as any opacity is applied (/90 = 4.17:1), so fills carry solid navy
+   * labels and build hierarchy from weight and size instead of transparency.
+   */
   --color-neu-primary: #0ea5e9;
+  --color-neu-primary-ink: #075985;
+  --color-neu-focus: #0c4a6e;
   --color-neu-accent: #38bdf8;
   --shadow-neu:
     -6px -6px 14px rgba(255, 255, 255, 0.85),
@@ -179,39 +203,88 @@
   }
 }
 
-html {
-  scroll-behavior: smooth;
+/*
+ * Sticky chrome measurements.
+ *
+ * Two bars stack at the top of the guest pages: the site header (sticky top-0)
+ * and, on /kitesurfing, the section nav beneath it. Anchor targets must clear
+ * both, so every offset on those pages derives from --sticky-stack instead of a
+ * hand-tuned number per breakpoint.
+ *
+ * The values here are the SSR-correct defaults and mirror the header's own
+ * breakpoints: 72px logo + py-3 on mobile (96px), an 80px logo from md (104px),
+ * plus the lg-only "kite surfing center" caption (118px). Measured, not guessed
+ * — re-measure if the header changes. SectionNav re-measures the rendered
+ * header at runtime and overwrites --header-h, so changing the logo size
+ * corrects the offsets instead of silently breaking them.
+ *
+ * scroll-behavior is deliberately NOT declared globally. A blanket
+ * `html { scroll-behavior: smooth }` applies to every scroll on the site,
+ * including ones the user never initiated, and ignores prefers-reduced-motion.
+ * Smooth scrolling is applied per interaction instead — see lib/smooth-scroll.ts.
+ */
+:root {
+  --header-h: 96px;
+  --section-nav-h: 56px;
+  --sticky-stack: calc(var(--header-h) + var(--section-nav-h));
+  /* Anchor targets clear the stack with a hairline of breathing room. */
+  --section-scroll-mt: calc(var(--sticky-stack) + 2px);
 }
 
-/* Scroll-in reveal used by components/kitesurfing/Reveal.tsx */
-.kite-reveal {
-  opacity: 0;
-  transform: translateY(28px);
-  transition:
-    opacity 0.9s cubic-bezier(0.22, 1, 0.36, 1),
-    transform 0.9s cubic-bezier(0.22, 1, 0.36, 1);
-  will-change: opacity, transform;
-}
-
-.kite-reveal[data-shown="true"] {
-  opacity: 1;
-  transform: none;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .kite-reveal {
-    opacity: 1;
-    transform: none;
-    transition: none;
+@media (min-width: 48rem) {
+  :root {
+    --header-h: 104px;
   }
 }
 
-/* Keep content visible when JS never runs (reveal is progressive enhancement) */
-@media (scripting: none), print {
-  .kite-reveal {
+@media (min-width: 64rem) {
+  /* 80px logo + py-3 + the lg-only caption, which sits at the 12px floor. */
+  :root {
+    --header-h: 118px;
+  }
+}
+
+/*
+ * Scroll-in reveal used by components/kitesurfing/Reveal.tsx
+ *
+ * `.kite-reveal` itself declares nothing: the default state is plain, visible
+ * content. The hidden state is opt-in, applied by the component only after it
+ * has mounted and only to blocks that were below the fold at load. Previously
+ * the base rule set `opacity: 0`, so a slow or failed script left the page
+ * blank — the reason the hero rendered empty on a cold mobile load.
+ *
+ * Duration is 0.35s over 12px: far enough to read as an arrival, short enough
+ * that scrolling never waits on it. The old 0.9s over 28px meant content was
+ * still visibly ghosting in well after the visitor had reached it.
+ */
+.kite-reveal[data-reveal="pending"] {
+  opacity: 0;
+  transform: translateY(12px);
+}
+
+.kite-reveal[data-reveal="shown"] {
+  opacity: 1;
+  transform: none;
+  transition:
+    opacity 0.35s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+  /* Only while the entrance is actually running; the component removes the
+     attribute once it finishes. */
+  will-change: opacity, transform;
+}
+
+/*
+ * Reduced motion has to beat the attribute selectors above on specificity, so
+ * it names them rather than the bare class. Reveal.tsx also checks the
+ * preference before scheduling anything, but the CSS stays correct alone.
+ */
+@media (prefers-reduced-motion: reduce) {
+  .kite-reveal[data-reveal="pending"],
+  .kite-reveal[data-reveal="shown"] {
     opacity: 1;
     transform: none;
     transition: none;
+    will-change: auto;
   }
 }
 
@@ -229,6 +302,16 @@ html {
 .neu-inset {
   background: var(--color-neu-inset);
   box-shadow: var(--shadow-neu-inset);
+}
+
+/* Before this rule the codebase had no focus styling at all: a stylesheet walk
+   over 217 rules across 3 sheets matched zero `focus` selectors, so keyboard
+   focus fell back to Chrome's 1px UA default — barely perceptible on the pale
+   neumorphic base, and invisible outdoors. */
+:where(a, button, summary, [role="button"], [tabindex]:not([tabindex="-1"])):focus-visible,
+.neu-btn:focus-visible {
+  outline: 2px solid var(--color-neu-focus);
+  outline-offset: 2px;
 }
 
 .neu-btn {
