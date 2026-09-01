@@ -224,6 +224,9 @@ export default async function BookingDeskPage({
           totalPriceCents={booking.totalPriceCents}
           amountPaidCents={paid}
           paymentLink={booking.paymentLink}
+          paymentLinkExpiresAt={
+            booking.paymentLinkExpiresAt?.toISOString() ?? null
+          }
           waitingPaymentAt={booking.waitingPaymentAt?.toISOString() ?? null}
           payments={booking.payments.map((p) => ({
             id: p.id,

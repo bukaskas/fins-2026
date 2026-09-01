@@ -31,6 +31,42 @@ import { BOOKINGS_PAGE_SIZE, DAILY_CAPACITY, WAITING_PAYMENT_WINDOW_MS } from "@
 const FLASH_CURRENCY = process.env.FLASH_CURRENCY || "EGP";
 const FLASH_MIN_CENTS = 500; // Flash rejects orders below 5 EGP
 
+// Floor for a Flash link's validity. A booking whose 24h window has already
+// lapsed is about to be swept by `expireStaleWaitingPayments`, and a link that
+// dies in seconds helps nobody — so a late link still gets a usable slice of
+// time rather than a zero (which Flash would reject outright).
+const PAYMENT_LINK_MIN_VALIDITY_MS = 15 * 60 * 1000;
+
+/**
+ * The id we hand Flash for a booking's Nth payment link.
+ *
+ * Flash treats `aggregatorOrderId` as unique forever and rejects a repeat with
+ * DUPLICATE_ORDER, so a re-issued link cannot send the booking id again. Attempt
+ * 1 stays bare — every link created before regeneration existed is an attempt 1,
+ * and those orders are still live on Flash's side.
+ */
+function flashAggregatorId(bookingId: string, attempt: number): string {
+  return attempt > 1 ? `${bookingId}-${attempt}` : bookingId;
+}
+
+/**
+ * The inverse: recover the booking id from whatever Flash echoes back to us.
+ *
+ * Anchored to the UUID shape rather than splitting on the last hyphen — a
+ * booking id ends in a 12-character group that is often all digits
+ * (`…-446655440000`), so a naive `-(\d+)$` strip would mangle a *bare* id into
+ * something Postgres rejects as malformed. Returns null for anything that
+ * isn't UUID-prefixed, so the caller can ignore the event instead of throwing
+ * (a throw would 500, and Flash would retry it forever).
+ */
+const BOOKING_UUID_PREFIX =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i;
+
+function bookingIdFromAggregatorId(aggregatorOrderId: string): string | null {
+  const match = BOOKING_UUID_PREFIX.exec(aggregatorOrderId);
+  return match ? match[0] : null;
+}
+
 // A booking in WAITING_PAYMENT auto-cancels this long after it entered the
 // status (i.e. after `waitingPaymentAt`) if it hasn't been paid/confirmed.
 
@@ -1137,8 +1173,10 @@ async function applyBookingStatusChange(
 }
 
 /**
- * Create (or reuse) a Flash payment link for a booking's outstanding balance.
- * Safe to call repeatedly — if a link already exists it is returned as-is.
+ * Create, reuse, or re-issue a Flash payment link for a booking's outstanding
+ * balance. Safe to call repeatedly: a link that is still live is returned as-is,
+ * and only an expired one is replaced (under a fresh order id — see
+ * {@link flashAggregatorId}).
  *
  * Intentionally public: guests trigger this from the unauthenticated booking
  * detail page (PayDepositOnline). Knowing the booking UUID is the capability.
@@ -1148,11 +1186,28 @@ export async function createBookingPaymentLink(bookingId: string) {
     const booking = await prisma.booking.findUnique({ where: { id: bookingId } });
     if (!booking) return { success: false, message: "Booking not found." };
 
-    // Idempotency: reuse an existing link rather than creating a duplicate
-    // Flash order (aggregatorOrderId = booking id is unique on Flash's side).
-    if (booking.flashOrderId && booking.paymentLink) {
-      return { success: true as const, paymentLink: booking.paymentLink, reused: true };
+    const now = Date.now();
+
+    // Reuse a live link rather than creating a duplicate Flash order. An expired
+    // one falls through to be re-issued instead: since links started carrying a
+    // real `validity`, handing the stored link back forever would mean handing
+    // back a dead one forever.
+    const linkIsLive =
+      booking.paymentLinkExpiresAt === null ||
+      booking.paymentLinkExpiresAt.getTime() > now;
+    if (booking.flashOrderId && booking.paymentLink && linkIsLive) {
+      return {
+        success: true as const,
+        paymentLink: booking.paymentLink,
+        expiresAt: booking.paymentLinkExpiresAt,
+        reused: true,
+      };
     }
+
+    // A replacement needs an order id Flash has not seen before.
+    const attempt = booking.paymentLink
+      ? booking.paymentLinkAttempt + 1
+      : booking.paymentLinkAttempt;
 
     if (booking.totalPriceCents == null) {
       return {
@@ -1172,11 +1227,27 @@ export async function createBookingPaymentLink(bookingId: string) {
       };
     }
 
+    // Expire the link with the booking's own 24h payment window, so a payment
+    // link can never outlive the hold it was issued for. Flash takes `validity`
+    // in seconds and applies its own default when it is omitted — which is how
+    // links used to stay alive after the booking had already auto-cancelled.
+    //
+    // In the normal flow this is a full 24h: `applyBookingStatusChange` stamps
+    // `waitingPaymentAt` and creates the link in the same call. A link made by
+    // hand later gets only what is left of that window, so the two deadlines
+    // stay the same deadline.
+    const deadline = booking.waitingPaymentAt
+      ? booking.waitingPaymentAt.getTime() + WAITING_PAYMENT_WINDOW_MS
+      : now + WAITING_PAYMENT_WINDOW_MS;
+    const validityMs = Math.max(deadline - now, PAYMENT_LINK_MIN_VALIDITY_MS);
+    const expiresAt = new Date(now + validityMs);
+
     const result = await createPaymentOrder({
-      aggregatorOrderId: booking.id,
+      aggregatorOrderId: flashAggregatorId(booking.id, attempt),
       amountCents: dueCents,
       currency: FLASH_CURRENCY,
       customer: { name: booking.name, phone: booking.phone },
+      validity: Math.floor(validityMs / 1000),
     });
 
     await prisma.booking.update({
@@ -1184,13 +1255,15 @@ export async function createBookingPaymentLink(bookingId: string) {
       data: {
         flashOrderId: result.flashOrderId,
         paymentLink: result.paymentLink,
+        paymentLinkExpiresAt: expiresAt,
+        paymentLinkAttempt: attempt,
       },
     });
     revalidatePath('/bookings', 'layout');
     revalidatePath(`/bookings/${bookingId}`);
     revalidatePath('/reception');
 
-    return { success: true as const, paymentLink: result.paymentLink };
+    return { success: true as const, paymentLink: result.paymentLink, expiresAt };
   } catch (error) {
     console.error('Flash payment link error:', error);
     return {
@@ -1243,8 +1316,18 @@ export async function recordFlashPayment(
       return { success: true, ignored: true as const };
     }
 
+    // A re-issued link carries `<bookingId>-N`, so the id Flash echoes back is
+    // not always the booking id itself. Anything that isn't UUID-prefixed is a
+    // foreign order: ignore it rather than letting Postgres reject a malformed
+    // uuid, which would surface as a 500 and an endless Flash retry.
+    const bookingId = bookingIdFromAggregatorId(aggregatorOrderId);
+    if (!bookingId) {
+      console.warn("Flash webhook with unparseable order id", { aggregatorOrderId });
+      return { success: true, ignored: true as const };
+    }
+
     const booking = await prisma.booking.findUnique({
-      where: { id: aggregatorOrderId },
+      where: { id: bookingId },
       select: { id: true },
     });
     if (!booking) {
@@ -1343,29 +1426,48 @@ export async function checkBookingPaymentStatus(bookingId: string) {
   try {
     const booking = await prisma.booking.findUnique({
       where: { id: bookingId },
-      select: { id: true },
+      select: { id: true, paymentLinkAttempt: true },
     });
     if (!booking) return { success: false, message: "Booking not found." };
 
-    const order = await getFlashOrder(bookingId);
-    const status = order.status ?? "unknown";
+    // Walk the attempts newest-first. Usually there is exactly one, but a guest
+    // who paid a link just before it lapsed — and whose webhook we then missed —
+    // has their money sitting on an *older* order, which is precisely the case
+    // this manual check exists to rescue. A single unreachable order must not
+    // abort the walk, so failures are remembered and reported only if no attempt
+    // yields an answer.
+    let status = "unknown";
+    let lastError: unknown = null;
 
-    if (status !== "succeeded") {
-      return { success: true as const, status, confirmed: false as const };
+    for (let attempt = booking.paymentLinkAttempt; attempt >= 1; attempt--) {
+      let order;
+      try {
+        order = await getFlashOrder(flashAggregatorId(bookingId, attempt));
+      } catch (error) {
+        lastError = error;
+        continue;
+      }
+
+      status = order.status ?? "unknown";
+      if (status !== "succeeded") continue;
+
+      const amountCents = order.amountCents ?? 0;
+      if (amountCents <= 0) {
+        return { success: false, message: "Flash returned no amount for this order." };
+      }
+
+      const applied = await applyFlashPayment({
+        bookingId,
+        amountCents,
+        idempotencyKey: order.id ?? `flash-order-${flashAggregatorId(bookingId, attempt)}`,
+      });
+
+      return { success: true as const, status, confirmed: true as const, ...applied };
     }
 
-    const amountCents = order.amountCents ?? 0;
-    if (amountCents <= 0) {
-      return { success: false, message: "Flash returned no amount for this order." };
-    }
+    if (lastError && status === "unknown") throw lastError;
 
-    const applied = await applyFlashPayment({
-      bookingId,
-      amountCents,
-      idempotencyKey: order.id ?? `flash-order-${bookingId}`,
-    });
-
-    return { success: true as const, status, confirmed: true as const, ...applied };
+    return { success: true as const, status, confirmed: false as const };
   } catch (error) {
     console.error("Check payment status error:", error);
     return {

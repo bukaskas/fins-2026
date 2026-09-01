@@ -54,6 +54,7 @@ export default function PaymentPanel({
   totalPriceCents,
   amountPaidCents,
   paymentLink,
+  paymentLinkExpiresAt,
   waitingPaymentAt,
   payments,
 }: {
@@ -62,6 +63,7 @@ export default function PaymentPanel({
   totalPriceCents: number | null;
   amountPaidCents: number;
   paymentLink: string | null;
+  paymentLinkExpiresAt: string | null;
   waitingPaymentAt: string | null;
   payments: PaymentRow[];
 }) {
@@ -74,6 +76,16 @@ export default function PaymentPanel({
 
   const total = totalPriceCents ?? 0;
   const balance = Math.max(0, total - amountPaidCents);
+
+  // Whether the link has lapsed is a clock question, and the clock differs
+  // between server and client — so it is answered after mount. Until then the
+  // link reads as live, which matches what the server rendered.
+  const [mountedAt, setMountedAt] = React.useState<number | null>(null);
+  React.useEffect(() => setMountedAt(Date.now()), [paymentLinkExpiresAt]);
+  const linkExpired =
+    mountedAt !== null &&
+    paymentLinkExpiresAt !== null &&
+    new Date(paymentLinkExpiresAt).getTime() <= mountedAt;
 
   const deadline =
     bookingStatus === BookingStatus.WAITING_PAYMENT && waitingPaymentAt
@@ -282,13 +294,19 @@ export default function PaymentPanel({
           }
         />
 
-        {!paymentLink && (
+        {(!paymentLink || linkExpired) && (
           <button
             type="button"
             onClick={generate}
             disabled={creating}
             aria-busy={creating}
-            aria-label={creating ? "Creating payment link" : "Create payment link"}
+            aria-label={
+              creating
+                ? "Creating payment link"
+                : linkExpired
+                  ? "Replace the expired payment link"
+                  : "Create payment link"
+            }
             className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-full border border-[#ece8e3] px-4 font-[family-name:var(--font-raleway)] text-[0.75rem] font-[600] uppercase tracking-[0.16em] text-[#3a3531] transition-colors hover:border-[#d6d0c8] disabled:opacity-50 ${FOCUS_RING}`}
           >
             {creating ? (
@@ -296,7 +314,11 @@ export default function PaymentPanel({
             ) : (
               <Link2 className="size-4" strokeWidth={1.7} aria-hidden="true" />
             )}
-            {creating ? "Creating link…" : "Create payment link"}
+            {creating
+              ? "Creating link…"
+              : linkExpired
+                ? "Replace expired link"
+                : "Create payment link"}
           </button>
         )}
       </div>
@@ -304,13 +326,27 @@ export default function PaymentPanel({
       {paymentLink && (
         <details className="group mt-3 border-t border-[#ece8e3] pt-2">
           <summary className={`flex min-h-11 cursor-pointer list-none items-center justify-between rounded-lg font-[family-name:var(--font-raleway)] text-[0.82rem] font-[600] text-[#3a3531] ${FOCUS_RING}`}>
-            <span>Online payment link</span>
+            <span>
+              Online payment link
+              {linkExpired && (
+                <span className="ml-2 font-[400] text-[#b91c1c]">expired</span>
+              )}
+            </span>
             <ChevronDown
               className="size-4 text-[#6b6460] transition-transform group-open:rotate-180"
               strokeWidth={1.8}
               aria-hidden="true"
             />
           </summary>
+          {linkExpired && (
+            <p
+              className="mt-2 font-[family-name:var(--font-raleway)] text-[0.78rem]"
+              style={{ color: MUTED }}
+            >
+              This link has expired and will no longer take a payment. Replace it
+              to send the guest a working one.
+            </p>
+          )}
           <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-3">
             <button
               type="button"

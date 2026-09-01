@@ -260,6 +260,7 @@ export default async function BookingDetailPage({
           amountPaidCents={paid}
           bookingId={booking.id}
           paymentLink={booking.paymentLink}
+          paymentLinkExpiresAt={booking.paymentLinkExpiresAt}
           waitingPaymentAt={booking.waitingPaymentAt}
         />
 

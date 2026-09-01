@@ -173,6 +173,12 @@ model Booking {
   paymentLink          String?
   paymentLinkExpiresAt DateTime?
 
+  // Which Flash order attempt is live. Flash rejects a second order carrying an
+  // aggregatorOrderId it has already seen (DUPLICATE_ORDER), so a re-issued
+  // link cannot reuse the booking id: attempt 1 sends the bare id, attempt N
+  // sends `<id>-N`. The webhook strips that suffix to find its way back here.
+  paymentLinkAttempt   Int       @default(1)
+
   // 24h payment window: set when entering WAITING_PAYMENT; the booking
   // auto-cancels 24h after this timestamp if still unpaid.
   waitingPaymentAt DateTime?

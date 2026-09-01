@@ -40,6 +40,7 @@ export default function NextStepCard({
   amountPaidCents = 0,
   bookingId,
   paymentLink = null,
+  paymentLinkExpiresAt = null,
   waitingPaymentAt = null,
 }: {
   status: BookingStatus;
@@ -47,6 +48,7 @@ export default function NextStepCard({
   amountPaidCents?: number;
   bookingId: string;
   paymentLink?: string | null;
+  paymentLinkExpiresAt?: Date | string | null;
   waitingPaymentAt?: Date | string | null;
 }) {
   const variant = getVariant(status);
@@ -73,6 +75,11 @@ export default function NextStepCard({
               amountPaidCents={amountPaidCents}
               bookingId={bookingId}
               paymentLink={paymentLink}
+              paymentLinkExpiresAt={
+                paymentLinkExpiresAt
+                  ? new Date(paymentLinkExpiresAt).toISOString()
+                  : null
+              }
               deadline={paymentDeadline}
             />
           )}
@@ -224,12 +231,14 @@ function PaymentBody({
   amountPaidCents,
   bookingId,
   paymentLink,
+  paymentLinkExpiresAt,
   deadline,
 }: {
   totalCents: number;
   amountPaidCents: number;
   bookingId: string;
   paymentLink: string | null;
+  paymentLinkExpiresAt: string | null;
   deadline: string | null;
 }) {
   const depositCents = Math.round(totalCents / 2);
@@ -288,7 +297,11 @@ function PaymentBody({
 
       {/* Primary action: pay the deposit online */}
       <div className="mt-6">
-        <PayDepositOnline bookingId={bookingId} paymentLink={paymentLink} />
+        <PayDepositOnline
+          bookingId={bookingId}
+          paymentLink={paymentLink}
+          paymentLinkExpiresAt={paymentLinkExpiresAt}
+        />
       </div>
 
       {/* Secondary fallback: manual bank transfer */}

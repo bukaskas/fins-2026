@@ -9,20 +9,30 @@ import { FOCUS_RING } from "@/lib/bookings/status";
 
 /**
  * Guest-facing "pay the 50% deposit online" CTA shown on the booking page while
- * the booking is awaiting payment. If a Flash link already exists we open it
- * directly; otherwise we create one on click, then redirect to the checkout.
+ * the booking is awaiting payment. A link that is still live opens directly;
+ * otherwise we create one on click, then redirect to the checkout — which also
+ * covers a link that has lapsed, since Flash links now carry a real expiry.
  */
 export default function PayDepositOnline({
   bookingId,
   paymentLink,
+  paymentLinkExpiresAt = null,
 }: {
   bookingId: string;
   paymentLink: string | null;
+  paymentLinkExpiresAt?: string | null;
 }) {
   const [loading, setLoading] = React.useState(false);
 
   const handlePay = async () => {
-    if (paymentLink) {
+    // Read the clock on click, never during render: a live/expired split
+    // computed while rendering would differ between server and client and
+    // hydrate wrong.
+    const linkIsLive =
+      paymentLink &&
+      (!paymentLinkExpiresAt ||
+        new Date(paymentLinkExpiresAt).getTime() > Date.now());
+    if (linkIsLive) {
       window.location.href = paymentLink;
       return;
     }
