@@ -1,5 +1,5 @@
 import { BookingStatus } from "@prisma/client";
-import { Instagram, Check, MessageCircle } from "lucide-react";
+import { Instagram, Check, MessageCircle, BookmarkCheck } from "lucide-react";
 
 import { CopyButton } from "./CopyButton";
 import PayDepositOnline from "./PayDepositOnline";
@@ -302,6 +302,18 @@ function PaymentBody({
           paymentLink={paymentLink}
           paymentLinkExpiresAt={paymentLinkExpiresAt}
         />
+      </div>
+
+      {/* The page is the receipt: the guest sees the booking flip to confirmed
+          here, whichever way they paid — so tell them to keep the link. */}
+      <div className="mt-5 flex items-start gap-3 rounded-2xl bg-[#faf9f7] px-4 py-3.5 ring-1 ring-[#ece8e3]">
+        <span className="mt-0.5 grid h-8 w-8 shrink-0 place-items-center rounded-full bg-[#EDE6F8] text-[#4B348A]">
+          <BookmarkCheck className="h-4 w-4" strokeWidth={1.7} aria-hidden="true" />
+        </span>
+        <p className="font-[family-name:var(--font-raleway)] text-[0.85rem] font-[400] leading-[1.55] text-[#5b5650]">
+          Keep this page. Once we&rsquo;ve received your payment, come back to
+          this same link &mdash; your booking will show as confirmed here.
+        </p>
       </div>
 
       {/* Secondary fallback: manual bank transfer */}

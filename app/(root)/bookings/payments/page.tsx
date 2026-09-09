@@ -49,6 +49,20 @@ export default async function DepositPaymentsPage() {
   const payments = result.data;
   const totalCents = payments.reduce((s, p) => s + p.amountCents, 0);
 
+  // Totals per method, biggest first — drives the summary cards above the table.
+  const byMethod = payments.reduce<Record<string, { cents: number; count: number }>>(
+    (acc, p) => {
+      const entry = (acc[p.method] ??= { cents: 0, count: 0 });
+      entry.cents += p.amountCents;
+      entry.count += 1;
+      return acc;
+    },
+    {}
+  );
+  const methodTotals = Object.entries(byMethod)
+    .map(([method, v]) => ({ method, ...v }))
+    .sort((a, b) => b.cents - a.cents);
+
   return (
     <main className="mx-auto max-w-5xl p-4 sm:p-6">
       {/* Header */}
@@ -73,6 +87,54 @@ export default async function DepositPaymentsPage() {
           Bookings
         </Link>
       </div>
+
+      {/* Totals by payment method */}
+      {methodTotals.length > 0 && (
+        <section aria-labelledby="method-totals" className="mb-6">
+          <h2
+            id="method-totals"
+            className="mb-3 font-[family-name:var(--font-raleway)] text-[0.72rem] sm:text-[0.65rem] tracking-[0.18em] uppercase font-[600]"
+            style={{ color: MUTED }}
+          >
+            By payment method
+          </h2>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+            {methodTotals.map(({ method, cents, count }) => {
+              const tone = METHOD_TONE[method] ?? { bg: "#F2F1EE", text: "#615C55" };
+              const share = totalCents > 0 ? (cents / totalCents) * 100 : 0;
+              return (
+                <div
+                  key={method}
+                  className="rounded-xl border border-[#ece8e3] bg-white p-4 shadow-[0_1px_6px_rgba(26,22,20,0.08)]"
+                >
+                  <span
+                    className="inline-flex items-center rounded-full px-2.5 py-1 font-[family-name:var(--font-raleway)] text-[0.72rem] sm:text-[0.65rem] tracking-[0.08em] uppercase font-[700]"
+                    style={{ background: tone.bg, color: tone.text }}
+                  >
+                    {method}
+                  </span>
+                  <p className="mt-3 font-[family-name:var(--font-roboto-mono)] text-[1.3rem] leading-none font-[500] text-[#1a1614] tabular-nums">
+                    {fmtEGP(cents)}
+                    <span className="ml-1 text-[0.72rem] sm:text-[0.65rem] text-[#6b6460]">EGP</span>
+                  </p>
+                  <p
+                    className="mt-2 font-[family-name:var(--font-raleway)] text-[0.72rem] sm:text-[0.68rem]"
+                    style={{ color: MUTED }}
+                  >
+                    {count} {count === 1 ? "payment" : "payments"} · {Math.round(share)}%
+                  </p>
+                  <div className="mt-2.5 h-1 rounded-full bg-[#f3f0ec]" aria-hidden="true">
+                    <div
+                      className="h-full rounded-full"
+                      style={{ width: `${share}%`, background: tone.text }}
+                    />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      )}
 
       {payments.length === 0 ? (
         <p className="py-10 text-center font-[family-name:var(--font-raleway)] text-sm" style={{ color: MUTED }}>
