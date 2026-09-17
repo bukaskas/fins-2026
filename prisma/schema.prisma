@@ -183,6 +183,12 @@ model Booking {
   // auto-cancels 24h after this timestamp if still unpaid.
   waitingPaymentAt DateTime?
 
+  // Claimed (set non-null) before the payment-confirmed guest email is sent, so
+  // the two payment paths can't both send one. Reception recording a second
+  // payment re-runs the CONFIRMED side-effects, and a Flash webhook can be
+  // redelivered; an unsendable email needs a durable guard, not an in-memory one.
+  confirmationEmailSentAt DateTime?
+
   @@index([bookingStatus, waitingPaymentAt])
   // /bookings filters and sorts by date on every load; the composite covers
   // the same query narrowed to one status.

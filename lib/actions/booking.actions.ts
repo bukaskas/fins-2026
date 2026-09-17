@@ -1361,6 +1361,86 @@ export async function recordFlashPayment(
 }
 
 /**
+ * Send the guest their payment confirmation, at most once per booking.
+ *
+ * Both payment paths land here and neither is safe on its own: a Flash webhook
+ * can be redelivered, and `payBookingDeposit` re-runs the CONFIRMED
+ * side-effects every time reception records a payment - so the guest who pays
+ * the balance on arrival would otherwise get a second "confirmed" email.
+ * `confirmationEmailSentAt` is claimed inside the WHERE clause, which makes the
+ * check and the claim one atomic statement rather than a read-then-write two
+ * concurrent callers could both pass.
+ *
+ * Never throws: a mail outage must not fail a payment that is already recorded.
+ */
+async function sendBookingConfirmedEmailOnce(bookingId: string) {
+  let claimed = false;
+  try {
+    const { count } = await prisma.booking.updateMany({
+      where: { id: bookingId, confirmationEmailSentAt: null },
+      data: { confirmationEmailSentAt: new Date() },
+    });
+    if (count === 0) return;
+    claimed = true;
+
+    const booking = await prisma.booking.findUnique({ where: { id: bookingId } });
+
+    // Reception can enter a booking with a phone number and no email, and the
+    // Pharaoh template is a one-off event mail with no confirmed variant -
+    // re-sending it here would just duplicate the mail the guest already has.
+    if (!booking?.email || booking.service === "pharaoh-airstyle") {
+      await releaseConfirmationEmailClaim(bookingId);
+      return;
+    }
+
+    const isDayUse = booking.service === "day-use";
+    const totalCents = booking.totalPriceCents;
+    const balanceDueCents =
+      totalCents !== null
+        ? Math.max(totalCents - booking.amountPaidCents, 0)
+        : undefined;
+
+    // Day use prints per-person line items, which are recomputed here rather
+    // than stored. If a rate moved between booking and payment the recomputed
+    // table would no longer sum to what the guest was actually charged, so it
+    // is dropped instead - the total on the row stays the single source of
+    // truth, exactly as at booking time.
+    const recomputed = isDayUse
+      ? calculateDayUsePrice(booking.date, booking.numberOfPeople, booking.numberOfKids)
+      : null;
+    const priceBreakdown =
+      recomputed && recomputed.totalCents === totalCents ? recomputed : undefined;
+
+    await sendBookingEmail(booking.email, booking.name, booking.date, {
+      bookingType: booking.service,
+      numberOfPeople: isDayUse ? booking.numberOfPeople : undefined,
+      numberOfKids: isDayUse ? booking.numberOfKids : undefined,
+      priceBreakdown,
+      bookingId: booking.id,
+      confirmed: true,
+      amountPaidCents: booking.amountPaidCents,
+      balanceDueCents,
+    });
+  } catch (error) {
+    // The claim means "the guest has this email". Nothing was sent, so give it
+    // back and let the next payment - or a manual resend - try again.
+    if (claimed) await releaseConfirmationEmailClaim(bookingId);
+    console.error("Confirmation email error:", error);
+  }
+}
+
+async function releaseConfirmationEmailClaim(bookingId: string) {
+  try {
+    await prisma.booking.updateMany({
+      where: { id: bookingId },
+      data: { confirmationEmailSentAt: null },
+    });
+  } catch (error) {
+    console.error("Confirmation email claim release error:", error);
+  }
+}
+
+/**
  * Record a Flash payment against a booking and confirm it. Shared by the
  * webhook and the manual status-check so the two paths can't double-record:
  *  - same idempotency key (DB unique) → no-op
@@ -1412,6 +1492,7 @@ async function applyFlashPayment(opts: {
   // Reuse CONFIRMED side-effects (revalidation, 80-person auto-close) via the
   // internal core — this path runs from the webhook with no user session.
   await applyBookingStatusChange(bookingId, BookingStatus.CONFIRMED);
+  await sendBookingConfirmedEmailOnce(bookingId);
   revalidatePath(`/bookings/${bookingId}`);
 
   return { confirmed: true as const };
@@ -1547,6 +1628,9 @@ export async function payBookingDeposit(bookingId: string, data: BookingDepositD
 
     // Reuse the CONFIRMED side-effects (agent assignment, revalidation, 80-person auto-close).
     await updateBookingStatus(bookingId, BookingStatus.CONFIRMED);
+    // After the status change, so the email reads the booking in its settled
+    // state — amountPaidCents is already re-aggregated above.
+    await sendBookingConfirmedEmailOnce(bookingId);
     revalidatePath(`/bookings/${bookingId}`);
 
     return { success: true, amountPaidCents };

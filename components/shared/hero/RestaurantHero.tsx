@@ -113,7 +113,7 @@ export function RestaurantHero({
             </span>
           </Link>
           <Link
-            href="https://drive.google.com/file/d/1qpcb2GbQISgk6uTCDn0KcJzagvJV1DxG/view?usp=sharing"
+            href="https://drive.google.com/file/d/1Y2Ri--GD0a6M6NdTR3a2s3rzQaEBubuz/view"
             className="text-white/55 hover:text-white text-[0.68rem] tracking-[0.22em] uppercase font-[family-name:var(--font-raleway)] transition-colors duration-200"
           >
             View Menu ↗

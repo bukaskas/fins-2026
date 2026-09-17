@@ -42,12 +42,26 @@ interface BookingEmailProps {
    * hold a seat - the lesson flow - opt into the confirmed wording.
    */
   confirmed?: boolean;
+  /** Total taken so far. Only rendered on the confirmed email. */
+  amountPaidCents?: number;
+  /**
+   * What is still owed on arrival. Passed in rather than derived: the deposit
+   * is 50% of a total this template deliberately never recomputes.
+   */
+  balanceDueCents?: number;
 }
 
 interface ServiceCopy {
   requestHeading: string;
   confirmedHeading: string;
   body: string;
+  /**
+   * Sent once the deposit has landed. Kept separate from `body` because the
+   * request wording all points at a conversation that is, by then, over —
+   * telling a guest who has just paid that we'll check things "before we
+   * speak" reads as though the payment didn't register.
+   */
+  confirmedBody: string;
 }
 
 const serviceContent: Record<string, ServiceCopy> = {
@@ -55,16 +69,19 @@ const serviceContent: Record<string, ServiceCopy> = {
     requestHeading: "We've received your kitesurfing request",
     confirmedHeading: "Your kitesurfing session is booked",
     body: "Thanks for booking with us. We'll be watching the forecast and will send you the exact time the day before — the wind here is hard to call any earlier than that. If there's a time you'd prefer, tell us and we'll try to build the day around it.",
+    confirmedBody: "Your payment came through and your session is booked. We'll be watching the forecast and will send you the exact time the day before — the wind here is hard to call any earlier than that.",
   },
   "day-use": {
     requestHeading: "We've received your day-use request",
     confirmedHeading: "Your day-use booking is confirmed",
     body: "Thanks for reaching out! Everything you asked for is below, so you can check it before we speak.",
+    confirmedBody: "Your payment came through and your spot is held. Everything you'll need for the day is below — worth a read before you travel.",
   },
   restaurant: {
     requestHeading: "We've received your table request",
     confirmedHeading: "Your table is booked",
     body: "Thanks for choosing us. If you have any dietary requirements or you're celebrating something, tell us now and we'll have it ready before you sit down.",
+    confirmedBody: "Your payment came through and your table is booked. If you have any dietary requirements or you're celebrating something, tell us and we'll have it ready before you sit down.",
   },
 };
 
@@ -74,6 +91,7 @@ const fallbackContent: ServiceCopy = {
   requestHeading: "We've received your booking request",
   confirmedHeading: "Your booking is confirmed",
   body: "Thanks for booking with us. Everything you asked for is below.",
+  confirmedBody: "Your payment came through and your booking is confirmed. Everything you asked for is below.",
 };
 
 const rateLabel: Record<RateType, string> = {
@@ -96,6 +114,42 @@ function describeParty(adults: number, kids: number): string | null {
   return parts.length ? parts.join(" · ") : null;
 }
 
+interface PaymentRowsProps {
+  amountPaidCents?: number;
+  balanceDueCents?: number;
+}
+
+/**
+ * The two lines a guest actually checks after paying. Rendered as table rows so
+ * they sit in the same column grid as the day-use price breakdown above them.
+ */
+const PaymentRows = ({ amountPaidCents, balanceDueCents }: PaymentRowsProps) => (
+  <>
+    {amountPaidCents !== undefined && (
+      <Row className="mb-1">
+        <Column className="text-[15px] text-[#22303F] align-top">Paid</Column>
+        <Column className="text-[15px] text-[#22303F] text-right align-top whitespace-nowrap">
+          {"\u00A0"}
+          {formatEGP(amountPaidCents)}
+        </Column>
+      </Row>
+    )}
+    {/* A settled booking says so outright; an unlabelled missing row reads as
+        though we forgot to bill the rest. */}
+    {balanceDueCents !== undefined && (
+      <Row>
+        <Column className="text-[15px] font-semibold text-[#22303F] align-top">
+          {balanceDueCents > 0 ? "Due on arrival" : "Nothing left to pay"}
+        </Column>
+        <Column className="text-[15px] font-semibold text-[#22303F] text-right align-top whitespace-nowrap">
+          {"\u00A0"}
+          {balanceDueCents > 0 ? formatEGP(balanceDueCents) : "—"}
+        </Column>
+      </Row>
+    )}
+  </>
+);
+
 const MetaRow = ({ label, value }: { label: string; value: string }) => (
   <Text className={`${text} mb-1`}>
     <span className="text-[#5B6B7C]">{label}: </span>
@@ -108,6 +162,9 @@ interface DayUseDetailsProps {
   numberOfPeople?: number;
   numberOfKids?: number;
   priceBreakdown?: PriceBreakdown;
+  confirmed?: boolean;
+  amountPaidCents?: number;
+  balanceDueCents?: number;
 }
 
 const DayUseDetails = ({
@@ -115,6 +172,9 @@ const DayUseDetails = ({
   numberOfPeople,
   numberOfKids,
   priceBreakdown,
+  confirmed = false,
+  amountPaidCents,
+  balanceDueCents,
 }: DayUseDetailsProps) => {
   const adults = numberOfPeople ?? 0;
   const kids = numberOfKids ?? 0;
@@ -125,7 +185,7 @@ const DayUseDetails = ({
       <Hr className={rule} />
 
       <Heading as="h2" className={sectionHeading}>
-        Your request
+        {confirmed ? "Your booking" : "Your request"}
       </Heading>
 
       {/* Label and value share one paragraph rather than two table cells:
@@ -143,7 +203,7 @@ const DayUseDetails = ({
           <Hr className={rule} />
 
           <Heading as="h2" className={sectionHeading}>
-            What you&rsquo;ll pay
+            {confirmed ? "Your payment" : "What you\u2019ll pay"}
           </Heading>
           <Text className={`${muted} mb-3`}>
             {rateLabel[priceBreakdown.rateType]} for this date.
@@ -195,6 +255,12 @@ const DayUseDetails = ({
                 {formatEGP(priceBreakdown.totalCents)}
               </Column>
             </Row>
+            {confirmed && (
+              <PaymentRows
+                amountPaidCents={amountPaidCents}
+                balanceDueCents={balanceDueCents}
+              />
+            )}
           </Section>
 
           <Text className={`${muted} mt-3`}>
@@ -249,6 +315,8 @@ const BookingEmail = ({
   priceBreakdown,
   bookingUrl,
   confirmed = false,
+  amountPaidCents,
+  balanceDueCents,
 }: BookingEmailProps) => {
   const mapped = bookingType ? serviceContent[bookingType] : undefined;
   if (bookingType && !mapped) {
@@ -262,13 +330,25 @@ const BookingEmail = ({
 
   const isDayUse = bookingType === "day-use";
   const party = describeParty(numberOfPeople ?? 0, numberOfKids ?? 0);
+  const hasPaymentInfo =
+    amountPaidCents !== undefined || balanceDueCents !== undefined;
+  const paymentInDayUseTable = isDayUse && !!priceBreakdown;
+  const showStandalonePayment =
+    confirmed && hasPaymentInfo && !paymentInDayUseTable;
 
   // The inbox row is the second-most-read line in an email; spend it on the
   // facts the subject can't carry rather than repeating the heading.
   const previewText = [
     date,
     isDayUse ? party : null,
-    isDayUse && priceBreakdown ? formatEGP(priceBreakdown.totalCents) : null,
+    confirmed && amountPaidCents !== undefined
+      ? `${formatEGP(amountPaidCents)} paid`
+      : isDayUse && priceBreakdown
+        ? formatEGP(priceBreakdown.totalCents)
+        : null,
+    confirmed && balanceDueCents !== undefined && balanceDueCents > 0
+      ? `${formatEGP(balanceDueCents)} due on arrival`
+      : null,
     confirmed ? "See you on the beach" : "We'll confirm on WhatsApp",
   ]
     .filter(Boolean)
@@ -308,7 +388,9 @@ const BookingEmail = ({
                   to the wrong side of the line. */}
               {username ? <bdi>{username}</bdi> : null},
             </Text>
-            <Text className={text}>{content.body}</Text>
+            <Text className={text}>
+              {confirmed ? content.confirmedBody : content.body}
+            </Text>
 
             {isDayUse && (
               <DayUseDetails
@@ -316,6 +398,9 @@ const BookingEmail = ({
                 numberOfPeople={numberOfPeople}
                 numberOfKids={numberOfKids}
                 priceBreakdown={priceBreakdown}
+                confirmed={confirmed}
+                amountPaidCents={amountPaidCents}
+                balanceDueCents={balanceDueCents}
               />
             )}
 
@@ -326,6 +411,22 @@ const BookingEmail = ({
               </Text>
             )}
 
+            {showStandalonePayment && (
+              <>
+                <Hr className={rule} />
+
+                <Heading as="h2" className={sectionHeading}>
+                  Your payment
+                </Heading>
+                <Section>
+                  <PaymentRows
+                    amountPaidCents={amountPaidCents}
+                    balanceDueCents={balanceDueCents}
+                  />
+                </Section>
+              </>
+            )}
+
             <Hr className={rule} />
 
             <Heading as="h2" className={sectionHeading}>
@@ -333,7 +434,9 @@ const BookingEmail = ({
             </Heading>
             <Text className={text}>
               {confirmed
-                ? "You're on the list. If anything changes, message us on WhatsApp and we'll sort it out."
+                ? balanceDueCents !== undefined && balanceDueCents > 0
+                  ? `You're on the list. Bring the remaining ${formatEGP(balanceDueCents)} with you — you can settle it at reception when you arrive. If anything changes, message us on WhatsApp and we'll sort it out.`
+                  : "You're on the list. If anything changes, message us on WhatsApp and we'll sort it out."
                 : "Our team reviews every request by hand and will reply on WhatsApp to confirm your spot. If you need to change anything — the date, the number of people — just tell us in that chat."}
             </Text>
 
@@ -352,7 +455,7 @@ const BookingEmail = ({
                   className="inline-block rounded-[8px] border border-solid border-[#5B6B7C] bg-white px-6 py-3.5 text-[15px] font-semibold text-[#22303F] no-underline text-center"
                   href={bookingUrl}
                 >
-                  {isDayUse ? "View request status" : "View your booking"}
+                  {isDayUse && !confirmed ? "View request status" : "View your booking"}
                 </Button>
               </Section>
             )}
@@ -408,6 +511,10 @@ BookingEmail.PreviewProps = {
     rateType: "holiday",
   },
   bookingUrl: "https://www.finskitesurfing.com/bookings/preview",
+  // Flip `confirmed` to true here to preview the payment-confirmation variant.
+  confirmed: false,
+  amountPaidCents: 200000,
+  balanceDueCents: 200000,
 } satisfies BookingEmailProps;
 
 export default BookingEmail;

@@ -53,6 +53,10 @@ interface BookingEmailOptions {
   bookingId?: string;
   /** Only for callers that actually hold a seat; everything else is a receipt. */
   confirmed?: boolean;
+  /** Total taken so far. Only meaningful alongside `confirmed`. */
+  amountPaidCents?: number;
+  /** What is still owed on arrival. Only meaningful alongside `confirmed`. */
+  balanceDueCents?: number;
 }
 
 export async function sendBookingEmail(
@@ -68,6 +72,8 @@ export async function sendBookingEmail(
     priceBreakdown,
     bookingId,
     confirmed = false,
+    amountPaidCents,
+    balanceDueCents,
   } = options;
 
   if (bookingType === "pharaoh-airstyle") {
@@ -104,6 +110,8 @@ export async function sendBookingEmail(
         priceBreakdown={priceBreakdown}
         bookingUrl={bookingUrl}
         confirmed={confirmed}
+        amountPaidCents={amountPaidCents}
+        balanceDueCents={balanceDueCents}
       />
     ),
   });
