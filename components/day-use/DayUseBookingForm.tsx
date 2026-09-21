@@ -18,11 +18,10 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import dayUsePhoto from "@/public/images/day_use/beach2.webp";
 import { toast } from "sonner";
 import { createBooking } from "@/lib/actions/booking.actions";
 import { getClosedDates } from "@/lib/actions/closedDate.actions";
-import Image from "next/image";
+import Image, { type StaticImageData } from "next/image";
 import {
   BookingFormData,
   bookingFormSchema,
@@ -63,6 +62,13 @@ export type DayUseBookingVariant = {
   };
   /** Replaces "When are you coming?" as the step 1 heading. */
   stepOneTitle: string;
+  /** Backdrop for the brand rail. Statically imported so Next can size it. */
+  photo: StaticImageData;
+  /** object-position for that backdrop, as a literal Tailwind class so it
+   *  survives the scanner. The rail is a wide, short banner on mobile and a
+   *  tall column on desktop, so the crop has to be chosen per photo: point it
+   *  at whatever the photo is actually of. */
+  photoClassName?: string;
 };
 
 /* ─────────────────────────────────────────────────────────────
@@ -467,7 +473,7 @@ function CountStepper({
 }
 
 function DayUseBookingForm({ variant }: { variant: DayUseBookingVariant }) {
-  const { fixedDate, eventHighlights, notice, rail } = variant;
+  const { fixedDate, eventHighlights, notice, rail, photo } = variant;
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [step, setStep] = React.useState<1 | 2 | 3>(1);
   const [calendarOpen, setCalendarOpen] = React.useState(false);
@@ -646,15 +652,16 @@ function DayUseBookingForm({ variant }: { variant: DayUseBookingVariant }) {
              form column gets — otherwise both sit below the fold. ── */}
       <div className="relative md:w-1/2 lg:w-[55%] h-52 sm:h-64 md:h-[calc(100vh-110px)] md:self-start md:sticky md:top-[110px] overflow-hidden">
         <Image
-          src={dayUsePhoto}
+          src={photo}
           alt=""
           aria-hidden="true"
           fill
           priority
           sizes="(max-width: 768px) 100vw, 55vw"
-          // Bias the crop below the horizon on viewports wide enough to leave
-          // vertical slack; the top of this frame is empty sky.
-          className="object-cover object-[center_72%]"
+          className={cn(
+            "object-cover",
+            variant.photoClassName ?? "object-[center_72%]",
+          )}
         />
         <div
           className="absolute inset-0"

@@ -82,6 +82,10 @@ These are the questions most likely to change the build. Replace each assumption
 11. **Closed dates — decided 2026-09-20:** A known closed date displays **Full** instead of a price and is disabled. Do not advertise a price for an unavailable day.
 12. **Availability-read failure — decided 2026-09-20:** Keep dates selectable, show a prominent warning with a Retry action, and rely on the existing server check to reject a genuinely closed date at submission. A transient read failure must not disable the entire booking flow.
 13. **Cell price format — decided 2026-09-20:** Show a compact number such as `1,500` in each cell, with one nearby label stating **EGP per adult**. The selected-date card spells out `1,500 EGP / adult`.
+14. **Rate cues — decided 2026-09-20:** Use a colored price plus a small matching dot in each available cell, with a three-item text legend below the month for Regular, Peak, and Best value. The selected card and accessible name state the rate type explicitly so color is never the only signal.
+15. **Selected state — decided 2026-09-20:** Use a solid Fins navy selected cell, with high-contrast date and price treatment. Preserve the rate’s full color/name in the selected-date summary rather than forcing every rate color onto the navy cell.
+16. **Step 1 action — decided 2026-09-20:** The guest selects a date, then presses a separate **Continue** button below the calendar. Do not label it Reserve because party and contact details are still incomplete.
+17. **Snapshot migration — decided 2026-09-20:** Backfill active upcoming Day Use bookings from `totalPriceCents` only where the original adult and child unit rates can be reconstructed unambiguously. Leave ambiguous legacy rows unsnapshotted and block party-size edits with a clear staff-review message rather than silently applying the latest configured price.
 
 ## Non-negotiable invariants
 

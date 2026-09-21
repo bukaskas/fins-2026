@@ -1,4 +1,5 @@
 import DayUseBookingForm from "@/components/day-use/DayUseBookingForm";
+import pharaohPhoto from "@/public/images/kitesurfing/kite_booking_form_descktop.webp";
 
 // Spectator registration for the Pharaoh Airstyle day. This is a day-use
 // booking in every respect — same rate, same "day-use" service, same emails,
@@ -23,14 +24,19 @@ export default function PharaohAirstyleDayUsePage() {
         fixedDate: PHARAOH_DAY_USE_DATE,
         eventHighlights: EVENT_HIGHLIGHTS,
         stepOneTitle: "Pharaoh Airstyle · 9 October",
+        photo: pharaohPhoto,
+        // The kiter is high in this frame, so the day-use crop (which biases
+        // low, to below a horizon) would cut the subject off entirely —
+        // especially on mobile, where the rail is a short banner.
+        photoClassName: "object-[center_28%]",
         rail: {
           eyebrow: "Fins Beach Club · Sokhna",
-          titleTop: "Come watch",
-          titleBottom: "the airstyle",
+          titleTop: "Pharaoh Airstyle,",
+          titleBottom: "join the crowd",
           bullets: [
             "Friday 9 October 2026",
             "9:00 AM – 11:00 PM",
-            "500m of shoreline",
+            "Kite competition",
           ],
         },
       }}

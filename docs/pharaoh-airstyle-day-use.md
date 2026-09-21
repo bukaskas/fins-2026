@@ -136,6 +136,8 @@ A new service slug; an events table or admin UI; a date-override pricing system 
 
 **Decisions made during the build, not in the draft:**
 
+- The brand-rail backdrop moved into the variant (`photo` + `photoClassName`) rather than staying hardcoded in the shared component. Each route now names its own photo and its own crop, because the right crop depends entirely on what the photo is of.
+
 - `htmlFor` is dropped and the label becomes "Your day" when the date is fixed — pointing a label at a control that no longer exists is worse than no association.
 - Step 3's "Edit" goes to step 2 on a fixed-date variant (`goToStep(fixedDate ? 2 : 1)`). Sending someone back to a step whose only control is read-only is a dead end.
 - Closed dates are still fetched on the fixed-date route — not for a picker it no longer has, but to drive the sold-out guard.
@@ -146,6 +148,12 @@ A new service slug; an events table or admin UI; a date-override pricing system 
 - `/day-use/booking/pharaoh-airstyle` shows the locked "Friday 9 October 2026" panel, the four highlight lines, the standard rate, and carries 1,500 EGP through to step 3's summary.
 - Past-date guard proved by temporarily pointing the variant at 2025-10-09: the form is replaced by "This day has passed". Reverted.
 - `npx tsc --noEmit` clean; `npm run build` compiles both routes; `npm run lint` error count identical before and after (69 pre-existing, none new).
+
+**Later copy/art changes (2026-09-21):**
+
+- Rail headline is "Pharaoh Airstyle, / join the crowd"; third subtitle item is "Kite competition" (was "500m of shoreline").
+- Backdrop is `public/images/kitesurfing/kite_booking_form_descktop.webp`, cropped `object-[center_28%]`. The day-use crop biases low (`center 72%`, below a horizon); this frame has the kiter high in it, so that crop would have cut the subject off — worst on mobile, where the rail is a short banner rather than a tall column.
+- Note: the subtitle row is `hidden sm:flex`, inherited from the day-use rail, so "Kite competition" does not appear on phones. Unchanged behaviour, flagged rather than fixed.
 
 **Not done:**
 
