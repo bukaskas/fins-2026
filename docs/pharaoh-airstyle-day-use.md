@@ -151,7 +151,10 @@ A new service slug; an events table or admin UI; a date-override pricing system 
 
 **Later copy/art changes (2026-09-21):**
 
-- Rail headline is "Pharaoh Airstyle, / join the crowd"; third subtitle item is "Kite competition" (was "500m of shoreline").
+- Rail headline is "Come watch / the airstyle" (two-line display pair). Third subtitle item is "Kite competition" (was "500m of shoreline").
+- Step 1's copy under the locked date is a single sentence — "Join us for a day packed with activities, music, flavorful bites, and high-flying kitesurfing tricks" — in place of the original four bullets. `FixedDatePanel` renders one highlight as a plain paragraph and two-or-more as a bulleted list, because a single bullet isn't a list.
+- The rail supports two headline modes: the two-line display pair (`titleTop`/`titleBottom`, up to 4rem) and a `lede` sentence at reading size. `lede` is currently unused but kept — a sentence at display size swamps the rail, so the two modes aren't interchangeable.
+- The same sentence is also the `og:description`. `og:title` stays "Pharaoh Airstyle — Spectator Registration": the preview needs a short name on the bold line above the description.
 - Backdrop is `public/images/kitesurfing/kite_booking_form_descktop.webp`, cropped `object-[center_28%]`. The day-use crop biases low (`center 72%`, below a horizon); this frame has the kiter high in it, so that crop would have cut the subject off — worst on mobile, where the rail is a short banner rather than a tall column.
 - Share preview (`og:image`/`twitter:image`) is `public/images/og/pharaoh-airstyle.jpg` — the same kite shot, pre-cropped to 1200x630 from the 1400x1000 source, keeping the full kiter and the kite. Exported as JPEG rather than the source WebP because WhatsApp, which is where this link gets shared, is unreliable about WebP previews. Note `buildMetadata` hardcodes `width: 1200, height: 630` for every page, so any image not actually that size is declared wrong to crawlers — true of the existing `dayuse_intro.webp` (680x453) and the reason this one was pre-cropped rather than pointed at directly.
 - Note: the subtitle row is `hidden sm:flex`, inherited from the day-use rail, so "Kite competition" does not appear on phones. Unchanged behaviour, flagged rather than fixed.

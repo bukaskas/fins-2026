@@ -10,11 +10,10 @@ import pharaohPhoto from "@/public/images/kitesurfing/kite_booking_form_descktop
 // late-night booker doesn't persist the 8th.
 const PHARAOH_DAY_USE_DATE = new Date(Date.UTC(2026, 9, 9));
 
+// A single sentence rather than a bullet list — FixedDatePanel drops the
+// bullet dot when there's only one line, since one bullet isn't a list.
 const EVENT_HIGHLIGHTS = [
-  "Best kitesurfing action",
-  "Food worth savoring",
-  "Day full of activities",
-  "Great community",
+  "Join us for a day packed with activities, music, flavorful bites, and high-flying kitesurfing tricks",
 ];
 
 export default function PharaohAirstyleDayUsePage() {
@@ -31,8 +30,8 @@ export default function PharaohAirstyleDayUsePage() {
         photoClassName: "object-[center_28%]",
         rail: {
           eyebrow: "Fins Beach Club · Sokhna",
-          titleTop: "Pharaoh Airstyle,",
-          titleBottom: "join the crowd",
+          titleTop: "Come watch",
+          titleBottom: "the airstyle",
           bullets: [
             "Friday 9 October 2026",
             "9:00 AM – 11:00 PM",

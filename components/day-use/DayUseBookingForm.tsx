@@ -56,8 +56,13 @@ export type DayUseBookingVariant = {
   notice?: { title: string; body: string };
   rail: {
     eyebrow: string;
-    titleTop: string;
-    titleBottom: string;
+    /** Two-line display headline. Omit when using `lede`. */
+    titleTop?: string;
+    titleBottom?: string;
+    /** A full sentence in place of the display headline. Set at reading size
+     *  rather than display size — a sentence at 4rem swamps the rail and
+     *  stops being readable. */
+    lede?: string;
     bullets: string[];
   };
   /** Replaces "When are you coming?" as the step 1 heading. */
@@ -207,7 +212,7 @@ function FixedDatePanel({
           {format(date, "EEEE d MMMM yyyy")}
         </span>
       </div>
-      {highlights && highlights.length > 0 && (
+      {highlights && highlights.length > 1 && (
         <ul
           className="border-t px-4 py-3.5 space-y-2"
           style={{ borderColor: HAIRLINE, background: TINT }}
@@ -227,6 +232,15 @@ function FixedDatePanel({
             </li>
           ))}
         </ul>
+      )}
+      {/* One line isn't a list: no bullet, no marker, just the sentence. */}
+      {highlights && highlights.length === 1 && (
+        <p
+          className="border-t px-4 py-3.5 text-[0.875rem] leading-relaxed"
+          style={{ borderColor: HAIRLINE, background: TINT, color: MUTED }}
+        >
+          {highlights[0]}
+        </p>
       )}
     </div>
   );
@@ -678,14 +692,20 @@ function DayUseBookingForm({ variant }: { variant: DayUseBookingVariant }) {
           >
             {rail.eyebrow}
           </span>
-          <p className="font-[family-name:var(--font-raleway)] text-white leading-[0.95] mb-4 sm:mb-6">
-            <span className="block text-[clamp(2rem,6vw,4rem)] font-[100] tracking-[-0.02em]">
-              {rail.titleTop}
-            </span>
-            <span className="block text-[clamp(2rem,6vw,4rem)] font-[800] tracking-[-0.02em]">
-              {rail.titleBottom}
-            </span>
-          </p>
+          {rail.lede ? (
+            <p className="font-[family-name:var(--font-raleway)] text-white font-[300] text-[clamp(1.125rem,2.2vw,1.5rem)] leading-[1.35] tracking-[-0.01em] max-w-[22ch] mb-4 sm:mb-6">
+              {rail.lede}
+            </p>
+          ) : (
+            <p className="font-[family-name:var(--font-raleway)] text-white leading-[0.95] mb-4 sm:mb-6">
+              <span className="block text-[clamp(2rem,6vw,4rem)] font-[100] tracking-[-0.02em]">
+                {rail.titleTop}
+              </span>
+              <span className="block text-[clamp(2rem,6vw,4rem)] font-[800] tracking-[-0.02em]">
+                {rail.titleBottom}
+              </span>
+            </p>
+          )}
           <div className="hidden sm:flex flex-wrap gap-x-5 gap-y-2">
             {rail.bullets.map((item) => (
               <span
