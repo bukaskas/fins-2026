@@ -86,6 +86,7 @@ These are the questions most likely to change the build. Replace each assumption
 15. **Selected state — decided 2026-09-20:** Use a solid Fins navy selected cell, with high-contrast date and price treatment. Preserve the rate’s full color/name in the selected-date summary rather than forcing every rate color onto the navy cell.
 16. **Step 1 action — decided 2026-09-20:** The guest selects a date, then presses a separate **Continue** button below the calendar. Do not label it Reserve because party and contact details are still incomplete.
 17. **Snapshot migration — decided 2026-09-20:** Backfill active upcoming Day Use bookings from `totalPriceCents` only where the original adult and child unit rates can be reconstructed unambiguously. Leave ambiguous legacy rows unsnapshotted and block party-size edits with a clear staff-review message rather than silently applying the latest configured price.
+18. **Terminology scope — decided 2026-09-21:** Replace Standard / Holiday / Discounted with Regular / Peak / Best value on every Day Use surface: landing page, booking flow, selected summary, totals, guest emails, and staff booking details. Do not expose mixed labels for the same rate.
 
 ## Non-negotiable invariants
 
