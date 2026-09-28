@@ -87,6 +87,7 @@ These are the questions most likely to change the build. Replace each assumption
 16. **Step 1 action — decided 2026-09-20:** The guest selects a date, then presses a separate **Continue** button below the calendar. Do not label it Reserve because party and contact details are still incomplete.
 17. **Snapshot migration — decided 2026-09-20:** Backfill active upcoming Day Use bookings from `totalPriceCents` only where the original adult and child unit rates can be reconstructed unambiguously. Leave ambiguous legacy rows unsnapshotted and block party-size edits with a clear staff-review message rather than silently applying the latest configured price.
 18. **Terminology scope — decided 2026-09-21:** Replace Standard / Holiday / Discounted with Regular / Peak / Best value on every Day Use surface: landing page, booking flow, selected summary, totals, guest emails, and staff booking details. Do not expose mixed labels for the same rate.
+19. **Stale quotes — decided 2026-09-21:** If the server’s current unit prices differ from the quote the guest reviewed, reject submission, preserve entered details, and require explicit review of the new price. Never silently create a booking at a changed amount in either direction.
 
 ## Non-negotiable invariants
 
