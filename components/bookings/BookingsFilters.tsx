@@ -2,7 +2,6 @@
 
 import { useRouter, useSearchParams } from "next/navigation";
 import { useRef, useState, useTransition } from "react";
-import { BookingStatus } from "@prisma/client";
 import {
   Search,
   X,
@@ -11,18 +10,13 @@ import {
   ArrowDownWideNarrow,
   ChevronDown,
 } from "lucide-react";
-
-const STATUS_OPTIONS: { value: string; label: string }[] = [
-  { value: "all", label: "All statuses" },
-  { value: BookingStatus.PENDING, label: "Pending" },
-  { value: BookingStatus.REQUEST_SENT, label: "Request Sent" },
-  { value: BookingStatus.UNDER_REVIEW, label: "Under Review" },
-  { value: BookingStatus.WAITING_PAYMENT, label: "Waiting Payment" },
-  { value: BookingStatus.CONFIRMED, label: "Confirmed" },
-  { value: BookingStatus.DECLINED, label: "Declined" },
-  { value: BookingStatus.NO_RESPONSE_EXPIRED, label: "No Response" },
-  { value: BookingStatus.CANCELED, label: "Canceled" },
-];
+import {
+  parseBookingStatusFilter,
+  serializeBookingStatusFilter,
+  STATUS_BORDER,
+  STATUS_GROUPS,
+  STATUS_LABEL,
+} from "@/lib/bookings/status";
 
 const SERVICE_OPTIONS = [
   { value: "all", label: "All services" },
@@ -90,6 +84,84 @@ function SelectPill({
 
 type AgentOption = { id: string; label: string };
 
+function BookingStatusFilter({
+  status,
+  onChange,
+}: {
+  status: string;
+  onChange: (value: string) => void;
+}) {
+  const [selectedStatuses, setSelectedStatuses] = useState(() =>
+    parseBookingStatusFilter(status),
+  );
+  const selectionRef = useRef(selectedStatuses);
+
+  function toggleStatus(value: (typeof selectedStatuses)[number]) {
+    const current = selectionRef.current;
+    const next = current.includes(value)
+      ? current.filter((status) => status !== value)
+      : [...current, value];
+
+    selectionRef.current = next;
+    setSelectedStatuses(next);
+    onChange(serializeBookingStatusFilter(next));
+  }
+
+  return (
+    <fieldset className="min-w-0 sm:col-span-2">
+      <legend className="font-[family-name:var(--font-raleway)] text-[0.72rem] font-[600] text-[#6b6460]">
+        Booking status
+      </legend>
+      <p className="mb-2 mt-0.5 font-[family-name:var(--font-raleway)] text-[0.72rem] text-[#6b6460]">
+        {selectedStatuses.length === 0
+          ? "Showing all statuses"
+          : `${selectedStatuses.length} selected`}
+      </p>
+      <div className="grid gap-3 sm:grid-cols-3">
+        {STATUS_GROUPS.map((group) => (
+          <div key={group.label}>
+            <p className="mb-1 font-[family-name:var(--font-raleway)] text-[0.72rem] font-[600] text-[#6b6460]">
+              {group.label}
+            </p>
+            <div className="grid gap-1.5">
+              {group.statuses.map((value) => {
+                const checked = selectedStatuses.includes(value);
+
+                return (
+                  <label
+                    key={value}
+                    className={`flex min-h-11 cursor-pointer items-center gap-2 rounded-xl border px-3 py-2 font-[family-name:var(--font-raleway)] text-[0.78rem] font-[500] transition-colors focus-within:ring-2 focus-within:ring-[#1a1614] focus-within:ring-offset-2 ${
+                      checked
+                        ? "border-[#1a1614] bg-[#f5f2ef] text-[#1a1614]"
+                        : "border-[#ece8e3] bg-white text-[#5a5450] hover:border-[#d6d0c8]"
+                    }`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={checked}
+                      onChange={() => toggleStatus(value)}
+                      className="size-4 shrink-0 cursor-pointer accent-[#1a1614] focus-visible:outline-none"
+                    />
+                    <span
+                      className="size-2 shrink-0 rounded-full"
+                      style={{ backgroundColor: STATUS_BORDER[value] }}
+                      aria-hidden="true"
+                    />
+                    <span>{STATUS_LABEL[value]}</span>
+                  </label>
+                );
+              })}
+            </div>
+          </div>
+        ))}
+      </div>
+      <p className="mt-2 font-[family-name:var(--font-raleway)] text-[0.72rem] text-[#6b6460]">
+        Leave every box unchecked to include all booking statuses.
+      </p>
+    </fieldset>
+  );
+}
+
 export function BookingsFilters({
   total,
   agents = [],
@@ -104,6 +176,7 @@ export function BookingsFilters({
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   const status = searchParams.get("status") ?? "all";
+  const selectedStatuses = parseBookingStatusFilter(status);
   const q = searchParams.get("q") ?? "";
   const service = searchParams.get("service") ?? "all";
   const agent = searchParams.get("agent") ?? "all";
@@ -141,7 +214,7 @@ export function BookingsFilters({
   }
 
   const isFiltered =
-    status !== "all" ||
+    selectedStatuses.length > 0 ||
     q !== "" ||
     service !== "all" ||
     agent !== "all" ||
@@ -149,6 +222,7 @@ export function BookingsFilters({
     unpaid !== "";
 
   const advancedCount = [
+    selectedStatuses.length > 0,
     agent !== "all",
     range !== "upcoming",
     sort !== "date",
@@ -186,18 +260,6 @@ export function BookingsFilters({
             className={`min-h-11 w-full rounded-full border border-[#ece8e3] bg-[#faf9f7] py-2 pl-8 pr-3 text-base font-[family-name:var(--font-raleway)] text-[#1a1614] placeholder:text-[#6b6460] transition-colors focus:border-[#1a1614] sm:text-[0.85rem] ${FOCUS_RING}`}
           />
         </div>
-
-        <SelectPill
-          label="Status"
-          value={status}
-          onChange={(v) => push({ status: v })}
-        >
-          {STATUS_OPTIONS.map((o) => (
-            <option key={o.value} value={o.value}>
-              {o.label}
-            </option>
-          ))}
-        </SelectPill>
 
         <SelectPill
           label="Service"
@@ -255,7 +317,13 @@ export function BookingsFilters({
           />
         </summary>
 
-        <div className="grid gap-4 pb-2 pt-3 sm:grid-cols-2">
+        <div className="grid min-w-0 gap-4 pb-2 pt-3 sm:grid-cols-2">
+          <BookingStatusFilter
+            key={status}
+            status={status}
+            onChange={(value) => push({ status: value })}
+          />
+
           {agents.length > 0 && (
             <div>
               <p className="mb-1.5 font-[family-name:var(--font-raleway)] text-[0.72rem] font-[600] text-[#6b6460]">
@@ -277,11 +345,11 @@ export function BookingsFilters({
             </div>
           )}
 
-          <fieldset>
+          <fieldset className="min-w-0">
             <legend className="mb-1.5 font-[family-name:var(--font-raleway)] text-[0.72rem] font-[600] text-[#6b6460]">
               Visit window
             </legend>
-            <div className="flex flex-wrap items-center gap-1 rounded-[1.35rem] border border-[#ece8e3] bg-[#faf9f7] p-0.5">
+            <div className="flex max-w-full flex-wrap items-center gap-1 rounded-[1.35rem] border border-[#ece8e3] bg-[#faf9f7] p-0.5">
               <CalendarDays
                 className="ml-2 h-3.5 w-3.5 shrink-0 text-[#6b6460]"
                 aria-hidden="true"
@@ -300,11 +368,11 @@ export function BookingsFilters({
             </div>
           </fieldset>
 
-          <fieldset>
+          <fieldset className="min-w-0">
             <legend className="mb-1.5 font-[family-name:var(--font-raleway)] text-[0.72rem] font-[600] text-[#6b6460]">
               Sort by
             </legend>
-            <div className="flex flex-wrap items-center gap-1 rounded-[1.35rem] border border-[#ece8e3] bg-[#faf9f7] p-0.5">
+            <div className="flex max-w-full flex-wrap items-center gap-1 rounded-[1.35rem] border border-[#ece8e3] bg-[#faf9f7] p-0.5">
               <ArrowDownWideNarrow
                 className="ml-2 h-3.5 w-3.5 shrink-0 text-[#6b6460]"
                 aria-hidden="true"
@@ -335,11 +403,11 @@ export function BookingsFilters({
             </div>
           </fieldset>
 
-          <fieldset>
+          <fieldset className="min-w-0">
             <legend className="mb-1.5 font-[family-name:var(--font-raleway)] text-[0.72rem] font-[600] text-[#6b6460]">
               Group results
             </legend>
-            <div className="flex flex-wrap items-center gap-1 rounded-[1.35rem] border border-[#ece8e3] bg-[#faf9f7] p-0.5">
+            <div className="flex max-w-full flex-wrap items-center gap-1 rounded-[1.35rem] border border-[#ece8e3] bg-[#faf9f7] p-0.5">
               <Layers
                 className="ml-2 h-3.5 w-3.5 shrink-0 text-[#6b6460]"
                 aria-hidden="true"

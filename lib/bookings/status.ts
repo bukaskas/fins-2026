@@ -48,6 +48,39 @@ export const STATUS_LABEL: Record<BookingStatus, string> = {
   CANCELED:            "Canceled",
 };
 
+const BOOKING_STATUS_SET: ReadonlySet<string> = new Set(
+  Object.values(BookingStatus),
+);
+
+/**
+ * Decode the comma-separated status filter used by `/bookings`.
+ *
+ * An empty list means "all statuses". Invalid URL values are ignored so a
+ * stale or hand-edited link can never turn into an invalid Prisma query.
+ */
+export function parseBookingStatusFilter(
+  value: string | null | undefined,
+): BookingStatus[] {
+  if (!value || value === "all") return [];
+
+  return Array.from(
+    new Set(
+      value
+        .split(",")
+        .filter((status): status is BookingStatus =>
+          BOOKING_STATUS_SET.has(status),
+        ),
+    ),
+  );
+}
+
+/** Encode selected statuses for the URL. An empty selection means all. */
+export function serializeBookingStatusFilter(
+  statuses: BookingStatus[],
+): string {
+  return statuses.length > 0 ? statuses.join(",") : "all";
+}
+
 /** Muted foreground that clears 4.5:1 on white. `#b0a89f` is 2.3:1 — banned. */
 export const MUTED = "#6b6460";
 

@@ -19,7 +19,10 @@ import { getServerSession } from "next-auth/next";
 import { redirect } from "next/navigation";
 import { authOptions } from "@/lib/auth";
 import { roleHasCapability } from "@/lib/permissions";
-import { serviceLabel } from "@/lib/bookings/status";
+import {
+  parseBookingStatusFilter,
+  serviceLabel,
+} from "@/lib/bookings/status";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -209,7 +212,7 @@ async function BookingsPage({
   }));
 
   const isFiltered =
-    status !== "all" ||
+    parseBookingStatusFilter(status).length > 0 ||
     q !== "" ||
     service !== "all" ||
     agent !== "all" ||

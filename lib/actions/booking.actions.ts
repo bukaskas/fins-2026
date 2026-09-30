@@ -27,6 +27,7 @@ import { calculateDayUsePrice, computeBookingTotalCents } from "@/lib/pricing";
 import { createPaymentOrder, getFlashOrder, verifyWebhookSignature } from "@/lib/flash";
 import { getAutoConfirmBookings } from "./settings.actions";
 import { BOOKINGS_PAGE_SIZE, DAILY_CAPACITY, WAITING_PAYMENT_WINDOW_MS } from "@/lib/constants";
+import { parseBookingStatusFilter } from "@/lib/bookings/status";
 
 const FLASH_CURRENCY = process.env.FLASH_CURRENCY || "EGP";
 const FLASH_MIN_CENTS = 500; // Flash rejects orders below 5 EGP
@@ -305,8 +306,11 @@ function bookingsWhere(query: BookingsQuery): Prisma.BookingWhereInput {
   const { status, service, agent, q, unpaid, range = "upcoming" } = query;
   const where: Prisma.BookingWhereInput = {};
 
-  if (status && status !== "all" && (Object.values(BookingStatus) as string[]).includes(status)) {
-    where.bookingStatus = status as BookingStatus;
+  const statuses = parseBookingStatusFilter(status);
+  if (statuses.length === 1) {
+    where.bookingStatus = statuses[0];
+  } else if (statuses.length > 1) {
+    where.bookingStatus = { in: statuses };
   }
 
   if (service && service !== "all") where.service = service;
