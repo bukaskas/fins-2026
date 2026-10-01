@@ -1,8 +1,10 @@
 import Link from "next/link";
-import Image, { StaticImageData } from "next/image";
+import { StaticImageData } from "next/image";
+import { ArrowRight } from "lucide-react";
 import kiteMobile from "@/public/images/hero_images/hero_mobile2.webp";
 import kiteDesktop from "@/public/images/hero_images/kitesurfing_desktop2.webp";
 import BookCourseLink from "@/components/kitesurfing/BookCourseLink";
+import { HeroSlide, heroPrimaryCta, heroSecondaryLink } from "./HeroSlide";
 
 type KitesurfingHeroProps = {
   mobileSrc?: StaticImageData;
@@ -13,121 +15,30 @@ export function KitesurfingHero({
   mobileSrc = kiteMobile,
   desktopSrc = kiteDesktop,
 }: KitesurfingHeroProps) {
-  const accent = "#38bdf8";
-
   return (
-    <div className="relative isolate h-screen overflow-hidden">
-      {/* Background images */}
-      <Image
-        src={mobileSrc}
-        alt="Kitesurfing at Fins Sokhna"
-        fill
-        priority
-        sizes="100vw"
-        className="absolute inset-0 -z-20 object-cover sm:hidden"
-      />
-      <Image
-        src={desktopSrc}
-        alt="Kitesurfing at Fins Sokhna"
-        fill
-        priority
-        sizes="100vw"
-        className="absolute inset-0 -z-20 hidden sm:block object-cover"
-      />
-
-      {/* Gradient layers */}
-      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-black/5" />
-      <div className="absolute inset-0 bg-gradient-to-r from-black/35 to-transparent" />
-
-      {/* Content */}
-      <div
-        className="absolute inset-0 flex flex-col justify-end pb-20 px-8 md:px-14 lg:px-20"
-        style={{
-          animation:
-            "heroContentReveal 0.9s cubic-bezier(.22,1,.36,1) 0.15s both",
-        }}
-      >
-        <style>{`
-          @keyframes heroContentReveal {
-            from { opacity: 0; transform: translateY(22px); }
-            to   { opacity: 1; transform: translateY(0); }
-          }
-        `}</style>
-
-        {/* Eyebrow */}
-        <div className="flex items-center gap-3 mb-5">
-          <span
-            className="h-px w-9 flex-shrink-0"
-            style={{ background: accent }}
-          />
-          <span
-            className="text-[0.62rem] tracking-[0.32em] uppercase font-[family-name:var(--font-raleway)] font-medium"
-            style={{ color: accent }}
-          >
-            IKO Certified · Red Sea · Sokhna
-          </span>
-        </div>
-
-        {/* Headline */}
-        <h1 className="font-[family-name:var(--font-raleway)] text-white leading-none mb-5">
-          <span className="block text-[clamp(4.5rem,13vw,10rem)] font-[100] tracking-[-0.025em] leading-[0.88]">
-            Kite
-          </span>
-          <span
-            className="block text-[clamp(1.3rem,3.5vw,2.8rem)] font-[800] tracking-[0.22em] uppercase mt-1"
-            style={{ color: accent }}
-          >
-            Surfing
-          </span>
-        </h1>
-
-        {/* Description */}
-        <p className="text-white/60 text-sm md:text-[0.9rem] max-w-sm mb-5 font-[family-name:var(--font-raleway)] font-[300] leading-relaxed">
-          Escape the city. Discover kitesurfing in our shallow lagoon — steady
-          winds, shallow water, and courses for all levels.
-        </p>
-
-        <div className="w-14 h-px bg-white/20 mb-5" />
-
-        {/* Tags */}
-        {/* <div className="flex flex-wrap gap-2 mb-8">
-          {["Courses for all levels", "Private & Group"].map((tag) => (
-            <span
-              key={tag}
-              className="px-3 py-[5px] border border-white/20 text-white/55 text-[0.58rem] tracking-[0.16em] uppercase font-[family-name:var(--font-raleway)] backdrop-blur-sm"
-            >
-              {tag}
-            </span>
-          ))}
-        </div> */}
-
-        {/* CTAs */}
-        <div className="flex items-center gap-7">
+    <HeroSlide
+      mobileSrc={mobileSrc}
+      desktopSrc={desktopSrc}
+      alt="Kitesurfing at Fins Sokhna"
+      accent="#38bdf8"
+      eyebrow="IKO Certified · Red Sea · Sokhna"
+      title="Kite"
+      subtitle="Surfing"
+      description="Escape the city. Discover kitesurfing in our shallow lagoon — steady winds, shallow water, and courses for all levels."
+      actions={
+        <>
           {/* Goes through BookCourseLink like every other booking CTA, so the
               homepage slide cannot drift from the rest: same label, same
               external handling, same source attribution. */}
-          <BookCourseLink
-            className="group inline-flex min-h-[44px] items-center gap-2 text-black text-[0.75rem] font-[700] tracking-[0.14em] uppercase px-6 font-[family-name:var(--font-raleway)] transition-opacity duration-200 hover:opacity-85"
-            style={{ background: accent }}
-          >
+          <BookCourseLink className={heroPrimaryCta}>
             Book a course
           </BookCourseLink>
-          <Link
-            href="/kitesurfing#courses"
-            className="text-white/55 hover:text-white text-[0.68rem] tracking-[0.22em] uppercase font-[family-name:var(--font-raleway)] transition-colors duration-200"
-          >
-            Learn more ↗
+          <Link href="/kitesurfing#courses" className={heroSecondaryLink}>
+            Learn more
+            <ArrowRight size={14} strokeWidth={2} aria-hidden="true" />
           </Link>
-        </div>
-      </div>
-
-      {/* Vertical side text */}
-      <div className="absolute right-6 bottom-20 hidden lg:flex flex-col items-center gap-3 pointer-events-none">
-        <span className="text-white/15 text-[0.55rem] tracking-[0.5em] uppercase font-[family-name:var(--font-raleway)] [writing-mode:vertical-rl]">
-          Red Sea · Egypt
-        </span>
-        <span className="block w-px h-10 bg-white/10" />
-      </div>
-    </div>
+        </>
+      }
+    />
   );
 }

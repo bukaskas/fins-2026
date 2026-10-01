@@ -1,0 +1,567 @@
+{
+  "currency": "EGP",
+  "note": "All prices do not include tax and service",
+  "categories": [
+    {
+      "id": "breakfast",
+      "name": "Breakfast",
+      "groups": [
+        {
+          "name": null,
+          "items": [
+            {
+              "name": "Fins Breakfast",
+              "description": "Cheese omelette, taameya, sausages, mushrooms, feta cheese with tomatoes, home made bread & fries",
+              "priceCents": 40000
+            },
+            {
+              "name": "Breakfast Quesadillas",
+              "description": "Scrambled eggs with vegetables, pepperoni, cheese on tortilla bread, toasted",
+              "priceCents": 32000
+            },
+            {
+              "name": "Breakfast Burger",
+              "description": "Eggs & cheese",
+              "priceCents": 32000
+            },
+            {
+              "name": "Omelet & Rocca",
+              "description": "Fluffy omelet with vegetables & cheese with a side of fresh rocca",
+              "priceCents": 28000
+            },
+            {
+              "name": "Special Shakshuka",
+              "description": "Eggs with tomato sauce, onions and parsley, baked in the oven",
+              "priceCents": 31000,
+              "addOns": [{ "name": "Taameya", "priceCents": 5000 }]
+            }
+          ]
+        },
+        {
+          "name": "Plates",
+          "items": [
+            { "name": "Cheese tomato", "priceCents": 17000 },
+            { "name": "Scrambled eggs curry plate", "priceCents": 24000 },
+            { "name": "Eggs & Sausage", "priceCents": 30000 },
+            { "name": "Taameya", "priceCents": 17000 }
+          ]
+        },
+        {
+          "name": "Morning Wraps",
+          "items": [
+            { "name": "Scrambled egg wrap", "priceCents": 24000 },
+            { "name": "Taameya wrap", "priceCents": 20000 },
+            { "name": "Sausage egg wrap", "priceCents": 27000 },
+            { "name": "Halloumi wrap", "priceCents": 26000 },
+            { "name": "Tuna melt wrap", "priceCents": 30000 }
+          ]
+        },
+        {
+          "name": "Extras",
+          "items": [
+            { "name": "Fries", "priceCents": 8000 },
+            { "name": "Wedges", "priceCents": 12000 },
+            { "name": "Sweet potato fries", "priceCents": 14000 }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "salads",
+      "name": "Salads",
+      "groups": [
+        {
+          "name": null,
+          "items": [
+            {
+              "name": "House Salad",
+              "description": "Lettuce, rocca, cucumbers, tomatoes, green peppers, carrots with dressing",
+              "priceCents": 25000
+            },
+            {
+              "name": "Rocca Salad",
+              "description": "A refreshing salad of rocket leaves with lemon dressing, sun-dried tomatoes, fresh mushrooms, parmesan and walnuts",
+              "priceCents": 26000
+            },
+            {
+              "name": "Chicken Caesar Salad",
+              "description": "Grilled chicken tenderloins served on lettuce, parmesan cheese and croutons, with Caesar dressing",
+              "priceCents": 30000
+            }
+          ]
+        },
+        {
+          "name": "Add on",
+          "items": [
+            { "name": "Feta", "priceCents": 12000 },
+            { "name": "Halloumi", "priceCents": 18000 },
+            { "name": "Chicken", "priceCents": 22000 },
+            { "name": "Salmon", "priceCents": 70000 },
+            { "name": "Tuna", "priceCents": 15000 },
+            { "name": "Shrimp", "priceCents": 46000 }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "appetizers",
+      "name": "Appetizers",
+      "groups": [
+        {
+          "name": null,
+          "items": [
+            { "name": "Chicken tenders 5 pcs", "priceCents": 30000 },
+            { "name": "Chicken wings 5 pcs", "priceCents": 30000 },
+            { "name": "Two burger sliders", "priceCents": 36000 },
+            {
+              "name": "Hawawshi classic",
+              "description": "Ground beef with a unique spice blend, in fresh baladi bread",
+              "priceCents": 28000
+            },
+            { "name": "Fries", "priceCents": 13000 },
+            { "name": "Wedges", "priceCents": 16000 },
+            { "name": "Sweet potato fries", "priceCents": 18000 }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "tacos",
+      "name": "Tacos",
+      "groups": [
+        {
+          "name": null,
+          "items": [
+            {
+              "name": "Shredded beef tacos",
+              "description": "Shredded pieces of beef with shredded lettuce, onions and jalapenos, topped with our special sauce",
+              "priceCents": 45000
+            },
+            {
+              "name": "Buffalo chicken tacos",
+              "description": "Shredded crunchy lettuce, pico de gallo, shredded chicken in a buffalo sauce covered with melted cheese, and jalapenos",
+              "priceCents": 40000
+            },
+            {
+              "name": "Shrimp tacos - grilled",
+              "description": "Grilled shrimps with shredded lettuce, onions and jalapenos, topped with our special sauce",
+              "priceCents": 49000
+            },
+            {
+              "name": "Shrimp tacos - fried",
+              "description": "Fried shrimps with shredded lettuce, onions and jalapenos, topped with our special sauce",
+              "priceCents": 49000
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "pizzas",
+      "name": "Pizzas",
+      "groups": [
+        {
+          "name": null,
+          "items": [
+            { "name": "Pepperoni", "priceCents": 44000 },
+            { "name": "BBQ Chicken", "priceCents": 46000 },
+            { "name": "Vegetarian", "priceCents": 36000 },
+            { "name": "Margherita", "priceCents": 34000 },
+            { "name": "Shrimps", "priceCents": 60000 },
+            { "name": "Chicken ranch", "priceCents": 46000 }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "burgers-wraps",
+      "name": "Burgers & Wraps",
+      "groups": [
+        {
+          "name": "Burgers",
+          "items": [
+            {
+              "name": "Burger Pie",
+              "description": "The ultimate combination of wagyu fat & fillet beef minced together with mouthwatering mushroom sauce, mozzarella and swiss cheese, and fresh tomato sauce wrapped in a pizza pie",
+              "priceCents": 44000
+            },
+            {
+              "name": "Chicken Crispy Burger",
+              "description": "Fried chicken breast topped with lettuce, tomatoes, mayonnaise, pickled cucumber and cheese",
+              "priceCents": 38000,
+              "addOns": [{ "name": "Extra beef bacon", "priceCents": 3000 }]
+            },
+            {
+              "name": "Jucy Lucy Burger",
+              "description": "Burger made from fillet & wagyu stuffed with cheese, lettuce and tomato, mushroom sauce, in a brioche bun",
+              "priceCents": 42000
+            }
+          ]
+        },
+        {
+          "name": "Wraps",
+          "items": [
+            { "name": "Chicken crispy wrap", "priceCents": 36000 },
+            { "name": "Chicken Lemon Garlic wrap", "priceCents": 36000 },
+            { "name": "Beef stroganoff wrap", "priceCents": 40000 },
+            { "name": "Chicken Caesar wrap", "priceCents": 38000 }
+          ]
+        },
+        {
+          "name": "Extras",
+          "items": [
+            { "name": "Fries", "priceCents": 8000 },
+            { "name": "Wedges", "priceCents": 12000 },
+            { "name": "Sweet potato fries", "priceCents": 14000 }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "pokes",
+      "name": "Pokes",
+      "groups": [
+        {
+          "name": null,
+          "items": [
+            { "name": "Chicken Poke", "priceCents": 53000 },
+            { "name": "Beef Poke", "priceCents": 58000 },
+            {
+              "name": "Salmon Poke",
+              "priceCents": 89000,
+              "addOns": [{ "name": "Extra salmon", "priceCents": 70000 }]
+            },
+            { "name": "Shrimp Poke", "priceCents": 72000 }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "pasta",
+      "name": "Pasta",
+      "groups": [
+        {
+          "name": null,
+          "items": [
+            {
+              "name": "Beef Stroganoff",
+              "description": "Slices of slow-cooked beef with fresh mushrooms & peppers in a creamy brown sauce",
+              "priceCents": 46000
+            },
+            {
+              "name": "Shrimp pasta",
+              "description": "Grilled shrimps on top of a pink sauce pasta, topped with fresh parmesan & fresh parsley",
+              "priceCents": 60000
+            },
+            {
+              "name": "Chicken mushroom",
+              "description": "Delicious penne pasta in a creamy brown mushroom sauce with grilled marinated chicken, topped with parmesan",
+              "priceCents": 42000
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "quesadillas",
+      "name": "Quesadillas",
+      "groups": [
+        {
+          "name": null,
+          "items": [
+            {
+              "name": "Chicken Quesadillas",
+              "description": "Grilled chicken with vegetables, topped with mozzarella cheese",
+              "priceCents": 38000
+            },
+            {
+              "name": "Beef Quesadillas",
+              "description": "Grilled beef with vegetables, topped with mozzarella cheese",
+              "priceCents": 42000
+            }
+          ]
+        },
+        {
+          "name": "Extras",
+          "items": [
+            { "name": "Fries", "priceCents": 8000 },
+            { "name": "Wedges", "priceCents": 12000 },
+            { "name": "Sweet potato fries", "priceCents": 14000 }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "main-courses",
+      "name": "Main Courses",
+      "groups": [
+        {
+          "name": null,
+          "items": [
+            {
+              "name": "Beef Stroganoff",
+              "description": "Slices of slow-cooked beef with fresh mushrooms & peppers in a creamy brown sauce",
+              "priceCents": 54000
+            },
+            {
+              "name": "Chicken Fajita",
+              "description": "Grilled chicken in a Mexican seasoning, with grilled vegetables, served with fresh parmesan & choice of one side",
+              "priceCents": 45000
+            },
+            {
+              "name": "Chicken Scallopini",
+              "description": "Fried chicken breast, beef bacon, sweet corn in a creamy mushroom sauce",
+              "priceCents": 46000
+            },
+            {
+              "name": "Shrimp Fajita",
+              "description": "Shrimp, sautéed peppers and sweet corn tossed in a rich, creamy mushroom sauce. A bold fusion of smoky fajita flavor and silky indulgence.",
+              "priceCents": 65000
+            },
+            {
+              "name": "Grilled Lemon Garlic Chicken",
+              "description": "Succulent chicken breasts smothered in a creamy mushroom brown gravy sauce, served with one side",
+              "priceCents": 45000
+            },
+            {
+              "name": "Cordon Bleu",
+              "description": "Juicy chicken, crispy coating, and a mouthwatering surprise inside: breaded chicken stuffed with beef bacon and Swiss cheese",
+              "priceCents": 50000
+            },
+            {
+              "name": "Chicken Mushroom",
+              "description": "Succulent chicken breasts smothered in a creamy mushroom brown gravy sauce, served with one side",
+              "priceCents": 50000
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "chefs-specials",
+      "name": "Chef's Specials",
+      "groups": [
+        {
+          "name": null,
+          "items": [
+            {
+              "name": "Salmon Lemon Garlic",
+              "description": "Grilled salmon marinated with lemon and garlic, served with a side of lemon sauce",
+              "priceCents": 100000,
+              "addOns": [{ "name": "Truffle oil", "priceCents": 10000 }]
+            },
+            {
+              "name": "South African Beef Fillet",
+              "description": "Perfectly grilled, tender South African beef fillet. This prime cut is expertly seasoned and flame-grilled to perfection, ensuring a juicy, flavorful bite every time. Served with a side of creamy pasta.",
+              "priceCents": 100000
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "vegetarian",
+      "name": "Vegetarian",
+      "groups": [
+        {
+          "name": "Vegi Appetizers",
+          "items": [
+            { "name": "Wedges", "priceCents": 15000 },
+            { "name": "Sweet potato fries", "priceCents": 15000 },
+            { "name": "Halloumi cheese", "priceCents": 17000 }
+          ]
+        },
+        {
+          "name": "Mains",
+          "items": [
+            {
+              "name": "Vegetarian Burger",
+              "description": "Vegetarian burger pattie topped with onions, tomatoes & lettuce",
+              "priceCents": 25000,
+              "addOns": [{ "name": "Extra fries", "priceCents": 6000 }]
+            },
+            {
+              "name": "Vegi Salad",
+              "description": "Leafy greens, cucumbers, tomatoes, colored peppers, sweet corn, quinoa and sautéed vegetables with dressing",
+              "priceCents": 22500
+            },
+            {
+              "name": "Pasta marinara",
+              "description": "A plate of pasta drowning in a sea of vibrant red marinara sauce",
+              "priceCents": 20000
+            },
+            {
+              "name": "Eggplant burger or plate",
+              "description": "2 thick slices of grilled or fried eggplant topped with hummus, ruccola and tomato in a brioche bun",
+              "priceCents": 30000,
+              "addOns": [{ "name": "Halloumi", "priceCents": 4000 }]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "kids",
+      "name": "Kids Menu",
+      "groups": [
+        {
+          "name": null,
+          "items": [
+            {
+              "name": "Two burger sliders",
+              "description": "Two beef slider burgers served with fries",
+              "priceCents": 36000
+            },
+            {
+              "name": "Chicken bomb",
+              "description": "Crispy fried patties filled with a delicious combination of chicken and cheese",
+              "priceCents": 24000
+            },
+            { "name": "Pasta red sauce", "priceCents": 20000 },
+            { "name": "Kids chicken tenders with fries", "priceCents": 31500 },
+            { "name": "Fries", "priceCents": 6000 },
+            { "name": "Wedges", "priceCents": 15000 },
+            { "name": "Sweet potato fries", "priceCents": 12000 }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "drinks",
+      "name": "Drinks",
+      "groups": [
+        {
+          "name": null,
+          "items": [
+            {
+              "name": "Fresh juices",
+              "options": ["Orange", "Strawberry", "Mango", "Lemon mint"],
+              "priceCents": 15000
+            },
+            {
+              "name": "Smoothies",
+              "options": ["Mango", "Strawberry", "Blueberry", "Pina colada", "Watermelon"],
+              "priceCents": 18000
+            },
+            {
+              "name": "Mojito",
+              "options": ["Classic", "Blueberry", "Passionfruit"],
+              "priceCents": 15000
+            },
+            { "name": "Mojito RedBull", "priceCents": 20000 }
+          ]
+        },
+        {
+          "name": "Cold drinks",
+          "items": [
+            {
+              "name": "Milkshakes",
+              "options": ["Caramel", "Chocolate", "Vanilla", "Strawberry"],
+              "priceCents": 19000
+            },
+            {
+              "name": "Iced coffee",
+              "options": ["Iced coffee", "Iced mocha", "Iced black coffee", "Iced caramel macchiato"],
+              "priceCents": 20000
+            }
+          ]
+        },
+        {
+          "name": "Soft drinks",
+          "items": [
+            { "name": "Water", "priceCents": 4000 },
+            { "name": "Sparkling water", "priceCents": 7000 },
+            { "name": "Soda", "priceCents": 7500 },
+            { "name": "Redbull", "priceCents": 16000 }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "coffee",
+      "name": "Coffee & Hot Drinks",
+      "groups": [
+        {
+          "name": "Coffee",
+          "items": [
+            {
+              "name": "Coffee",
+              "options": ["Doppio", "Americano", "Latte Macchiato", "Flat White", "Cappuccino", "Latte"],
+              "priceCents": 18000
+            },
+            { "name": "Spanish latte", "priceCents": 20000 },
+            { "name": "Turkish coffee", "priceCents": 10000 },
+            { "name": "Turkish coffee with milk", "priceCents": 13000 },
+            { "name": "Espresso", "priceCents": 10000 },
+            { "name": "Hot mocha", "priceCents": 20000 },
+            { "name": "Hot chocolate", "priceCents": 16000 }
+          ]
+        },
+        {
+          "name": "Add ons",
+          "items": [
+            { "name": "Extra shot", "priceCents": 5000 },
+            { "name": "Almond milk", "priceCents": 5000 },
+            { "name": "Oat milk", "priceCents": 5000 },
+            { "name": "Add flavor", "priceCents": 3000 }
+          ]
+        },
+        {
+          "name": "Hot drinks",
+          "items": [
+            { "name": "Green tea", "priceCents": 7500 },
+            { "name": "English tea", "priceCents": 7500 },
+            { "name": "Anis", "priceCents": 7500 }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "desserts",
+      "name": "Desserts",
+      "groups": [
+        {
+          "name": null,
+          "items": [
+            {
+              "name": "Chocolate crepe",
+              "description": "A homemade crepe topped with luscious chocolate",
+              "priceCents": 26000
+            },
+            { "name": "Saint Sebastian", "priceCents": 24500 },
+            { "name": "Chocolate pizza", "priceCents": 26000 },
+            { "name": "Plain Cheesecake", "priceCents": 22500 },
+            { "name": "Raspberry Cheesecake", "priceCents": 22500 },
+            { "name": "Brownie with Ice Cream", "priceCents": 21500 },
+            { "name": "Mille Feuille Signature", "priceCents": 25000 },
+            {
+              "name": "Ice cream",
+              "description": "Nestle ice cream, 2 scoops",
+              "priceCents": 12000
+            },
+            {
+              "name": "Pancakes",
+              "options": ["Honey", "Chocolate & banana", "Pistachio and chocolate"],
+              "priceCents": 25000
+            },
+            {
+              "name": "Mini Pancakes",
+              "priceCents": 20000,
+              "addOns": [
+                { "name": "Honey", "priceCents": 2000 },
+                { "name": "Nutella", "priceCents": 4000 },
+                { "name": "Pistachio", "priceCents": 5000 }
+              ]
+            },
+            {
+              "name": "French toast",
+              "description": "Brioche bread soaked in our magical mixture, served with chocolate and ice cream. Choose a banana or strawberry topping.",
+              "priceCents": 30000,
+              "addOns": [{ "name": "Both toppings", "priceCents": 2000 }]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

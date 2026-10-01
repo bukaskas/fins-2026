@@ -170,9 +170,7 @@ function RestaurantPage() {
         {/* Menu PDF link */}
         <div className="mt-14 pt-10" style={{ borderTop: "1px solid #e7e0d5" }}>
           <Link
-            href="https://drive.google.com/file/d/1Y2Ri--GD0a6M6NdTR3a2s3rzQaEBubuz/view"
-            target="_blank"
-            rel="noopener noreferrer"
+            href="/restaurant/menu"
             className="group inline-flex items-center gap-2.5 text-[0.67rem] tracking-[0.22em] uppercase font-[family-name:var(--font-raleway)] font-[600] transition-opacity duration-200 hover:opacity-60"
             style={{ color: "#fb923c" }}
           >
@@ -259,9 +257,7 @@ function RestaurantPage() {
               </span>
             </Link>
             <Link
-              href="https://drive.google.com/file/d/1Y2Ri--GD0a6M6NdTR3a2s3rzQaEBubuz/view"
-              target="_blank"
-              rel="noopener noreferrer"
+              href="/restaurant/menu"
               className="group inline-flex items-center gap-2.5 text-[0.72rem] font-[400] tracking-[0.14em] uppercase px-7 py-3.5 font-[family-name:var(--font-raleway)] transition-colors duration-200"
               style={{
                 border: "1px solid rgba(255,255,255,0.18)",
@@ -270,7 +266,7 @@ function RestaurantPage() {
             >
               View Menu
               <span className="group-hover:translate-x-1 transition-transform duration-200">
-                ↗
+                →
               </span>
             </Link>
             <p
