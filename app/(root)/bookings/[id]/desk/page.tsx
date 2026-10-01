@@ -20,6 +20,7 @@ import DeskCommandBar from "./DeskCommandBar";
 import MessageDeck from "./MessageDeck";
 import PaymentPanel from "./PaymentPanel";
 import PartyDialog from "./PartyDialog";
+import { RATE_LABELS, formatEGPAmount, ratesFromSnapshot } from "@/lib/pricing";
 import StatusDialog from "@/components/bookings/BookingStatusDialog";
 import ContactLog from "./ContactLog";
 
@@ -66,6 +67,8 @@ export default async function BookingDeskPage({
   const service = serviceLabel(booking.service);
   const adults = booking.numberOfPeople ?? 0;
   const kids = booking.numberOfKids ?? 0;
+
+  const soldAt = booking.service === "day-use" ? ratesFromSnapshot(booking) : null;
 
   const paid = booking.amountPaidCents ?? 0;
   const total = booking.totalPriceCents ?? 0;
@@ -252,8 +255,19 @@ export default async function BookingDeskPage({
                 kids={kids}
                 service={booking.service}
                 dateIso={date.toISOString()}
+                soldAt={soldAt}
               />
             </div>
+            {soldAt && (
+              <p
+                className="mt-2 font-[family-name:var(--font-raleway)] text-[0.8rem] tabular-nums"
+                style={{ color: MUTED }}
+              >
+                {RATE_LABELS[soldAt.rateType]} rate ·{" "}
+                {formatEGPAmount(soldAt.adultUnitCents)} / adult ·{" "}
+                {formatEGPAmount(soldAt.kidsUnitCents)} / child EGP
+              </p>
+            )}
           </div>
 
           <div className="rounded-2xl border border-[#ece8e3] bg-white p-4 shadow-[0_1px_6px_rgba(26,22,20,0.08)]">

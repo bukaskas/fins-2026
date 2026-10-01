@@ -23,7 +23,19 @@ import { authOptions } from "@/lib/auth";
 import { hasCapability, requireCapability } from "@/lib/auth-guard";
 import { roleHasCapability } from "@/lib/permissions";
 import { upsertClosedDate } from "@/lib/closed-dates";
-import { calculateDayUsePrice, computeBookingTotalCents } from "@/lib/pricing";
+import {
+  calculateDayUsePrice,
+  computeBookingTotalCents,
+  priceFromUnitRates,
+  ratesFromSnapshot,
+  snapshotFromRate,
+  type QuotedDayUseRates,
+} from "@/lib/pricing";
+import {
+  DAY_USE_BOOKING_HORIZON_MONTHS,
+  dateKeyFromUtcMidnight,
+  isWithinDayUseBookingWindow,
+} from "@/lib/date-keys";
 import { createPaymentOrder, getFlashOrder, verifyWebhookSignature } from "@/lib/flash";
 import { getAutoConfirmBookings } from "./settings.actions";
 import { BOOKINGS_PAGE_SIZE, DAILY_CAPACITY, WAITING_PAYMENT_WINDOW_MS } from "@/lib/constants";
@@ -31,12 +43,6 @@ import { parseBookingStatusFilter } from "@/lib/bookings/status";
 
 const FLASH_CURRENCY = process.env.FLASH_CURRENCY || "EGP";
 const FLASH_MIN_CENTS = 500; // Flash rejects orders below 5 EGP
-
-// Floor for a Flash link's validity. A booking whose 24h window has already
-// lapsed is about to be swept by `expireStaleWaitingPayments`, and a link that
-// dies in seconds helps nobody — so a late link still gets a usable slice of
-// time rather than a zero (which Flash would reject outright).
-const PAYMENT_LINK_MIN_VALIDITY_MS = 15 * 60 * 1000;
 
 /**
  * The id we hand Flash for a booking's Nth payment link.
@@ -107,13 +113,40 @@ function cairoBusinessDayStart(now = new Date()): Date {
   ));
 }
 
+/** Apply the capacity side-effect after a booking has become confirmed. */
+async function autoCloseConfirmedBookingDate(date: Date) {
+  const dayStart = utcDayStart(date);
+  const dayEnd = new Date(dayStart.getTime() + 24 * 60 * 60 * 1000 - 1);
+  const { _sum } = await prisma.booking.aggregate({
+    where: {
+      date: { gte: dayStart, lte: dayEnd },
+      bookingStatus: { in: CAPACITY_STATUSES },
+    },
+    _sum: { numberOfPeople: true, numberOfKids: true },
+  });
+  const capacityPeople =
+    (_sum.numberOfPeople ?? 0) + (_sum.numberOfKids ?? 0);
+  if (capacityPeople >= DAILY_CAPACITY) {
+    await upsertClosedDate(
+      dayStart,
+      `Auto-closed: ${DAILY_CAPACITY}-person daily capacity reached`,
+    );
+  }
+}
 
 
 
 
-export async function createBooking(data: BookingFormData) {
+
+export async function createBooking(
+  data: BookingFormData,
+  /** The Day Use unit rates the guest reviewed. A mismatch is refused, never
+   *  silently booked at the new amount (see PLAN.md decision 19). */
+  quotedRates?: QuotedDayUseRates,
+) {
   try {
     const validatedData = bookingFormSchema.parse(data);
+    const isDayUseService = validatedData.service === "day-use";
 
     // Gate: block closed dates for non-staff. Closed dates are stored as UTC
     // midnights (see lib/closed-dates.ts), so compare in UTC.
@@ -121,6 +154,17 @@ export async function createBooking(data: BookingFormData) {
     const userRole = (session?.user as { role?: Role } | undefined)?.role;
     if (!roleHasCapability(userRole, "bookings:manage")) {
       const normalizedDate = utcDayStart(validatedData.date);
+      // The guest calendar only offers Cairo today through the six-month
+      // horizon; the same window is enforced here so it can't be bypassed.
+      if (
+        isDayUseService &&
+        !isWithinDayUseBookingWindow(dateKeyFromUtcMidnight(normalizedDate))
+      ) {
+        return {
+          success: false,
+          message: `Please pick a date between today and ${DAY_USE_BOOKING_HORIZON_MONTHS} months from now.`,
+        };
+      }
       const closed = await prisma.closedDate.findUnique({ where: { date: normalizedDate } });
       if (closed) {
         return { success: false, message: "Sorry, this date is fully booked." };
@@ -134,14 +178,38 @@ export async function createBooking(data: BookingFormData) {
     // Day use keeps the whole breakdown rather than just the total, so the
     // confirmation email can print line items that are guaranteed to sum to
     // the number stored on the row.
-    const dayUseBreakdown =
-      validatedData.service === "day-use"
-        ? calculateDayUsePrice(
-            validatedData.date,
-            validatedData.numberOfPeople,
-            validatedData.numberOfKids ?? 0,
-          )
-        : null;
+    const dayUseBreakdown = isDayUseService
+      ? calculateDayUsePrice(
+          validatedData.date,
+          validatedData.numberOfPeople,
+          validatedData.numberOfKids ?? 0,
+        )
+      : null;
+
+    // The rate moved between the guest's review and this request (a pricing
+    // deploy mid-visit). Refuse in either direction and hand back the current
+    // rates so the form can show them for explicit review. An old bundle that
+    // predates `quotedRates` is checked on the total it sent instead.
+    if (dayUseBreakdown) {
+      const quoteIsStale = quotedRates
+        ? quotedRates.adultUnitCents !== dayUseBreakdown.adultUnitCents ||
+          quotedRates.kidsUnitCents !== dayUseBreakdown.kidsUnitCents
+        : validatedData.totalPriceCents != null &&
+          validatedData.totalPriceCents !== dayUseBreakdown.totalCents;
+      if (quoteIsStale) {
+        return {
+          success: false,
+          code: "PRICE_CHANGED" as const,
+          message: "The price for this date has changed since you picked it.",
+          rates: {
+            dateKey: dateKeyFromUtcMidnight(validatedData.date),
+            adultUnitCents: dayUseBreakdown.adultUnitCents,
+            kidsUnitCents: dayUseBreakdown.kidsUnitCents,
+            rateType: dayUseBreakdown.rateType,
+          },
+        };
+      }
+    }
     const serverTotalCents =
       dayUseBreakdown?.totalCents ??
       computeBookingTotalCents(
@@ -181,6 +249,7 @@ export async function createBooking(data: BookingFormData) {
         numberOfPeople: validatedData.numberOfPeople,
         numberOfKids: validatedData.numberOfKids ?? 0,
         totalPriceCents,
+        ...(dayUseBreakdown ? snapshotFromRate(dayUseBreakdown) : {}),
         instagram: validatedData.instagram?.trim() || null,
         bookingStatus: goToPayment
           ? BookingStatus.WAITING_PAYMENT
@@ -941,16 +1010,104 @@ export async function sendBulkEmails(
   }
 }
 
+const DAY_USE_PRICING_SELECT = {
+  service: true,
+  date: true,
+  numberOfPeople: true,
+  numberOfKids: true,
+  adultUnitPriceCents: true,
+  kidsUnitPriceCents: true,
+  dayUseRateType: true,
+} satisfies Prisma.BookingSelect;
+
+type DayUsePricingRow = Prisma.BookingGetPayload<{ select: typeof DAY_USE_PRICING_SELECT }>;
+
+const UNSNAPSHOTTED_PARTY_EDIT_MESSAGE =
+  "This older day use booking has no saved per-person rates, so its party can't be repriced automatically. Check the original price with a manager before changing the party.";
+
+/**
+ * Price a staff edit to a Day Use booking.
+ *
+ * - Same date: the booking keeps the unit rates it was sold at, whatever the
+ *   config says today. A legacy row without them can't have its party changed.
+ * - New date (or a booking becoming Day Use): the destination date's current
+ *   rate, replacing the whole snapshot in the same write.
+ *
+ * Returns the fields to write, or `{}` when nothing price-related changes.
+ */
+function priceDayUseEdit(
+  existing: DayUsePricingRow,
+  next: { date: Date; adults: number; kids: number },
+):
+  | { ok: true; data: Prisma.BookingUpdateInput }
+  | { ok: false; message: string } {
+  const sameDate =
+    existing.service === "day-use" &&
+    dateKeyFromUtcMidnight(existing.date) === dateKeyFromUtcMidnight(next.date);
+
+  if (!sameDate) {
+    const fresh = calculateDayUsePrice(next.date, next.adults, next.kids);
+    return {
+      ok: true,
+      data: { totalPriceCents: fresh.totalCents, ...snapshotFromRate(fresh) },
+    };
+  }
+
+  const snapshot = ratesFromSnapshot(existing);
+  if (snapshot) {
+    return {
+      ok: true,
+      data: {
+        totalPriceCents: priceFromUnitRates(snapshot, next.adults, next.kids).totalCents,
+      },
+    };
+  }
+
+  const partyChanged =
+    existing.numberOfPeople !== next.adults || existing.numberOfKids !== next.kids;
+  if (partyChanged) return { ok: false, message: UNSNAPSHOTTED_PARTY_EDIT_MESSAGE };
+  // Nothing that affects the price changed: leave the stored total alone
+  // rather than quietly moving it to today's rate.
+  return { ok: true, data: {} };
+}
+
 export async function updateBooking(id: string, data: UpdateBookingData) {
   await requireCapability("bookings:manage");
   try {
     const validatedData = updateBookingSchema.parse(data);
-    const newTotalCents = computeBookingTotalCents(
-      validatedData.service,
-      validatedData.date,
-      validatedData.numberOfPeople,
-      validatedData.numberOfKids ?? 0,
-    );
+    const existing = await prisma.booking.findUnique({
+      where: { id },
+      select: DAY_USE_PRICING_SELECT,
+    });
+    if (!existing) {
+      return { success: false, message: "Booking not found." };
+    }
+
+    let pricingData: Prisma.BookingUpdateInput;
+    if (validatedData.service === "day-use") {
+      const priced = priceDayUseEdit(existing, {
+        date: validatedData.date,
+        adults: validatedData.numberOfPeople,
+        kids: validatedData.numberOfKids ?? 0,
+      });
+      if (!priced.ok) return { success: false, message: priced.message };
+      pricingData = priced.data;
+    } else {
+      const newTotalCents = computeBookingTotalCents(
+        validatedData.service,
+        validatedData.date,
+        validatedData.numberOfPeople,
+        validatedData.numberOfKids ?? 0,
+      );
+      pricingData = {
+        ...(newTotalCents !== null ? { totalPriceCents: newTotalCents } : {}),
+        // No longer Day Use: its frozen Day Use rates no longer describe it.
+        adultUnitPriceCents: null,
+        kidsUnitPriceCents: null,
+        dayUseRateType: null,
+      };
+    }
+
     const updatedBooking = await prisma.booking.update({
       where: { id },
       data: {
@@ -964,7 +1121,7 @@ export async function updateBooking(id: string, data: UpdateBookingData) {
         amountPaidCents: validatedData.amountPaidCents,
         instructor: validatedData.instructor ?? null,
         time: validatedData.time ?? null,
-        ...(newTotalCents !== null ? { totalPriceCents: newTotalCents } : {}),
+        ...pricingData,
       },
     });
 
@@ -1143,20 +1300,7 @@ async function applyBookingStatusChange(
 
     // Auto-close the date if confirmed people reach the 80-person limit
     if (status === BookingStatus.CONFIRMED) {
-      const dayStart = utcDayStart(booking.date);
-      const dayEnd = new Date(dayStart.getTime() + 24 * 60 * 60 * 1000 - 1);
-      const { _sum } = await prisma.booking.aggregate({
-        where: {
-          date: { gte: dayStart, lte: dayEnd },
-          bookingStatus: { in: CAPACITY_STATUSES },
-        },
-        _sum: { numberOfPeople: true, numberOfKids: true },
-      });
-      const capacityPeople =
-        (_sum.numberOfPeople ?? 0) + (_sum.numberOfKids ?? 0);
-      if (capacityPeople >= DAILY_CAPACITY) {
-        await upsertClosedDate(dayStart, `Auto-closed: ${DAILY_CAPACITY}-person daily capacity reached`);
-      }
+      await autoCloseConfirmedBookingDate(booking.date);
     }
 
     // Generate a Flash payment link when moving into WAITING_PAYMENT.
@@ -1191,14 +1335,36 @@ export async function createBookingPaymentLink(bookingId: string) {
     if (!booking) return { success: false, message: "Booking not found." };
 
     const now = Date.now();
+    if (booking.bookingStatus !== BookingStatus.WAITING_PAYMENT) {
+      return {
+        success: false,
+        message: "Payment links are only available while the booking is waiting for payment.",
+      };
+    }
+    if (!booking.waitingPaymentAt) {
+      return {
+        success: false,
+        message: "This booking has no active payment window. Move it back to waiting for payment first.",
+      };
+    }
+
+    const deadline =
+      booking.waitingPaymentAt.getTime() + WAITING_PAYMENT_WINDOW_MS;
+    if (deadline <= now) {
+      return {
+        success: false,
+        message: "The booking's payment window has expired. Start a new payment window before issuing a link.",
+      };
+    }
 
     // Reuse a live link rather than creating a duplicate Flash order. An expired
     // one falls through to be re-issued instead: since links started carrying a
     // real `validity`, handing the stored link back forever would mean handing
     // back a dead one forever.
     const linkIsLive =
-      booking.paymentLinkExpiresAt === null ||
-      booking.paymentLinkExpiresAt.getTime() > now;
+      booking.paymentLinkExpiresAt !== null &&
+      booking.paymentLinkExpiresAt.getTime() > now &&
+      booking.paymentLinkExpiresAt.getTime() <= deadline;
     if (booking.flashOrderId && booking.paymentLink && linkIsLive) {
       return {
         success: true as const,
@@ -1240,22 +1406,35 @@ export async function createBookingPaymentLink(bookingId: string) {
     // `waitingPaymentAt` and creates the link in the same call. A link made by
     // hand later gets only what is left of that window, so the two deadlines
     // stay the same deadline.
-    const deadline = booking.waitingPaymentAt
-      ? booking.waitingPaymentAt.getTime() + WAITING_PAYMENT_WINDOW_MS
-      : now + WAITING_PAYMENT_WINDOW_MS;
-    const validityMs = Math.max(deadline - now, PAYMENT_LINK_MIN_VALIDITY_MS);
-    const expiresAt = new Date(now + validityMs);
+    const validitySeconds = Math.floor((deadline - now) / 1000);
+    if (validitySeconds < 1) {
+      return {
+        success: false,
+        message: "The booking's payment window has expired. Start a new payment window before issuing a link.",
+      };
+    }
+    const expiresAt = new Date(now + validitySeconds * 1000);
+    const aggregatorOrderId = flashAggregatorId(booking.id, attempt);
 
     const result = await createPaymentOrder({
-      aggregatorOrderId: flashAggregatorId(booking.id, attempt),
+      aggregatorOrderId,
       amountCents: dueCents,
       currency: FLASH_CURRENCY,
       customer: { name: booking.name, phone: booking.phone },
-      validity: Math.floor(validityMs / 1000),
+      validity: validitySeconds,
     });
 
-    await prisma.booking.update({
-      where: { id: bookingId },
+    // The provider call cannot be part of a database transaction. Re-check the
+    // booking state when storing its order so a concurrent status/payment
+    // change cannot attach a newly issued link to an ineligible booking.
+    const { count } = await prisma.booking.updateMany({
+      where: {
+        id: bookingId,
+        bookingStatus: BookingStatus.WAITING_PAYMENT,
+        waitingPaymentAt: booking.waitingPaymentAt,
+        paymentLinkAttempt: booking.paymentLinkAttempt,
+        amountPaidCents: booking.amountPaidCents,
+      },
       data: {
         flashOrderId: result.flashOrderId,
         paymentLink: result.paymentLink,
@@ -1263,6 +1442,16 @@ export async function createBookingPaymentLink(bookingId: string) {
         paymentLinkAttempt: attempt,
       },
     });
+    if (count === 0) {
+      console.warn("Flash link created after booking state changed", {
+        bookingId,
+        aggregatorOrderId,
+      });
+      return {
+        success: false,
+        message: "The booking changed while the payment link was being created. Refresh and try again.",
+      };
+    }
     revalidatePath('/bookings', 'layout');
     revalidatePath(`/bookings/${bookingId}`);
     revalidatePath('/reception');
@@ -1299,6 +1488,7 @@ export async function recordFlashPayment(
     const aggregatorOrderId = String(payload.aggregatorOrderId ?? "");
     const status = String(payload.status ?? "");
     const order = (payload.order ?? {}) as Record<string, unknown>;
+    const providerOrderId = String(order.id ?? payload.orderId ?? "");
     const paidAmountCents = Number(
       payload.PaidAmountCents ?? order.amountCents ?? 0
     );
@@ -1330,15 +1520,6 @@ export async function recordFlashPayment(
       return { success: true, ignored: true as const };
     }
 
-    const booking = await prisma.booking.findUnique({
-      where: { id: bookingId },
-      select: { id: true },
-    });
-    if (!booking) {
-      console.warn("Flash webhook for unknown booking", { aggregatorOrderId });
-      return { success: true, ignored: true as const };
-    }
-
     if (!Number.isFinite(paidAmountCents) || paidAmountCents <= 0) {
       console.warn("Flash webhook with invalid paid amount", {
         aggregatorOrderId,
@@ -1348,9 +1529,11 @@ export async function recordFlashPayment(
     }
 
     const applied = await applyFlashPayment({
-      bookingId: booking.id,
+      bookingId,
       amountCents: paidAmountCents,
       idempotencyKey: transactionId,
+      aggregatorOrderId,
+      providerOrderId,
     });
     return { success: true, ...applied };
   } catch (error) {
@@ -1404,13 +1587,16 @@ async function sendBookingConfirmedEmailOnce(bookingId: string) {
         ? Math.max(totalCents - booking.amountPaidCents, 0)
         : undefined;
 
-    // Day use prints per-person line items, which are recomputed here rather
-    // than stored. If a rate moved between booking and payment the recomputed
-    // table would no longer sum to what the guest was actually charged, so it
-    // is dropped instead - the total on the row stays the single source of
-    // truth, exactly as at booking time.
+    // Day use prints per-person line items from the rates the booking was sold
+    // at (a legacy row without a snapshot falls back to today's rate). If the
+    // table would not sum to what the guest was actually charged - e.g. a
+    // hand-corrected total - it is dropped instead: the total on the row stays
+    // the single source of truth, exactly as at booking time.
+    const soldAt = isDayUse ? ratesFromSnapshot(booking) : null;
     const recomputed = isDayUse
-      ? calculateDayUsePrice(booking.date, booking.numberOfPeople, booking.numberOfKids)
+      ? soldAt
+        ? priceFromUnitRates(soldAt, booking.numberOfPeople, booking.numberOfKids)
+        : calculateDayUsePrice(booking.date, booking.numberOfPeople, booking.numberOfKids)
       : null;
     const priceBreakdown =
       recomputed && recomputed.totalCents === totalCents ? recomputed : undefined;
@@ -1444,34 +1630,147 @@ async function releaseConfirmationEmailClaim(bookingId: string) {
   }
 }
 
+// Serializable settlement prevents a concurrent status, amount, or link
+// change from slipping between validation and the payment/status writes.
+async function withBookingSettlementRetry<T>(
+  fn: () => Promise<T>,
+  attempts = 3,
+): Promise<T> {
+  for (let attempt = 1; ; attempt++) {
+    try {
+      return await fn();
+    } catch (error) {
+      const code = (error as { code?: string })?.code;
+      if (code === "P2034" && attempt < attempts) continue;
+      throw error;
+    }
+  }
+}
+
 /**
- * Record a Flash payment against a booking and confirm it. Shared by the
- * webhook and the manual status-check so the two paths can't double-record:
- *  - same idempotency key (DB unique) → no-op
- *  - booking already has any Flash-originated payment → no-op
- *    (the link is always for the 50% deposit, so one per booking)
+ * Settle a successful Flash payment. The booking eligibility, expected
+ * deposit, current aggregator order, and provider order are all checked in the
+ * same serializable transaction that records the money. Money reported by a
+ * valid signed event is retained even when those checks fail, but the booking
+ * is placed in UNDER_REVIEW instead of being confirmed.
  */
 async function applyFlashPayment(opts: {
   bookingId: string;
   amountCents: number;
   idempotencyKey: string;
+  aggregatorOrderId: string;
+  providerOrderId: string;
 }) {
-  const { bookingId, amountCents, idempotencyKey } = opts;
+  const {
+    bookingId,
+    amountCents,
+    idempotencyKey,
+    aggregatorOrderId,
+    providerOrderId,
+  } = opts;
 
-  const sameKey = await prisma.bookingPayment.findUnique({
-    where: { flashTransactionId: idempotencyKey },
-    select: { id: true },
-  });
-  if (sameKey) return { duplicate: true as const };
+  const runSettlement = () => prisma.$transaction(async (tx) => {
+    const sameKey = await tx.bookingPayment.findUnique({
+      where: { flashTransactionId: idempotencyKey },
+      select: {
+        bookingId: true,
+        booking: { select: { bookingStatus: true } },
+      },
+    });
+    if (sameKey) {
+      if (sameKey.bookingId !== bookingId) {
+        const { count } = await tx.booking.updateMany({
+          where: { id: bookingId },
+          data: { bookingStatus: BookingStatus.UNDER_REVIEW },
+        });
+        if (count === 0) {
+          return { missing: true as const, confirmed: false as const };
+        }
+        return {
+          duplicateSettlement: true as const,
+          confirmed: false as const,
+          reviewRequired: true as const,
+          mismatchReasons: ["flash_transaction_id_reused"],
+        };
+      }
+      return {
+        duplicate: true as const,
+        confirmed: sameKey.booking.bookingStatus === BookingStatus.CONFIRMED,
+        reviewRequired:
+          sameKey.booking.bookingStatus === BookingStatus.UNDER_REVIEW,
+      };
+    }
 
-  const existingFlash = await prisma.bookingPayment.findFirst({
-    where: { bookingId, flashTransactionId: { not: null } },
-    select: { id: true },
-  });
-  if (existingFlash) return { duplicate: true as const };
+    const booking = await tx.booking.findUnique({
+      where: { id: bookingId },
+      select: {
+        id: true,
+        date: true,
+        bookingStatus: true,
+        waitingPaymentAt: true,
+        totalPriceCents: true,
+        amountPaidCents: true,
+        flashOrderId: true,
+        paymentLinkAttempt: true,
+      },
+    });
+    if (!booking) {
+      return { missing: true as const, confirmed: false as const };
+    }
 
-  // Mirror payBookingDeposit: record the payment, re-aggregate, update booking.
-  await prisma.$transaction(async (tx) => {
+    // A different successful transaction after a booking already settled is
+    // not an idempotent retry. The partial unique index prevents a second row;
+    // flag the booking for a human to reconcile the possible double charge.
+    const existingFlash = await tx.bookingPayment.findFirst({
+      where: { bookingId, flashTransactionId: { not: null } },
+      select: { id: true },
+    });
+    if (existingFlash) {
+      await tx.booking.update({
+        where: { id: bookingId },
+        data: { bookingStatus: BookingStatus.UNDER_REVIEW },
+      });
+      return {
+        duplicateSettlement: true as const,
+        confirmed: false as const,
+        reviewRequired: true as const,
+        bookingDate: booking.date,
+        mismatchReasons: ["booking_already_has_flash_settlement"],
+      };
+    }
+
+    const expectedAmountCents = booking.totalPriceCents === null
+      ? null
+      : Math.max(
+          Math.round(booking.totalPriceCents / 2) - booking.amountPaidCents,
+          0,
+        );
+    const expectedAggregatorOrderId = flashAggregatorId(
+      booking.id,
+      booking.paymentLinkAttempt,
+    );
+    const paymentDeadline = booking.waitingPaymentAt
+      ? booking.waitingPaymentAt.getTime() + WAITING_PAYMENT_WINDOW_MS
+      : null;
+    const now = Date.now();
+    const mismatchReasons: string[] = [];
+
+    if (booking.bookingStatus !== BookingStatus.WAITING_PAYMENT) {
+      mismatchReasons.push("booking_not_waiting_for_payment");
+    }
+    if (paymentDeadline === null || paymentDeadline <= now) {
+      mismatchReasons.push("payment_window_expired");
+    }
+    if (expectedAmountCents === null || amountCents !== expectedAmountCents) {
+      mismatchReasons.push("unexpected_amount");
+    }
+    if (aggregatorOrderId !== expectedAggregatorOrderId) {
+      mismatchReasons.push("unexpected_aggregator_order");
+    }
+    if (!providerOrderId || providerOrderId !== booking.flashOrderId) {
+      mismatchReasons.push("unexpected_provider_order");
+    }
+
     await tx.bookingPayment.create({
       data: {
         bookingId,
@@ -1486,20 +1785,67 @@ async function applyFlashPayment(opts: {
       where: { bookingId },
       _sum: { amountCents: true },
     });
-
+    const reviewRequired = mismatchReasons.length > 0;
     await tx.booking.update({
       where: { id: bookingId },
-      data: { amountPaidCents: _sum.amountCents ?? 0 },
+      data: {
+        amountPaidCents: _sum.amountCents ?? 0,
+        bookingStatus: reviewRequired
+          ? BookingStatus.UNDER_REVIEW
+          : BookingStatus.CONFIRMED,
+      },
     });
+
+    return {
+      confirmed: !reviewRequired,
+      reviewRequired,
+      bookingDate: booking.date,
+      mismatchReasons,
+    };
+  }, {
+    timeout: 30000,
+    isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
   });
 
-  // Reuse CONFIRMED side-effects (revalidation, 80-person auto-close) via the
-  // internal core — this path runs from the webhook with no user session.
-  await applyBookingStatusChange(bookingId, BookingStatus.CONFIRMED);
-  await sendBookingConfirmedEmailOnce(bookingId);
+  let settled;
+  try {
+    settled = await withBookingSettlementRetry(runSettlement);
+  } catch (error) {
+    // The database-level one-settlement-per-booking constraint is the final
+    // race guard. If another settlement won concurrently, distinguish a true
+    // redelivery from a second charge by re-entering the same serializable
+    // decision path after the winning transaction has committed.
+    if ((error as { code?: string })?.code !== "P2002") throw error;
+    settled = await withBookingSettlementRetry(runSettlement);
+  }
+
+  if ("missing" in settled) {
+    console.warn("Flash settlement for unknown booking", { aggregatorOrderId });
+    return { ignored: true as const, confirmed: false as const };
+  }
+  if ("duplicate" in settled) return settled;
+
+  if (settled.reviewRequired) {
+    console.warn("Flash settlement routed to review", {
+      bookingId,
+      transactionId: idempotencyKey,
+      mismatchReasons: settled.mismatchReasons,
+    });
+  } else {
+    try {
+      await autoCloseConfirmedBookingDate(settled.bookingDate);
+    } catch (error) {
+      // Settlement is already committed. A capacity-maintenance failure must
+      // not make Flash retry a payment that was safely recorded.
+      console.error("Confirmed booking capacity update error:", error);
+    }
+    await sendBookingConfirmedEmailOnce(bookingId);
+  }
+  revalidatePath('/bookings', 'layout');
+  revalidatePath('/reception');
   revalidatePath(`/bookings/${bookingId}`);
 
-  return { confirmed: true as const };
+  return settled;
 }
 
 /**
@@ -1545,9 +1891,12 @@ export async function checkBookingPaymentStatus(bookingId: string) {
         bookingId,
         amountCents,
         idempotencyKey: order.id ?? `flash-order-${flashAggregatorId(bookingId, attempt)}`,
+        aggregatorOrderId:
+          order.aggregatorOrderId ?? flashAggregatorId(bookingId, attempt),
+        providerOrderId: order.id ?? "",
       });
 
-      return { success: true as const, status, confirmed: true as const, ...applied };
+      return { success: true as const, status, ...applied };
     }
 
     if (lastError && status === "unknown") throw lastError;
@@ -1573,18 +1922,27 @@ export async function updateBookingParty(id: string, adults: number, kids: numbe
     }
     const existing = await prisma.booking.findUnique({
       where: { id },
-      select: { service: true, date: true },
+      select: DAY_USE_PRICING_SELECT,
     });
     if (!existing) {
       return { success: false, message: "Booking not found." };
     }
-    const newTotalCents = computeBookingTotalCents(existing.service, existing.date, adults, kids);
+    let pricingData: Prisma.BookingUpdateInput;
+    if (existing.service === "day-use") {
+      // Same date, so this keeps the rates the booking was sold at.
+      const priced = priceDayUseEdit(existing, { date: existing.date, adults, kids });
+      if (!priced.ok) return { success: false, message: priced.message };
+      pricingData = priced.data;
+    } else {
+      const newTotalCents = computeBookingTotalCents(existing.service, existing.date, adults, kids);
+      pricingData = newTotalCents !== null ? { totalPriceCents: newTotalCents } : {};
+    }
     await prisma.booking.update({
       where: { id },
       data: {
         numberOfPeople: adults,
         numberOfKids: kids,
-        ...(newTotalCents !== null ? { totalPriceCents: newTotalCents } : {}),
+        ...pricingData,
       },
     });
     revalidatePath('/bookings', 'layout');
@@ -1795,8 +2153,14 @@ export async function createDayUseBookingAdmin(data: {
         service: "day-use",
         numberOfPeople: data.numberOfPeople,
         numberOfKids: data.numberOfKids,
+        // Freeze today's rate for the date so a later party edit reprices from
+        // it rather than being blocked as an unsnapshotted legacy row.
+        ...snapshotFromRate(calculateDayUsePrice(data.date, 1, 0)),
         bookingStatus: data.bookingStatus,
         amountPaidCents: data.amountPaidCents,
+        ...(data.bookingStatus === BookingStatus.WAITING_PAYMENT
+          ? { waitingPaymentAt: new Date() }
+          : {}),
       },
     });
     revalidatePath("/bookings");
@@ -1825,6 +2189,7 @@ export async function createCorporateBooking(data: CorporateBookingData) {
         totalPriceCents: validated.depositCents,
         amountPaidCents: 0,
         bookingStatus: BookingStatus.WAITING_PAYMENT,
+        waitingPaymentAt: new Date(),
       },
     });
     revalidatePath("/bookings");

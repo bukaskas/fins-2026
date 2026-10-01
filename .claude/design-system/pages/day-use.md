@@ -41,17 +41,24 @@ to the staff tool. `#a09890` is banned for text everywhere (2.9:1).
 
 ## Rate colours
 
-Standard / Holiday / Discounted drive a dot and a tinted background; the label
+Regular / Peak / Best value drive a dot and a tinted background; the label
 always uses the darkened pair so it clears 4.5:1.
 
 | Rate | Dot | Background | Label text |
 |------|-----|------------|------------|
-| Standard | `#0284c7` | `#f0f9ff` | `#0369a1` |
-| Holiday | `#f59e0b` | `#fffbeb` | `#b45309` |
-| Discounted | `#22c55e` | `#f0fdf4` | `#15803d` |
+| Regular | `#0284c7` | `#f0f9ff` | `#0369a1` |
+| Peak | `#f59e0b` | `#fffbeb` | `#b45309` |
+| Best value | `#22c55e` | `#f0fdf4` | `#15803d` |
 
-Standard deliberately uses the brand sky family rather than a generic blue — the
+Regular deliberately uses the brand sky family rather than a generic blue — the
 rate is a Fins concept, not a status badge. Never colour label text with the dot.
+These labels are the only guest-facing names for a rate — landing page, booking
+calendar, totals, emails and staff views all use them (PLAN.md decision 18).
+
+In the step 1 price calendar each open day shows the dot plus the compact adult
+price in the label colour; the selected day is solid navy (`#0c1a2e`) with white
+date/price and a sky dot, and the selected-date card carries the full rate name.
+Closed days read **Full**; past and beyond-horizon days show no price.
 
 ## Type
 

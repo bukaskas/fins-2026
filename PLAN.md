@@ -1,7 +1,7 @@
 # Plan: Guest date-rate calendar for Day Use
 
 **Date:** 2026-09-20  
-**Status:** Draft for grilling — no implementation has started  
+**Status:** Stages 1–2 implemented 2026-09-30; Stage 3 partly verified; Stage 4 (end-to-end matrix, migration + backfill, release) not started  
 **Owner-visible outcome:** On `/day-use/booking`, every available calendar day shows its adult per-person price before the guest selects it. Selecting a day highlights it and opens a clear summary of that date, rate type, adult price, and child price before the guest continues through the existing booking flow.
 
 ## Handoff block
@@ -268,3 +268,12 @@ These are the questions most likely to change the build. Replace each assumption
 ## Progress log
 
 - 2026-09-20 — Draft plan created from the current code and the supplied calendar reference. Awaiting grilling and owner decisions; implementation has not started.
+- 2026-09-30 — Implemented Stages 1–2 and part of Stage 3.
+  - **Stage 1:** Vitest added (`npm test -- --run`, 27 tests). `lib/config/pricing.json` now uses `dateOverrides` only (holiday surcharge/discount multiplier and date lists removed; the past May holiday dates became 1,600 EGP Peak overrides). The config is validated with Zod in `lib/pricing-config.ts` and a malformed override throws when the module loads. `lib/date-keys.ts` owns the date-key conversions (UTC midnight / DayPicker local / Cairo instant) and the six-month window. `resolveDayUseRate(key)` in `lib/pricing.ts` is the single resolver. Internal rate types are `regular | peak | best-value`, and `RATE_LABELS` feeds the landing page, booking form, emails, beach desk and staff desk.
+  - **Snapshots:** added `Booking.adultUnitPriceCents`, `kidsUnitPriceCents` and `dayUseRateType` (migration `20260930130000_day_use_rate_snapshots`, **not yet applied**). New guest and staff Day Use bookings are created with a snapshot. On a same-date edit (`updateBookingParty`, or `updateBooking` without a date change) the snapshot is kept. A date change reprices and replaces the snapshot in the same write. An unsnapshotted legacy row blocks party changes with a staff-review message. The PartyDialog preview uses the snapshot. The backfill is `npm run backfill-day-use-rates` (dry run; add `-- --apply` to write).
+  - **Server gates:** guest Day Use `createBooking` rejects dates outside Cairo today…+6 months. It also rejects a stale quote with `code: "PRICE_CHANGED"` plus the current rates, checked against `quotedRates` or, for an old bundle, the client total. The form keeps the guest's details, shows the old and new prices, and requires a second explicit submit.
+  - **Stage 2:** `components/day-use/DayUseRateCalendar.tsx` (inline month plus `SelectedDayRateCard`) replaces the popover and `RateDisplay`. There is no default date. Continue looks dimmed until a date is picked and explains why when pressed. Closed days show "Full". A failed closed-date read shows a warning with Retry and leaves dates selectable.
+  - **Verified in the browser** (sample overrides added temporarily, then removed): prices and labels match the resolver. At 375px the calendar fits with no horizontal scroll and 45×56px cells. The Step 2 total reconciles, and the selection survives Back.
+  - **Not yet verified:** a real booking submission (so the PRICE_CHANGED path and the snapshot writes are untested against a database), a screen-reader pass, a devtools-throttled closed-date failure, and the Stage 4 matrix.
+  - **Found in passing, unchanged:** `createDayUseBookingAdmin` stores no `totalPriceCents`. That is existing behaviour, left as is.
+

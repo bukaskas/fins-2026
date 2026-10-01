@@ -1,14 +1,11 @@
 {
   "adultPriceCents": 150000,
   "kidsRateMultiplier": 0.5,
-  "holidaySurchargeCents": 10000,
-  "discountMultiplier": 0.75,
-  "holidayDates": [
-    "2026-05-26",
-    "2026-05-27",
-    "2026-05-28",
-    "2026-05-29",
-    "2026-05-30"
-  ],
-  "discountedDates": []
+  "dateOverrides": {
+    "2026-05-26": { "adultPriceCents": 160000, "rateType": "peak" },
+    "2026-05-27": { "adultPriceCents": 160000, "rateType": "peak" },
+    "2026-05-28": { "adultPriceCents": 160000, "rateType": "peak" },
+    "2026-05-29": { "adultPriceCents": 160000, "rateType": "peak" },
+    "2026-05-30": { "adultPriceCents": 160000, "rateType": "peak" }
+  }
 }

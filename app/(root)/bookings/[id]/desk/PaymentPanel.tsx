@@ -116,7 +116,10 @@ export default function PaymentPanel({
           toast.error(res.message ?? "Could not check the payment status.");
           return;
         }
-        if (res.confirmed) {
+        if ("reviewRequired" in res && res.reviewRequired) {
+          toast.warning("Payment found, but its details need review — booking moved to Under Review");
+          router.refresh();
+        } else if (res.confirmed) {
           toast.success("Payment confirmed — booking updated");
           router.refresh();
         } else {

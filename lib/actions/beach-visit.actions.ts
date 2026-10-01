@@ -4,7 +4,8 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/db/prisma";
 import { Prisma, WalletLedgerReason, WalletType, WalletUnit } from "@prisma/client";
 import { currentUserId, requireCapability } from "@/lib/auth-guard";
-import { calculateDayUsePrice } from "@/lib/pricing";
+import { RATE_LABELS, calculateDayUsePrice } from "@/lib/pricing";
+import { dateKeyInCairo } from "@/lib/date-keys";
 
 
 const BEACH_USE_SKU = "BEACH_USE_DAY";
@@ -92,9 +93,10 @@ export async function quickAddBeachUse(formData: FormData) {
     }
 
     // 3) No membership + no credit => charge outstanding. Single source of
-    // truth for the day-use price (incl. holiday/discounted dates) is
-    // lib/pricing — same rate a booking for today would get.
-    const { adultUnitCents, rateType } = calculateDayUsePrice(now, 1, 0);
+    // truth for the day-use price (incl. date overrides) is lib/pricing —
+    // same rate a booking for today would get. "Today" is Cairo's day: the
+    // UTC date of `now` is still yesterday between Cairo midnight and 02/03:00.
+    const { adultUnitCents, rateType } = calculateDayUsePrice(dateKeyInCairo(now), 1, 0);
     const isOwner = user.role === "OWNER";
     const chargeCents = isOwner
       ? Math.trunc(adultUnitCents * (1 - OWNER_DISCOUNT))
@@ -108,8 +110,8 @@ export async function quickAddBeachUse(formData: FormData) {
         status: "OPEN",
         checkedInAt: now,
         notes: isOwner
-          ? `Desk quick add: OWNER 20% discount (${rateType} rate)`
-          : `Desk quick add: ${chargeCents / 100} EGP (${rateType} rate)`,
+          ? `Desk quick add: OWNER 20% discount (${RATE_LABELS[rateType]} rate)`
+          : `Desk quick add: ${chargeCents / 100} EGP (${RATE_LABELS[rateType]} rate)`,
       },
     });
 

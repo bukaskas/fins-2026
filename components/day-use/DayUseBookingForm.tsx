@@ -12,15 +12,10 @@ import { Input } from "@/components/ui/input";
 import { format } from "date-fns";
 import { useForm } from "@tanstack/react-form";
 import { Button } from "@/components/ui/button";
-import { Calendar } from "@/components/ui/calendar";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
 import { toast } from "sonner";
 import { createBooking } from "@/lib/actions/booking.actions";
 import { getClosedDates } from "@/lib/actions/closedDate.actions";
+import { getPublicSpecialEvents } from "@/lib/actions/specialEvent.actions";
 import Image, { type StaticImageData } from "next/image";
 import {
   BookingFormData,
@@ -28,7 +23,27 @@ import {
   toFieldErrors,
 } from "@/lib/validators";
 import { PhoneInput } from "@/app/(root)/kitesurfing/booking/phoneInput";
-import { calculateDayUsePrice, formatEGP } from "@/lib/pricing";
+import {
+  formatEGP,
+  priceFromUnitRates,
+  resolveDayUseRate,
+  type DayUseRate,
+} from "@/lib/pricing";
+import {
+  type DateKey,
+  dateKeyFromUtcMidnight,
+  dateKeyInCairo,
+  localCalendarDateFromKey,
+  utcMidnightFromKey,
+} from "@/lib/date-keys";
+import {
+  type CalendarEvent,
+  DayUseRateCalendar,
+  EventDayLink,
+  RATE_META,
+  SelectedDayEventCard,
+  SelectedDayRateCard,
+} from "@/components/day-use/DayUseRateCalendar";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Minus, Plus, CalendarDays, Pencil } from "lucide-react";
 import Link from "next/link";
@@ -89,101 +104,23 @@ const TINT = "#f4f8fb";
 
 const WHATSAPP_HREF = "https://wa.me/201222144388";
 
-// Saturated hue drives the dot and the tint; the label always uses the
-// darkened pair so it clears 4.5:1. Standard uses the brand sky rather than a
-// generic blue — the rate is a Fins idea, not a status badge.
-const RATE_META = {
-  standard: { label: "Standard", dot: "#0284c7", bg: "#f0f9ff", color: "#0369a1" },
-  holiday: { label: "Holiday", dot: "#f59e0b", bg: "#fffbeb", color: "#b45309" },
-  discounted: { label: "Discounted", dot: "#22c55e", bg: "#f0fdf4", color: "#15803d" },
-};
-
 const STEP_TITLES = {
   1: "When are you coming?",
   2: "Who's coming?",
   3: "Where do we reach you?",
 } as const;
 
-/** UTC-midnight day key, the same shape the calendar writes. */
-function dayKey(date: Date) {
-  return date.toISOString().slice(0, 10);
-}
+/** A stored-shape (UTC midnight) date's day key. */
+const dayKey = dateKeyFromUtcMidnight;
 
-/** Calendar selections are normalised to UTC midnight; the default has to use
- *  the same shape or a late-night booker sees one date and stores another. */
-function utcTomorrow() {
-  const now = new Date();
-  return new Date(
-    Date.UTC(now.getFullYear(), now.getMonth(), now.getDate() + 1),
-  );
-}
-
-function utcStartOfToday() {
-  const now = new Date();
-  return new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()));
+/** A stored-shape date as the local date `format` should print. Formatting
+ *  the UTC midnight directly shows the previous day west of UTC. */
+function displayDate(date: Date): Date {
+  return localCalendarDateFromKey(dayKey(date));
 }
 
 const eyebrow =
   "font-[family-name:var(--font-raleway)] text-[0.7rem] tracking-[0.2em] uppercase font-[700]";
-
-/* ── Rate panel shown the moment a date is picked ── */
-function RateDisplay({ date }: { date: Date }) {
-  const breakdown = calculateDayUsePrice(date, 1, 1);
-  const meta = RATE_META[breakdown.rateType];
-  return (
-    <div
-      className="mt-4 rounded-2xl overflow-hidden border"
-      style={{ borderColor: HAIRLINE }}
-    >
-      <div
-        className="flex items-center gap-2.5 px-4 py-3"
-        style={{ background: meta.bg }}
-      >
-        <span
-          className="w-1.5 h-1.5 rounded-full shrink-0"
-          style={{ background: meta.dot }}
-        />
-        <span className={eyebrow} style={{ color: meta.color }}>
-          {meta.label} rate
-        </span>
-      </div>
-      <div className="bg-white divide-y" style={{ borderColor: HAIRLINE }}>
-        {[
-          { label: "Adult", sub: null, cents: breakdown.adultUnitCents },
-          { label: "Child", sub: "5–8 years", cents: breakdown.kidsUnitCents },
-        ].map((row) => (
-          <div
-            key={row.label}
-            className="flex items-center justify-between px-4 py-3"
-            style={{ borderColor: HAIRLINE }}
-          >
-            <span className="text-[0.875rem]" style={{ color: MUTED }}>
-              {row.label}
-              {row.sub && (
-                <span className="text-[0.8125rem]" style={{ color: MUTED }}>
-                  {" "}
-                  · {row.sub}
-                </span>
-              )}
-            </span>
-            <span
-              className="font-[family-name:var(--font-raleway)] text-[0.9375rem] font-[700] tabular-nums"
-              style={{ color: NAVY }}
-            >
-              {formatEGP(row.cents)}
-            </span>
-          </div>
-        ))}
-      </div>
-      <p
-        className="px-4 py-2.5 text-[0.8125rem] bg-white border-t"
-        style={{ color: MUTED, borderColor: HAIRLINE }}
-      >
-        Children under 5 join free — no ticket needed.
-      </p>
-    </div>
-  );
-}
 
 /* ── Step 1 for a fixed-date variant: the day is stated, not chosen ──
    No button affordance and no Pencil: nothing here is editable, and
@@ -209,7 +146,7 @@ function FixedDatePanel({
           className="text-[0.9375rem] font-[600]"
           style={{ color: NAVY }}
         >
-          {format(date, "EEEE d MMMM yyyy")}
+          {format(displayDate(date), "EEEE d MMMM yyyy")}
         </span>
       </div>
       {highlights && highlights.length > 1 && (
@@ -326,15 +263,15 @@ function ClosedNotice({
 
 /* ── Live price arithmetic on step 2 ── */
 function PriceBreakdown({
-  date,
+  rate,
   adults,
   kids,
 }: {
-  date: Date;
+  rate: DayUseRate;
   adults: number;
   kids: number;
 }) {
-  const breakdown = calculateDayUsePrice(date, adults, kids);
+  const breakdown = priceFromUnitRates(rate, adults, kids);
   const meta = RATE_META[breakdown.rateType];
   return (
     <div
@@ -347,7 +284,7 @@ function PriceBreakdown({
           style={{ background: meta.dot }}
         />
         <span className={eyebrow} style={{ color: meta.color }}>
-          {meta.label} rate · {format(date, "d MMM")}
+          {meta.label} rate · {format(localCalendarDateFromKey(rate.dateKey), "d MMM")}
         </span>
       </div>
       <div className="space-y-2.5">
@@ -490,7 +427,12 @@ function DayUseBookingForm({ variant }: { variant: DayUseBookingVariant }) {
   const { fixedDate, eventHighlights, notice, rail, photo } = variant;
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [step, setStep] = React.useState<1 | 2 | 3>(1);
-  const [calendarOpen, setCalendarOpen] = React.useState(false);
+  // Cairo today, fixed for the life of the page so the calendar, the past
+  // check and the rates all agree on it.
+  const [todayKey] = React.useState(() => dateKeyInCairo());
+  // Set when the server refused a stale quote: the current rates for that
+  // date, shown for review in place of the ones this bundle computes.
+  const [serverRate, setServerRate] = React.useState<DayUseRate | null>(null);
   const [policyAccepted, setPolicyAccepted] = React.useState(false);
   const [policyPrompted, setPolicyPrompted] = React.useState(false);
   // Local display strings so users can clear and re-type without the field
@@ -522,6 +464,46 @@ function DayUseBookingForm({ variant }: { variant: DayUseBookingVariant }) {
 
   React.useEffect(loadClosedDates, [loadClosedDates]);
 
+  const closedKeys = React.useMemo(
+    () => new Set(closedDates.map(dayKey)),
+    [closedDates],
+  );
+
+  // Event days hand the guest to the event's own form. Only the open-date
+  // calendar needs them — a fixed-date page already is an event's form. A
+  // failed load just leaves the calendar unmarked: the day stays bookable here.
+  const [eventsByKey, setEventsByKey] = React.useState<
+    ReadonlyMap<DateKey, CalendarEvent>
+  >(() => new Map());
+  React.useEffect(() => {
+    if (fixedDate) return;
+    getPublicSpecialEvents()
+      .then((r) => {
+        if (r.success) setEventsByKey(new Map(r.data.map((e) => [e.dateKey, e])));
+      })
+      .catch(() => {});
+  }, [fixedDate]);
+
+  /** The event a chosen date hands off to, unless the day is full. */
+  const eventFor = React.useCallback(
+    (date: Date | undefined): CalendarEvent | null => {
+      if (!date || fixedDate) return null;
+      const key = dayKey(date);
+      if (closedKeys.has(key)) return null;
+      return eventsByKey.get(key) ?? null;
+    },
+    [eventsByKey, closedKeys, fixedDate],
+  );
+
+  /** The rate the guest is being quoted for a stored-shape date. */
+  const rateFor = React.useCallback(
+    (date: Date): DayUseRate => {
+      const key = dayKey(date);
+      return serverRate?.dateKey === key ? serverRate : resolveDayUseRate(key);
+    },
+    [serverRate],
+  );
+
   // Move focus to the new step heading so the change is announced and keyboard
   // users land in the right place instead of staying on the old button.
   React.useEffect(() => {
@@ -535,7 +517,8 @@ function DayUseBookingForm({ variant }: { variant: DayUseBookingVariant }) {
   const form = useForm({
     defaultValues: {
       name: "",
-      date: fixedDate ?? utcTomorrow(),
+      // No default: the guest picks a day deliberately (PLAN.md decision 5).
+      date: fixedDate ?? (undefined as unknown as Date),
       email: "",
       phone: "",
       service: "day-use",
@@ -566,8 +549,9 @@ function DayUseBookingForm({ variant }: { variant: DayUseBookingVariant }) {
       setSubmitError(null);
       setIsSubmitting(true);
       try {
-        const breakdown = calculateDayUsePrice(
-          value.date,
+        const rate = rateFor(value.date);
+        const breakdown = priceFromUnitRates(
+          rate,
           value.numberOfPeople,
           value.numberOfKids ?? 0,
         );
@@ -579,10 +563,30 @@ function DayUseBookingForm({ variant }: { variant: DayUseBookingVariant }) {
           totalPriceCents: breakdown.totalCents,
           instagram: value.instagram?.trim() || null,
         };
-        const result = await createBooking(normalizedValue);
+        const result = await createBooking(normalizedValue, {
+          adultUnitCents: rate.adultUnitCents,
+          kidsUnitCents: rate.kidsUnitCents,
+        });
         if (result.success && result.bookingId) {
           toast.success(result.message);
           router.push(`/bookings/${result.bookingId}`);
+        } else if ("code" in result && result.code === "PRICE_CHANGED") {
+          // Never book at an amount the guest didn't see. Show the new rate,
+          // keep everything they typed, and let them send again to accept.
+          const next = result.rates;
+          const newTotal = priceFromUnitRates(
+            next,
+            value.numberOfPeople,
+            value.numberOfKids ?? 0,
+          ).totalCents;
+          setServerRate(next);
+          setSubmitError(
+            `The price for ${format(localCalendarDateFromKey(next.dateKey), "EEEE d MMMM")} has changed since you picked it: ` +
+              `now ${formatEGP(next.adultUnitCents)} per adult and ${formatEGP(next.kidsUnitCents)} per child ` +
+              `(was ${formatEGP(rate.adultUnitCents)} and ${formatEGP(rate.kidsUnitCents)}). ` +
+              `Your new total is ${formatEGP(newTotal)}. Nothing has been booked — check the total below and press Request my day to continue at the new price.`,
+          );
+          setIsSubmitting(false);
         } else {
           const message = result.message || "We couldn't create that booking.";
           setSubmitError(message);
@@ -604,9 +608,8 @@ function DayUseBookingForm({ variant }: { variant: DayUseBookingVariant }) {
   // otherwise happily accept a booking for a day that has already been and
   // gone. Neither should be discovered three steps in.
   const fixedDateIsPast =
-    !!fixedDate && dayKey(fixedDate) < dayKey(utcStartOfToday());
-  const fixedDateIsClosed =
-    !!fixedDate && closedDates.some((d) => dayKey(d) === dayKey(fixedDate));
+    !!fixedDate && dayKey(fixedDate) < todayKey;
+  const fixedDateIsClosed = !!fixedDate && closedKeys.has(dayKey(fixedDate));
 
   const goToStep = (next: 1 | 2 | 3) => {
     setSubmitError(null);
@@ -616,9 +619,13 @@ function DayUseBookingForm({ variant }: { variant: DayUseBookingVariant }) {
   const handleNext = () => {
     if (step === 1) {
       const selected = form.getFieldValue("date");
-      const isClosed =
-        selected && closedDates.some((d) => dayKey(d) === dayKey(selected));
-      if (isClosed) {
+      if (!selected) {
+        // Continue reads as unavailable until a day is picked, but still
+        // says why when pressed rather than being a silent dead button.
+        setSubmitError("Pick a day on the calendar to continue.");
+        return;
+      }
+      if (closedKeys.has(dayKey(selected))) {
         setSubmitError("We're fully booked that day. Please pick another date.");
         return;
       }
@@ -810,7 +817,6 @@ function DayUseBookingForm({ variant }: { variant: DayUseBookingVariant }) {
                     return (
                       <Field data-invalid={isInvalid}>
                         <FieldLabel
-                          htmlFor={fixedDate ? undefined : field.name}
                           className="text-[0.9375rem] font-[600]"
                           style={{ color: NAVY }}
                         >
@@ -822,87 +828,29 @@ function DayUseBookingForm({ variant }: { variant: DayUseBookingVariant }) {
                             highlights={eventHighlights}
                           />
                         ) : (
-                          <>
-                          <Popover
-                            open={calendarOpen}
-                            onOpenChange={setCalendarOpen}
-                          >
-                            <PopoverTrigger asChild>
-                              <Button
-                                variant="outline"
-                                id={field.name}
-                                className="justify-start font-normal rounded-full w-full min-h-11 text-[0.9375rem]"
-                                style={{ borderColor: HAIRLINE, color: NAVY }}
-                              >
-                                <CalendarDays
-                                  className="size-4 mr-1 opacity-60"
-                                  aria-hidden="true"
-                                />
-                                {field.state.value
-                                  ? format(field.state.value, "EEEE d MMMM yyyy")
-                                  : "Pick a date"}
-                              </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-auto p-0" align="start">
-                              <Calendar
-                                mode="single"
-                                selected={field.state.value}
-                                onSelect={(date) => {
-                                  if (date) {
-                                    field.handleChange(
-                                      new Date(
-                                        Date.UTC(
-                                          date.getFullYear(),
-                                          date.getMonth(),
-                                          date.getDate(),
-                                        ),
-                                      ),
-                                    );
-                                  } else {
-                                    field.handleChange(date);
-                                  }
-                                  setSubmitError(null);
-                                  setCalendarOpen(false);
-                                }}
-                                defaultMonth={field.state.value}
-                                disabled={[
-                                  { before: utcStartOfToday() },
-                                  ...closedDates,
-                                ]}
-                                required={true}
-                              />
-                            </PopoverContent>
-                          </Popover>
-
-                          {closedDatesLoading && (
-                            <p
-                              className="text-[0.8125rem] mt-2"
-                              style={{ color: MUTED }}
-                            >
-                              Checking which days are still open…
-                            </p>
-                          )}
-                          {closedDatesFailed && (
-                            <p
-                              className="text-[0.8125rem] mt-2 flex flex-wrap items-center gap-x-2"
-                              style={{ color: "#b45309" }}
-                            >
-                              We couldn&apos;t load full days just now.
-                              <button
-                                type="button"
-                                onClick={loadClosedDates}
-                                className="underline underline-offset-4 rounded focus-visible:outline-none focus-visible:ring-2"
-                                style={focusRing}
-                              >
-                                Try again
-                              </button>
-                            </p>
-                          )}
-                          </>
+                          <DayUseRateCalendar
+                            selectedKey={
+                              field.state.value ? dayKey(field.state.value) : null
+                            }
+                            onSelect={(key: DateKey) => {
+                              field.handleChange(utcMidnightFromKey(key));
+                              setSubmitError(null);
+                            }}
+                            closedKeys={closedKeys}
+                            closedDatesLoading={closedDatesLoading}
+                            closedDatesFailed={closedDatesFailed}
+                            onRetryClosedDates={loadClosedDates}
+                            todayKey={todayKey}
+                            eventsByKey={eventsByKey}
+                          />
                         )}
 
+                        {(() => {
+                          const event = eventFor(field.state.value);
+                          return event && <SelectedDayEventCard event={event} />;
+                        })()}
                         {field.state.value && (
-                          <RateDisplay date={field.state.value} />
+                          <SelectedDayRateCard rate={rateFor(field.state.value)} />
                         )}
                         {isInvalid && (
                           <FieldError errors={field.state.meta.errors} />
@@ -967,7 +915,7 @@ function DayUseBookingForm({ variant }: { variant: DayUseBookingVariant }) {
 
                     {date && (adults > 0 || (kids ?? 0) > 0) && (
                       <PriceBreakdown
-                        date={date}
+                        rate={rateFor(date)}
                         adults={adults}
                         kids={kids ?? 0}
                       />
@@ -1060,7 +1008,7 @@ function DayUseBookingForm({ variant }: { variant: DayUseBookingVariant }) {
                               className="text-[0.9375rem] font-[600]"
                               style={{ color: NAVY }}
                             >
-                              {format(date, "EEEE d MMMM")}
+                              {format(displayDate(date), "EEEE d MMMM")}
                             </p>
                             <p
                               className="text-[0.8125rem] mt-0.5"
@@ -1098,7 +1046,7 @@ function DayUseBookingForm({ variant }: { variant: DayUseBookingVariant }) {
                             style={{ color: NAVY }}
                           >
                             {formatEGP(
-                              calculateDayUsePrice(date, adults, kids ?? 0)
+                              priceFromUnitRates(rateFor(date), adults, kids ?? 0)
                                 .totalCents,
                             )}
                           </span>
@@ -1300,18 +1248,34 @@ function DayUseBookingForm({ variant }: { variant: DayUseBookingVariant }) {
           {/* ── Footer action ── */}
           <div className="mt-7">
             {step < 3 ? (
-              <Button
-                type="button"
-                onClick={handleNext}
-                disabled={isSubmitting}
-                className={cn(
-                  eyebrow,
-                  "w-full rounded-full min-h-12 hover:opacity-90 transition-opacity",
-                )}
-                style={{ background: SKY, color: NAVY }}
-              >
-                Continue
-              </Button>
+              <form.Subscribe selector={(state) => state.values.date}>
+                {(date) => {
+                  // An event day is booked on the event's own form, so its
+                  // link replaces Continue rather than sitting beside it.
+                  const event = step === 1 ? eventFor(date) : null;
+                  if (event) return <EventDayLink event={event} />;
+                  const noDate = !date;
+                  // Reads as unavailable until a day is picked, but stays
+                  // pressable so it can say why (handleNext).
+                  const waiting = step === 1 && noDate;
+                  return (
+                    <Button
+                      type="button"
+                      onClick={handleNext}
+                      disabled={isSubmitting}
+                      aria-disabled={waiting || undefined}
+                      className={cn(
+                        eyebrow,
+                        "w-full rounded-full min-h-12 hover:opacity-90 transition-opacity",
+                        waiting && "opacity-50 hover:opacity-50",
+                      )}
+                      style={{ background: SKY, color: NAVY }}
+                    >
+                      Continue
+                    </Button>
+                  );
+                }}
+              </form.Subscribe>
             ) : (
               <Button
                 type="submit"

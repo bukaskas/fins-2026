@@ -189,6 +189,16 @@ model Booking {
   // redelivered; an unsendable email needs a durable guard, not an in-memory one.
   confirmationEmailSentAt DateTime?
 
+  // Day Use unit prices the guest was quoted, fixed at booking time. A party
+  // edit multiplies these rather than today's config, so a later rate change
+  // cannot silently reprice an existing booking; a date edit replaces all
+  // three with the destination date's rate. Null on a legacy row whose rates
+  // could not be recovered — party edits are then blocked for staff review.
+  adultUnitPriceCents Int?
+  kidsUnitPriceCents  Int?
+  /// "regular" | "peak" | "best-value" (lib/pricing-config.ts RATE_TYPES)
+  dayUseRateType      String?
+
   @@index([bookingStatus, waitingPaymentAt])
   // /bookings filters and sorts by date on every load; the composite covers
   // the same query narrowed to one status.
@@ -225,6 +235,9 @@ model BookingPayment {
   // Flash transaction id — unique so a retried/duplicate webhook can't double-insert
   flashTransactionId String? @unique
 
+  // PostgreSQL also enforces one non-null Flash settlement per booking through
+  // the partial unique index in migration 20260930120000. Prisma schema syntax
+  // cannot currently represent that partial index.
   @@index([bookingId, createdAt])
 }
 
@@ -233,6 +246,23 @@ model ClosedDate {
   date      DateTime @unique @db.Date
   reason    String?
   createdAt DateTime @default(now())
+}
+
+// A named day on the calendar (e.g. Pharaoh Airstyle). Content only — the
+// day's price still comes from lib/config/pricing.json. Choosing the date on
+// /day-use/booking hands the guest to `href`, the event's own booking form.
+model SpecialEvent {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  date        DateTime @unique @db.Date
+  title       String
+  /// Fits a calendar cell, e.g. "Airstyle".
+  shortLabel  String
+  description String?
+  /// Site-relative path of the event's booking form.
+  href        String
+  isPublic    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @default(now()) @updatedAt
 }
 
 enum Role {

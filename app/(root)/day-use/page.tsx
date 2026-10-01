@@ -30,7 +30,8 @@ import { StaticImageData } from "next/image";
 import Reveal from "@/components/kitesurfing/Reveal";
 import StickyReserveBar from "./StickyReserveBar";
 import { getClosedDates } from "@/lib/actions/closedDate.actions";
-import { formatEGP, getDayUseRates, getUpcomingHolidayDates } from "@/lib/pricing";
+import { RATE_LABELS, formatEGP, getDayUseRates, getUpcomingPeakDates } from "@/lib/pricing";
+import { dateKeyInCairo, utcMidnightFromKey } from "@/lib/date-keys";
 import { LOCATION_ADDRESS, WHATSAPP_PHONE } from "@/lib/constants";
 
 /* ─────────────────────────────────────────────────────────────
@@ -57,13 +58,7 @@ const CTA_BASE =
 
 /** Today in Africa/Cairo, normalised to the UTC midnight that keys rates and closed dates. */
 function cairoToday(): Date {
-  const ymd = new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Africa/Cairo",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(new Date());
-  return new Date(`${ymd}T00:00:00.000Z`);
+  return utcMidnightFromKey(dateKeyInCairo());
 }
 
 function formatDay(date: Date): string {
@@ -78,7 +73,7 @@ function formatDay(date: Date): string {
 async function DayUsePage() {
   const today = cairoToday();
   const rates = getDayUseRates(today);
-  const upcomingHolidays = getUpcomingHolidayDates(today);
+  const upcomingPeakDates = getUpcomingPeakDates(today);
 
   // Public page: if the availability lookup fails, the page still renders and
   // simply says nothing about today rather than guessing.
@@ -152,7 +147,7 @@ async function DayUsePage() {
         />
       </div>
 
-      <WhatsIncluded rates={rates} upcomingHolidays={upcomingHolidays} />
+      <WhatsIncluded rates={rates} upcomingPeakDates={upcomingPeakDates} />
       <BottomCTA />
 
       <StickyReserveBar priceLabel={formatEGP(rates.adultUnitCents)} />
@@ -280,7 +275,7 @@ function TodayAtFins({
   availabilityKnown,
 }: {
   today: Date;
-  rates: { adultUnitCents: number; kidsUnitCents: number; rateType: string };
+  rates: ReturnType<typeof getDayUseRates>;
   isFull: boolean;
   availabilityKnown: boolean;
 }) {
@@ -304,8 +299,8 @@ function TodayAtFins({
             </p>
             <p className="mt-1 text-[0.875rem] font-[400]" style={{ color: MUTED }}>
               {formatEGP(rates.kidsUnitCents)} ages 5–8 · under 5 free
-              {rates.rateType === "holiday" && " · holiday rate"}
-              {rates.rateType === "discounted" && " · discounted rate"}
+              {rates.rateType !== "regular" &&
+                ` · ${RATE_LABELS[rates.rateType].toLowerCase()} rate`}
             </p>
 
             {availabilityKnown && (
@@ -496,10 +491,10 @@ const INCLUSIONS = [
 
 function WhatsIncluded({
   rates,
-  upcomingHolidays,
+  upcomingPeakDates,
 }: {
-  rates: { adultUnitCents: number; kidsUnitCents: number; rateType: string };
-  upcomingHolidays: Date[];
+  rates: ReturnType<typeof getDayUseRates>;
+  upcomingPeakDates: Date[];
 }) {
   return (
     <div className="rounded-t-[2.5rem] md:rounded-t-[4rem]" style={{ background: NAVY }}>
@@ -586,10 +581,10 @@ function WhatsIncluded({
             </div>
           </div>
 
-          {upcomingHolidays.length > 0 && (
+          {upcomingPeakDates.length > 0 && (
             <p className="mb-6 text-[0.8125rem] font-[400] leading-relaxed" style={{ color: ON_NAVY }}>
-              Holiday rate applies on{" "}
-              {upcomingHolidays.map((d) => formatDay(d).replace(/^\w+, /, "")).join(", ")}.
+              Peak rate applies on{" "}
+              {upcomingPeakDates.map((d) => formatDay(d).replace(/^\w+, /, "")).join(", ")}.
             </p>
           )}
 

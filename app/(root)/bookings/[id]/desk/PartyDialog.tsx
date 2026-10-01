@@ -7,13 +7,20 @@ import { toast } from "sonner";
 import { Loader2, Minus, Pencil, Plus } from "lucide-react";
 
 import { updateBookingParty } from "@/lib/actions/booking.actions";
-import { computeBookingTotalCents } from "@/lib/pricing";
+import {
+  computeBookingTotalCents,
+  priceFromUnitRates,
+  type DayUseRate,
+} from "@/lib/pricing";
 import { FOCUS_RING, MUTED } from "@/lib/bookings/status";
 
 /**
- * Party editor. The live price preview is kept exactly as it was — running the
- * real `computeBookingTotalCents` before anything is written is what lets
- * reception answer "what if my sister comes too?" out loud, mid-conversation.
+ * Party editor. The live price preview runs the same arithmetic the server
+ * will before anything is written, which is what lets reception answer "what
+ * if my sister comes too?" out loud, mid-conversation. A Day Use booking is
+ * previewed at the unit rates it was sold at (`soldAt`), exactly as
+ * `updateBookingParty` will charge it; a legacy one without them can't be
+ * repriced here.
  *
  * Fixed here: 36px steppers → 44px, and the dialog now scrolls.
  */
@@ -71,12 +78,14 @@ export default function PartyDialog({
   kids,
   service,
   dateIso,
+  soldAt,
 }: {
   bookingId: string;
   adults: number;
   kids: number;
   service: string;
   dateIso: string;
+  soldAt: Pick<DayUseRate, "adultUnitCents" | "kidsUnitCents" | "rateType"> | null;
 }) {
   const router = useRouter();
   const [open, setOpen] = React.useState(false);
@@ -92,10 +101,14 @@ export default function PartyDialog({
   }, [open, adults, kids]);
 
   const totalPeople = adultsValue + kidsValue;
-  const previewCents = React.useMemo(
-    () => computeBookingTotalCents(service, new Date(dateIso), adultsValue, kidsValue),
-    [service, dateIso, adultsValue, kidsValue],
-  );
+  const isDayUse = service === "day-use";
+  const needsReview = isDayUse && !soldAt;
+  const previewCents = React.useMemo(() => {
+    if (isDayUse) {
+      return soldAt ? priceFromUnitRates(soldAt, adultsValue, kidsValue).totalCents : null;
+    }
+    return computeBookingTotalCents(service, new Date(dateIso), adultsValue, kidsValue);
+  }, [isDayUse, soldAt, service, dateIso, adultsValue, kidsValue]);
   const dirty = adultsValue !== adults || kidsValue !== kids;
 
   const onSave = async () => {
@@ -169,7 +182,14 @@ export default function PartyDialog({
                 >
                   {totalPeople} {totalPeople === 1 ? "person" : "people"}
                 </span>
-                {previewCents == null ? (
+                {needsReview ? (
+                  <span
+                    className="text-right font-[family-name:var(--font-raleway)] text-[0.82rem]"
+                    style={{ color: MUTED }}
+                  >
+                    Needs manager review
+                  </span>
+                ) : previewCents == null ? (
                   <span
                     className="font-[family-name:var(--font-raleway)] text-[0.82rem]"
                     style={{ color: MUTED }}
@@ -188,6 +208,16 @@ export default function PartyDialog({
                   </span>
                 )}
               </div>
+              {needsReview && (
+                <p
+                  className="mt-2 font-[family-name:var(--font-raleway)] text-[0.8rem] leading-relaxed"
+                  style={{ color: MUTED }}
+                >
+                  This older booking has no saved per-person rates, so the party
+                  can&apos;t be repriced automatically. Check the original price
+                  with a manager before changing it.
+                </p>
+              )}
             </div>
           </div>
 
@@ -203,7 +233,7 @@ export default function PartyDialog({
               <button
                 type="button"
                 onClick={onSave}
-                disabled={!dirty || isSubmitting}
+                disabled={!dirty || isSubmitting || needsReview}
                 className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-[#1a1614] px-4 font-[family-name:var(--font-raleway)] text-[0.75rem] font-[600] uppercase tracking-[0.16em] text-white transition-colors hover:bg-[#2a2522] disabled:opacity-40 ${FOCUS_RING}`}
               >
                 {isSubmitting && (

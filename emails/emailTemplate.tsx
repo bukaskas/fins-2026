@@ -16,7 +16,7 @@ import {
   Text,
   pixelBasedPreset,
 } from "@react-email/components";
-import { formatEGP, type PriceBreakdown, type RateType } from "@/lib/pricing";
+import { RATE_LABELS, formatEGP, type PriceBreakdown } from "@/lib/pricing";
 import { LOCATION_ADDRESS, WHATSAPP_PHONE } from "@/lib/constants";
 
 // Same derivation the site footer uses: local Egyptian number -> wa.me form.
@@ -94,11 +94,6 @@ const fallbackContent: ServiceCopy = {
   confirmedBody: "Your payment came through and your booking is confirmed. Everything you asked for is below.",
 };
 
-const rateLabel: Record<RateType, string> = {
-  standard: "Standard rate",
-  holiday: "Holiday rate",
-  discounted: "Discounted rate",
-};
 
 const text = "text-[15px] leading-relaxed text-[#22303F] m-0";
 const muted = "text-[13px] leading-relaxed text-[#5B6B7C] m-0";
@@ -196,7 +191,7 @@ const DayUseDetails = ({
       <MetaRow label="Hours" value="9:00 AM – 11:00 PM" />
 
       {/* Prices are rendered only when the booking was actually priced. An
-          invented per-person figure was wrong on holiday, discounted and
+          invented per-person figure was wrong on peak, best-value and
           child rates alike, so nothing is better than a guess here. */}
       {priceBreakdown && (
         <>
@@ -206,7 +201,7 @@ const DayUseDetails = ({
             {confirmed ? "Your payment" : "What you\u2019ll pay"}
           </Heading>
           <Text className={`${muted} mb-3`}>
-            {rateLabel[priceBreakdown.rateType]} for this date.
+            {RATE_LABELS[priceBreakdown.rateType]} rate for this date.
           </Text>
 
           <Section>
@@ -508,7 +503,7 @@ BookingEmail.PreviewProps = {
     adultTotalCents: 320000,
     kidsTotalCents: 80000,
     totalCents: 400000,
-    rateType: "holiday",
+    rateType: "peak",
   },
   bookingUrl: "https://www.finskitesurfing.com/bookings/preview",
   // Flip `confirmed` to true here to preview the payment-confirmation variant.
