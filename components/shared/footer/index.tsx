@@ -11,7 +11,7 @@ import { kitesurfingBookingUrl } from "@/lib/booking-url";
 import Link from "next/link";
 import { FaInstagram, FaFacebook, FaWhatsapp } from "react-icons/fa";
 import Image from "next/image";
-import white_logo from "@/public/images/fins-white-logo.svg";
+import white_logo from "@/public/images/fins-white-logo.png";
 
 const accent = "#38bdf8";
 

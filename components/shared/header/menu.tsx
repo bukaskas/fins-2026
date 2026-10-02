@@ -10,7 +10,7 @@ import { Menu as MenuIcon, X } from "lucide-react";
 import Link from "next/link";
 import { APP_NAME } from "@/lib/constants";
 import Image from "next/image";
-import logo from "../../../public/images/logo.svg";
+import logo from "../../../public/images/logo.png";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { UserAuthButton } from "./UserAuthButton";
@@ -62,7 +62,6 @@ async function Menu() {
         {/* Logo — centred */}
         <Link className="flex flex-col items-center mx-4 lg:mx-6 flex-shrink-0" href="/">
           <Image
-            className="rounded-full"
             src={logo}
             width={80}
             height={80}
@@ -98,7 +97,6 @@ async function Menu() {
       <nav className="md:hidden flex justify-center items-center w-full py-3 px-4 relative">
         <Link className="flex flex-col items-center" href="/">
           <Image
-            className="rounded-full"
             src={logo}
             width={72}
             height={72}

@@ -54,8 +54,6 @@ export default function NextStepCard({
   const variant = getVariant(status);
   if (!variant) return null;
 
-  const remainingCents = Math.max(0, totalPriceCents - amountPaidCents);
-
   // Deadline for the 24h payment window (ISO string for the client countdown).
   const paymentDeadline = waitingPaymentAt
     ? new Date(
@@ -84,7 +82,7 @@ export default function NextStepCard({
             />
           )}
           {variant === "confirmed" && (
-            <ConfirmedBody remainingCents={remainingCents} />
+            <ConfirmedBody amountPaidCents={amountPaidCents} />
           )}
         </div>
       </div>
@@ -162,7 +160,7 @@ function WhatsAppButton({ caption }: { caption: string }) {
   );
 }
 
-function ConfirmedBody({ remainingCents }: { remainingCents: number }) {
+function ConfirmedBody({ amountPaidCents }: { amountPaidCents: number }) {
   return (
     <div className="flex items-start gap-4">
       <span
@@ -175,13 +173,13 @@ function ConfirmedBody({ remainingCents }: { remainingCents: number }) {
         <Heading>Thank you for booking at Fins</Heading>
         <Body>Please show this reservation page on arrival.</Body>
 
-        {remainingCents > 0 && (
+        {amountPaidCents > 0 && (
           <div className="mt-5 inline-flex items-baseline gap-2 rounded-2xl bg-white/70 ring-1 ring-[#ece8e3] px-4 py-3">
             <div>
-              <MicroLabel>Pay on arrival</MicroLabel>
+              <MicroLabel>Amount paid</MicroLabel>
               <div className="mt-1.5 flex items-baseline gap-1">
                 <span className="font-[family-name:var(--font-raleway)] text-[1.6rem] font-[400] leading-none tracking-[-0.02em] text-[#1a1614]">
-                  {fmtEGP(remainingCents)}
+                  {fmtEGP(amountPaidCents)}
                 </span>
                 <span className="font-[family-name:var(--font-raleway)] text-[0.75rem] font-[400] text-[#6b6460]">
                   EGP
