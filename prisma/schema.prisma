@@ -167,6 +167,7 @@ model Booking {
   agent           User?         @relation("BookingAgent", fields: [agentId], references: [id], onDelete: SetNull)
   payments        BookingPayment[]
   contacts        BookingContact[]
+  events          BookingEvent[]
 
   // Flash payment link integration
   flashOrderId         String?
@@ -204,6 +205,33 @@ model Booking {
   // the same query narrowed to one status.
   @@index([date])
   @@index([bookingStatus, date])
+}
+
+enum BookingEventSource {
+  STAFF
+  GUEST
+  PAYMENT
+  CRON
+}
+
+/// Append-only history of who moved a booking: one row per status change
+/// (`toStatus` set) or owner reassignment (`toStatus` null). `source` says what
+/// kind of actor it was, so a webhook or cron write is never read as a person.
+/// /bookings/agents derives "first staff action" and response times from it.
+model BookingEvent {
+  id          String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  bookingId   String             @db.Uuid
+  booking     Booking            @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  source      BookingEventSource
+  actorId     String?            @db.Uuid
+  actor       User?              @relation("BookingEventActor", fields: [actorId], references: [id], onDelete: SetNull)
+  fromStatus  BookingStatus?
+  toStatus    BookingStatus?
+  fromAgentId String?            @db.Uuid
+  toAgentId   String?            @db.Uuid
+  createdAt   DateTime           @default(now()) @db.Timestamp(6)
+
+  @@index([bookingId, createdAt])
 }
 
 model BookingContact {
@@ -318,6 +346,7 @@ model User {
   walletLedgerActor          WalletLedger[]      @relation("WalletActor")
   assignedBookings           Booking[]           @relation("BookingAgent")
   bookingContacts            BookingContact[]    @relation("BookingContactActor")
+  bookingEvents              BookingEvent[]      @relation("BookingEventActor")
 
   instructorProfile       InstructorProfile?
   commissionsAsInstructor InstructorCommission[] @relation("CommissionInstructor")

@@ -9,6 +9,7 @@ import {
   Booking,
   BookingContactChannel,
   BookingContactOutcome,
+  BookingEventSource,
   BookingStatus,
   PaymentMethod,
   Prisma,
@@ -20,7 +21,7 @@ export type BookingWithAgent = Booking & {
 };
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
-import { hasCapability, requireCapability } from "@/lib/auth-guard";
+import { currentUserId, hasCapability, requireCapability } from "@/lib/auth-guard";
 import { roleHasCapability } from "@/lib/permissions";
 import { upsertClosedDate } from "@/lib/closed-dates";
 import {
@@ -40,6 +41,13 @@ import { createPaymentOrder, getFlashOrder, verifyWebhookSignature } from "@/lib
 import { getAutoConfirmBookings } from "./settings.actions";
 import { BOOKINGS_PAGE_SIZE, DAILY_CAPACITY, WAITING_PAYMENT_WINDOW_MS } from "@/lib/constants";
 import { parseBookingStatusFilter } from "@/lib/bookings/status";
+import {
+  ACTIVE_PENDING_STATUSES,
+  buildAgentStats,
+  CONFIRMED_STATUSES,
+  DECLINED_STATUSES,
+  type AgentStatsResult,
+} from "@/lib/bookings/agent-stats";
 
 const FLASH_CURRENCY = process.env.FLASH_CURRENCY || "EGP";
 const FLASH_MIN_CENTS = 500; // Flash rejects orders below 5 EGP
@@ -92,6 +100,46 @@ function utcDayStart(d: Date): Date {
 /** Dates are UTC midnights, so day arithmetic is plain millisecond arithmetic. */
 function addUtcDays(d: Date, days: number): Date {
   return new Date(d.getTime() + days * 24 * 60 * 60 * 1000);
+}
+
+/**
+ * Append to the booking history (see `BookingEvent`). Never throws: the history
+ * only feeds reporting, so a failed insert must not undo or fail the change it
+ * describes. Call it after the write has committed, not inside a transaction.
+ */
+async function logBookingEvents(events: Prisma.BookingEventCreateManyInput[]) {
+  if (events.length === 0) return;
+  try {
+    await prisma.bookingEvent.createMany({ data: events });
+  } catch (error) {
+    console.error("Booking event log error:", error);
+  }
+}
+
+/**
+ * Cancel WAITING_PAYMENT bookings matching `where` whose 24h window has
+ * elapsed, recording each as a cron cancellation. Idempotent: the WHERE clause
+ * only matches still-waiting, already-expired rows.
+ */
+async function expireWaitingPayments(where: Prisma.BookingWhereInput = {}): Promise<number> {
+  const expired = await prisma.booking.updateManyAndReturn({
+    where: {
+      ...where,
+      bookingStatus: BookingStatus.WAITING_PAYMENT,
+      waitingPaymentAt: { not: null, lt: new Date(Date.now() - WAITING_PAYMENT_WINDOW_MS) },
+    },
+    data: { bookingStatus: BookingStatus.CANCELED },
+    select: { id: true },
+  });
+  await logBookingEvents(
+    expired.map((b) => ({
+      bookingId: b.id,
+      source: BookingEventSource.CRON,
+      fromStatus: BookingStatus.WAITING_PAYMENT,
+      toStatus: BookingStatus.CANCELED,
+    })),
+  );
+  return expired.length;
 }
 
 /**
@@ -151,7 +199,12 @@ export async function createBooking(
     // Gate: block closed dates for non-staff. Closed dates are stored as UTC
     // midnights (see lib/closed-dates.ts), so compare in UTC.
     const session = await getServerSession(authOptions);
-    const userRole = (session?.user as { role?: Role } | undefined)?.role;
+    const sessionUser = session?.user as { id?: string; role?: Role } | undefined;
+    const userRole = sessionUser?.role;
+    // A booking staff create themselves is theirs from the start.
+    const staffCreatorId = roleHasCapability(userRole, "bookings:manage")
+      ? sessionUser?.id ?? null
+      : null;
     if (!roleHasCapability(userRole, "bookings:manage")) {
       const normalizedDate = utcDayStart(validatedData.date);
       // The guest calendar only offers Cairo today through the six-month
@@ -256,8 +309,18 @@ export async function createBooking(
           : BookingStatus.PENDING,
         // Start the 24h payment countdown when landing in WAITING_PAYMENT.
         ...(goToPayment ? { waitingPaymentAt: new Date() } : {}),
+        agentId: staffCreatorId,
       },
     });
+    await logBookingEvents([
+      {
+        bookingId: booking.id,
+        source: staffCreatorId ? BookingEventSource.STAFF : BookingEventSource.GUEST,
+        actorId: staffCreatorId,
+        toStatus: booking.bookingStatus,
+        toAgentId: staffCreatorId,
+      },
+    ]);
 
     const isDayUse = validatedData.service === "day-use";
     const isPharaoh = validatedData.service === "pharaoh-airstyle";
@@ -647,215 +710,137 @@ export async function deleteBooking(id: string) {
   }
 }
 
-export type AgentStatsRow = {
-  agentId: string | null;
-  name: string;
-  email: string | null;
-  touched: number;
-  byStatus: Record<BookingStatus, number>;
-  confirmedCount: number;
-  declinedCount: number;
-  pendingCount: number;
-  revenueCents: number;
-  collectedCents: number;
-  peopleCount: number;
-  serviceBreakdown: Record<string, number>;
-  topService: string | null;
-};
+const AGENT_STATS_BOOKING_SELECT = {
+  agentId: true,
+  service: true,
+  bookingStatus: true,
+  totalPriceCents: true,
+  amountPaidCents: true,
+  createdAt: true,
+  events: {
+    select: {
+      source: true,
+      actorId: true,
+      fromStatus: true,
+      toStatus: true,
+      createdAt: true,
+    },
+  },
+  contacts: { select: { actorId: true, createdAt: true } },
+} satisfies Prisma.BookingSelect;
 
-export type AgentStatsResult = {
-  team: {
-    totalBookings: number;
-    confirmedCount: number;
-    declinedCount: number;
-    pendingCount: number;
-    unassignedCount: number;
-    conversionRate: number;
-    revenueCents: number;
-    collectedCents: number;
-    serviceBreakdown: Record<string, number>;
-  };
-  perAgent: AgentStatsRow[];
-};
-
-const CONFIRMED_STATUSES: BookingStatus[] = [
-  BookingStatus.CONFIRMED,
-  BookingStatus.ARRIVED,
-];
-// Active but not yet confirmed — counted separately from confirmed on the
-// dashboard calendar.
-const ACTIVE_PENDING_STATUSES: BookingStatus[] = [
-  BookingStatus.PENDING,
-  BookingStatus.REQUEST_SENT,
-  BookingStatus.UNDER_REVIEW,
-  BookingStatus.WAITING_PAYMENT,
-];
-const DECLINED_STATUSES: BookingStatus[] = [
-  BookingStatus.DECLINED,
-  BookingStatus.NO_RESPONSE_EXPIRED,
-  BookingStatus.CANCELED,
-];
-
-function emptyStatusMap(): Record<BookingStatus, number> {
-  return Object.values(BookingStatus).reduce((acc, status) => {
-    acc[status] = 0;
-    return acc;
-  }, {} as Record<BookingStatus, number>);
-}
-
+/**
+ * Figures for /bookings/agents over bookings created in `[rangeStart,
+ * rangeEnd)`; both null means all time. `previousStart` adds the same team
+ * figures for `[previousStart, rangeStart)`. The rules live in
+ * lib/bookings/agent-stats.ts.
+ *
+ * ADMIN and OWNER get every row. Anyone else gets team totals and their own
+ * row only, so the page cannot be used to rank colleagues.
+ */
 export async function getAgentStats(
   rangeStart: Date | null,
   rangeEnd: Date | null,
+  previousStart: Date | null = null,
 ): Promise<{ success: true; data: AgentStatsResult } | { success: false; message: string }> {
-  await requireCapability("bookings:manage");
+  const session = await getServerSession(authOptions);
+  const viewer = session?.user as { id?: string; role?: Role } | undefined;
+  if (!roleHasCapability(viewer?.role, "bookings:manage")) {
+    throw new Error("Not authorized");
+  }
   try {
-    const where =
-      rangeStart && rangeEnd ? { createdAt: { gte: rangeStart, lte: rangeEnd } } : {};
+    const now = new Date();
+    const created =
+      rangeStart && rangeEnd ? { createdAt: { gte: rangeStart, lt: rangeEnd } } : {};
 
-    const [bookings, agents] = await Promise.all([
-      prisma.booking.findMany({
-        where,
-        select: {
-          id: true,
-          agentId: true,
-          service: true,
-          bookingStatus: true,
-          totalPriceCents: true,
-          amountPaidCents: true,
-          numberOfPeople: true,
-          numberOfKids: true,
-          agent: { select: { id: true, name: true, email: true } },
-        },
-      }),
-      prisma.user.findMany({
-        where: { role: { in: [Role.ADMIN, Role.STAFF] } },
-        select: { id: true, name: true, email: true },
-      }),
-    ]);
+    const [bookings, previousBookings, contactCounts, openBookings, firstEvent] =
+      await Promise.all([
+        prisma.booking.findMany({ where: created, select: AGENT_STATS_BOOKING_SELECT }),
+        rangeStart && previousStart
+          ? prisma.booking.findMany({
+              where: { createdAt: { gte: previousStart, lt: rangeStart } },
+              select: AGENT_STATS_BOOKING_SELECT,
+            })
+          : null,
+        prisma.bookingContact.groupBy({
+          by: ["actorId"],
+          where: { actorId: { not: null }, ...created },
+          _count: { _all: true },
+        }),
+        // Follow-ups are about today's open bookings, whenever they were made.
+        prisma.booking.findMany({
+          where: {
+            bookingStatus: { in: ACTIVE_PENDING_STATUSES },
+            contacts: { some: {} },
+          },
+          select: {
+            contacts: {
+              orderBy: { createdAt: "desc" },
+              take: 1,
+              select: { actorId: true, outcome: true, createdAt: true, nextContactAt: true },
+            },
+          },
+        }),
+        prisma.bookingEvent.findFirst({
+          orderBy: { createdAt: "asc" },
+          select: { createdAt: true },
+        }),
+      ]);
 
-    const rowsById = new Map<string | null, AgentStatsRow>();
-
-    for (const a of agents) {
-      rowsById.set(a.id, {
-        agentId: a.id,
-        name: a.name || a.email,
-        email: a.email,
-        touched: 0,
-        byStatus: emptyStatusMap(),
-        confirmedCount: 0,
-        declinedCount: 0,
-        pendingCount: 0,
-        revenueCents: 0,
-        collectedCents: 0,
-        peopleCount: 0,
-        serviceBreakdown: {},
-        topService: null,
-      });
+    const contactsByActor = new Map<string, number>();
+    for (const c of contactCounts) {
+      if (c.actorId) contactsByActor.set(c.actorId, c._count._all);
     }
+    const openContacts = openBookings.flatMap((b) => b.contacts);
 
-    const ensureRow = (
-      key: string | null,
-      seedName: string,
-      seedEmail: string | null,
-    ): AgentStatsRow => {
-      const existing = rowsById.get(key);
-      if (existing) return existing;
-      const row: AgentStatsRow = {
-        agentId: key,
-        name: seedName,
-        email: seedEmail,
-        touched: 0,
-        byStatus: emptyStatusMap(),
-        confirmedCount: 0,
-        declinedCount: 0,
-        pendingCount: 0,
-        revenueCents: 0,
-        collectedCents: 0,
-        peopleCount: 0,
-        serviceBreakdown: {},
-        topService: null,
-      };
-      rowsById.set(key, row);
-      return row;
-    };
-
-    const teamServiceBreakdown: Record<string, number> = {};
-    let teamRevenue = 0;
-    let teamCollected = 0;
-    let teamConfirmed = 0;
-    let teamDeclined = 0;
-    let teamPending = 0;
-    let unassignedCount = 0;
-
+    // Everyone who works the desk, plus anyone else the figures mention.
+    const mentioned = new Set<string>(contactsByActor.keys());
     for (const b of bookings) {
-      const key = b.agentId ?? null;
-      const seedName = b.agent ? b.agent.name || b.agent.email : "Unassigned";
-      const seedEmail = b.agent?.email ?? null;
-      const row = ensureRow(key, seedName, seedEmail);
-
-      row.touched += 1;
-      row.byStatus[b.bookingStatus] += 1;
-
-      const isConfirmed = CONFIRMED_STATUSES.includes(b.bookingStatus);
-      const isDeclined = DECLINED_STATUSES.includes(b.bookingStatus);
-
-      if (isConfirmed) row.confirmedCount += 1;
-      else if (isDeclined) row.declinedCount += 1;
-      else row.pendingCount += 1;
-
-      if (isConfirmed) {
-        row.revenueCents += b.totalPriceCents ?? 0;
-        row.peopleCount += b.numberOfPeople + (b.numberOfKids ?? 0);
-      }
-      row.collectedCents += b.amountPaidCents;
-      row.serviceBreakdown[b.service] = (row.serviceBreakdown[b.service] ?? 0) + 1;
-
-      teamServiceBreakdown[b.service] = (teamServiceBreakdown[b.service] ?? 0) + 1;
-      if (isConfirmed) {
-        teamConfirmed += 1;
-        teamRevenue += b.totalPriceCents ?? 0;
-      } else if (isDeclined) {
-        teamDeclined += 1;
-      } else {
-        teamPending += 1;
-      }
-      teamCollected += b.amountPaidCents;
-      if (key === null) unassignedCount += 1;
+      if (b.agentId) mentioned.add(b.agentId);
+      for (const e of b.events) if (e.actorId) mentioned.add(e.actorId);
+      for (const c of b.contacts) if (c.actorId) mentioned.add(c.actorId);
     }
-
-    for (const row of rowsById.values()) {
-      const entries = Object.entries(row.serviceBreakdown);
-      if (entries.length > 0) {
-        entries.sort((a, b) => b[1] - a[1]);
-        row.topService = entries[0][0];
-      }
-    }
-
-    const perAgent = Array.from(rowsById.values()).sort((a, b) => {
-      if (a.agentId === null) return 1;
-      if (b.agentId === null) return -1;
-      return b.touched - a.touched;
+    for (const c of openContacts) if (c.actorId) mentioned.add(c.actorId);
+    const users = await prisma.user.findMany({
+      where: {
+        OR: [
+          { role: { in: [Role.STAFF, Role.RECEPTION] } },
+          { id: { in: Array.from(mentioned) } },
+        ],
+      },
+      select: { id: true, name: true, email: true, role: true },
     });
 
-    const totalBookings = bookings.length;
-    const decided = teamConfirmed + teamDeclined;
-    const conversionRate = decided > 0 ? teamConfirmed / decided : 0;
+    const trackingSince = firstEvent?.createdAt ?? null;
+    const { team, perAgent } = buildAgentStats({
+      bookings,
+      users,
+      contactsByActor,
+      openContacts,
+      trackingSince,
+      now,
+    });
+    const previous = previousBookings
+      ? buildAgentStats({
+          bookings: previousBookings,
+          users,
+          contactsByActor: new Map(),
+          openContacts: [],
+          trackingSince,
+          now,
+        }).team
+      : null;
+
+    const seesTeam = viewer?.role === Role.ADMIN || viewer?.role === Role.OWNER;
 
     return {
       success: true,
       data: {
-        team: {
-          totalBookings,
-          confirmedCount: teamConfirmed,
-          declinedCount: teamDeclined,
-          pendingCount: teamPending,
-          unassignedCount,
-          conversionRate,
-          revenueCents: teamRevenue,
-          collectedCents: teamCollected,
-          serviceBreakdown: teamServiceBreakdown,
-        },
-        perAgent,
+        team,
+        previous,
+        perAgent: seesTeam ? perAgent : perAgent.filter((row) => row.agentId === viewer?.id),
+        scope: seesTeam ? "team" : "self",
+        trackingSince,
       },
     };
   } catch (error) {
@@ -928,10 +913,21 @@ export async function sendFullyBookedEmails(date: string) {
     }
 
     if (sentIds.length > 0) {
-      await prisma.booking.updateMany({
-        where: { id: { in: sentIds } },
+      const canceled = await prisma.booking.updateManyAndReturn({
+        where: { id: { in: sentIds }, bookingStatus: BookingStatus.PENDING },
         data: { bookingStatus: BookingStatus.CANCELED },
+        select: { id: true },
       });
+      const actorId = await currentUserId();
+      await logBookingEvents(
+        canceled.map((b) => ({
+          bookingId: b.id,
+          source: BookingEventSource.STAFF,
+          actorId,
+          fromStatus: BookingStatus.PENDING,
+          toStatus: BookingStatus.CANCELED,
+        })),
+      );
       revalidatePath('/bookings', 'layout');
     }
 
@@ -1216,14 +1212,7 @@ export async function getBookingById(id: string) {
     // (idempotent single-row update), instead of sweeping the whole table on
     // every anonymous page view. The table-wide sweep runs from the cron route
     // and staff reads.
-    await prisma.booking.updateMany({
-      where: {
-        id,
-        bookingStatus: BookingStatus.WAITING_PAYMENT,
-        waitingPaymentAt: { not: null, lt: new Date(Date.now() - WAITING_PAYMENT_WINDOW_MS) },
-      },
-      data: { bookingStatus: BookingStatus.CANCELED },
-    });
+    await expireWaitingPayments({ id });
     const booking = await prisma.booking.findUnique({
       where: { id },
       include: { agent: { select: { id: true, name: true, email: true } } },
@@ -1252,15 +1241,7 @@ export async function getBookingById(id: string) {
  * throws. Callers that run outside render — the cron route — revalidate.
  */
 export async function cancelExpiredWaitingPayments() {
-  const cutoff = new Date(Date.now() - WAITING_PAYMENT_WINDOW_MS);
-  const { count } = await prisma.booking.updateMany({
-    where: {
-      bookingStatus: BookingStatus.WAITING_PAYMENT,
-      waitingPaymentAt: { not: null, lt: cutoff },
-    },
-    data: { bookingStatus: BookingStatus.CANCELED },
-  });
-  return count;
+  return expireWaitingPayments();
 }
 
 export async function updateBookingStatus(id: string, status: BookingStatus) {
@@ -1273,21 +1254,35 @@ export async function updateBookingStatus(id: string, status: BookingStatus) {
 }
 
 /**
- * Internal status-change core (not an action endpoint). Also used by the
- * Flash payment path, which runs without a user session — authorization there
- * is the verified webhook signature, not a role.
+ * Internal status-change core (not an action endpoint).
+ *
+ * Ownership (`agentId`) is set once: a booking with no owner goes to the staff
+ * member who first confirms it. Later status changes — a second confirmation,
+ * reception marking ARRIVED — never move it; only assignBookingAgent does.
  */
 async function applyBookingStatusChange(
   id: string,
   status: BookingStatus,
-  agentId?: string,
+  actorId?: string,
 ) {
   try {
+    const before = await prisma.booking.findUnique({
+      where: { id },
+      select: { bookingStatus: true, agentId: true },
+    });
+    if (!before) return { success: false, message: "Booking not found." };
+
+    const claimsOwnership =
+      !!actorId &&
+      !before.agentId &&
+      CONFIRMED_STATUSES.includes(status) &&
+      !CONFIRMED_STATUSES.includes(before.bookingStatus);
+
     const booking = await prisma.booking.update({
       where: { id },
       data: {
         bookingStatus: status,
-        ...(agentId ? { agentId } : {}),
+        ...(claimsOwnership ? { agentId: actorId } : {}),
         // Start (or restart) the 24h payment countdown on entry into
         // WAITING_PAYMENT; the deadline is derived as waitingPaymentAt + 24h.
         ...(status === BookingStatus.WAITING_PAYMENT
@@ -1295,6 +1290,20 @@ async function applyBookingStatusChange(
           : {}),
       },
     });
+    // payBookingDeposit re-applies CONFIRMED on every payment; only a real
+    // change is history.
+    if (before.bookingStatus !== status) {
+      await logBookingEvents([
+        {
+          bookingId: id,
+          source: BookingEventSource.STAFF,
+          actorId: actorId ?? null,
+          fromStatus: before.bookingStatus,
+          toStatus: status,
+          ...(claimsOwnership ? { toAgentId: actorId } : {}),
+        },
+      ]);
+    }
     revalidatePath('/bookings', 'layout');
     revalidatePath('/reception');
 
@@ -1735,6 +1744,7 @@ async function applyFlashPayment(opts: {
         confirmed: false as const,
         reviewRequired: true as const,
         bookingDate: booking.date,
+        previousStatus: booking.bookingStatus,
         mismatchReasons: ["booking_already_has_flash_settlement"],
       };
     }
@@ -1800,6 +1810,7 @@ async function applyFlashPayment(opts: {
       confirmed: !reviewRequired,
       reviewRequired,
       bookingDate: booking.date,
+      previousStatus: booking.bookingStatus,
       mismatchReasons,
     };
   }, {
@@ -1825,6 +1836,25 @@ async function applyFlashPayment(opts: {
   }
   if ("duplicate" in settled) return settled;
 
+  // After the commit, and never throwing: reporting must not make Flash retry
+  // a payment that is already recorded.
+  if ("previousStatus" in settled) {
+    const toStatus = settled.reviewRequired
+      ? BookingStatus.UNDER_REVIEW
+      : BookingStatus.CONFIRMED;
+    if (settled.previousStatus !== toStatus) {
+      await logBookingEvents([
+        {
+          bookingId,
+          source: BookingEventSource.PAYMENT,
+          fromStatus: settled.previousStatus,
+          toStatus,
+        },
+      ]);
+    }
+    if (settled.confirmed) await assignPaymentConfirmedOwner(bookingId);
+  }
+
   if (settled.reviewRequired) {
     console.warn("Flash settlement routed to review", {
       bookingId,
@@ -1846,6 +1876,42 @@ async function applyFlashPayment(opts: {
   revalidatePath(`/bookings/${bookingId}`);
 
   return settled;
+}
+
+/**
+ * A payment confirmed this booking, so no person did. If it has no owner, it
+ * goes to the staff member who last sent it to WAITING_PAYMENT; a booking no
+ * staff member moved stays ownerless and is reported as self-serve.
+ */
+async function assignPaymentConfirmedOwner(bookingId: string) {
+  try {
+    const request = await prisma.bookingEvent.findFirst({
+      where: {
+        bookingId,
+        source: BookingEventSource.STAFF,
+        toStatus: BookingStatus.WAITING_PAYMENT,
+        actorId: { not: null },
+      },
+      orderBy: { createdAt: "desc" },
+      select: { actorId: true },
+    });
+    if (!request?.actorId) return;
+    const { count } = await prisma.booking.updateMany({
+      where: { id: bookingId, agentId: null },
+      data: { agentId: request.actorId },
+    });
+    if (count > 0) {
+      await logBookingEvents([
+        {
+          bookingId,
+          source: BookingEventSource.PAYMENT,
+          toAgentId: request.actorId,
+        },
+      ]);
+    }
+  } catch (error) {
+    console.error("Payment-confirmed owner assignment error:", error);
+  }
 }
 
 /**
@@ -2120,10 +2186,25 @@ export async function getFutureBookingPeopleTotalsByDate() {
 export async function assignBookingAgent(bookingId: string, agentId: string | null) {
   await requireCapability("bookings:manage");
   try {
+    const before = await prisma.booking.findUnique({
+      where: { id: bookingId },
+      select: { agentId: true },
+    });
     await prisma.booking.update({
       where: { id: bookingId },
       data: { agentId },
     });
+    if (before && before.agentId !== agentId) {
+      await logBookingEvents([
+        {
+          bookingId,
+          source: BookingEventSource.STAFF,
+          actorId: await currentUserId(),
+          fromAgentId: before.agentId,
+          toAgentId: agentId,
+        },
+      ]);
+    }
     revalidatePath('/bookings', 'layout');
     return { success: true };
   } catch (error) {
@@ -2144,8 +2225,10 @@ export async function createDayUseBookingAdmin(data: {
 }) {
   await requireCapability("bookings:manage");
   try {
+    const creatorId = await currentUserId();
     const booking = await prisma.booking.create({
       data: {
+        agentId: creatorId,
         name: data.name,
         email: data.email,
         phone: data.phone,
@@ -2163,6 +2246,15 @@ export async function createDayUseBookingAdmin(data: {
           : {}),
       },
     });
+    await logBookingEvents([
+      {
+        bookingId: booking.id,
+        source: BookingEventSource.STAFF,
+        actorId: creatorId,
+        toStatus: booking.bookingStatus,
+        toAgentId: creatorId,
+      },
+    ]);
     revalidatePath("/bookings");
     revalidatePath("/bookings/day-use");
     return { success: true, bookingId: booking.id };
@@ -2176,8 +2268,10 @@ export async function createCorporateBooking(data: CorporateBookingData) {
   await requireCapability("bookings:manage");
   try {
     const validated = corporateBookingSchema.parse(data);
+    const creatorId = await currentUserId();
     const booking = await prisma.booking.create({
       data: {
+        agentId: creatorId,
         service: "corporate",
         name: validated.name,
         phone: validated.phone,
@@ -2192,6 +2286,15 @@ export async function createCorporateBooking(data: CorporateBookingData) {
         waitingPaymentAt: new Date(),
       },
     });
+    await logBookingEvents([
+      {
+        bookingId: booking.id,
+        source: BookingEventSource.STAFF,
+        actorId: creatorId,
+        toStatus: booking.bookingStatus,
+        toAgentId: creatorId,
+      },
+    ]);
     revalidatePath("/bookings");
     return { success: true, bookingId: booking.id };
   } catch (error) {
@@ -2469,17 +2572,7 @@ export async function getBookingForDesk(id: string) {
   try {
     // Same idempotent single-row expiry as the public read, so the desk never
     // shows a live countdown for a booking the cron has already let lapse.
-    await prisma.booking.updateMany({
-      where: {
-        id,
-        bookingStatus: BookingStatus.WAITING_PAYMENT,
-        waitingPaymentAt: {
-          not: null,
-          lt: new Date(Date.now() - WAITING_PAYMENT_WINDOW_MS),
-        },
-      },
-      data: { bookingStatus: BookingStatus.CANCELED },
-    });
+    await expireWaitingPayments({ id });
 
     return await prisma.booking.findUnique({
       where: { id },

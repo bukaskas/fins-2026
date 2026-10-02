@@ -13,11 +13,12 @@ import {
   YAxis,
 } from "recharts";
 
-import type { AgentStatsRow } from "@/lib/actions/booking.actions";
+import type { AgentStatsRow } from "@/lib/bookings/agent-stats";
 
 type Props = {
   perAgent: AgentStatsRow[];
   serviceBreakdown: Record<string, number>;
+  hasBookings: boolean;
 };
 
 const SERVICE_COLORS = [
@@ -32,8 +33,9 @@ const SERVICE_COLORS = [
 
 const STATUS_COLORS = {
   confirmed: "#34d399",
-  pending: "#fbbf24",
-  declined: "#f87171",
+  open: "#fbbf24",
+  lost: "#f87171",
+  declined: "#94a3b8",
 };
 
 const SERVICE_LABELS: Record<string, string> = {
@@ -41,19 +43,21 @@ const SERVICE_LABELS: Record<string, string> = {
   "kitesurfing-course": "Kitesurfing",
   restaurant: "Restaurant",
   "pharaoh-airstyle": "Pharaoh",
+  corporate: "Corporate",
 };
 
 function serviceLabel(value: string) {
   return SERVICE_LABELS[value] ?? value;
 }
 
-export function AgentStatsCharts({ perAgent, serviceBreakdown }: Props) {
+export function AgentStatsCharts({ perAgent, serviceBreakdown, hasBookings }: Props) {
   const stackedData = perAgent
-    .filter((a) => a.touched > 0)
+    .filter((a) => a.confirmedCount + a.openCount + a.lostCount + a.declinedCount > 0)
     .map((a) => ({
       name: a.name,
       confirmed: a.confirmedCount,
-      pending: a.pendingCount,
+      open: a.openCount,
+      lost: a.lostCount,
       declined: a.declinedCount,
     }));
 
@@ -61,11 +65,9 @@ export function AgentStatsCharts({ perAgent, serviceBreakdown }: Props) {
     .map(([service, count]) => ({ name: serviceLabel(service), value: count }))
     .sort((a, b) => b.value - a.value);
 
-  const noData = perAgent.every((a) => a.touched === 0);
-
-  if (noData) {
+  if (!hasBookings) {
     return (
-      <div className="bg-white border border-[#ece8e3] p-10 text-center font-[family-name:var(--font-raleway)] text-[0.78rem] text-[#8a8480]">
+      <div className="bg-white border border-[#ece8e3] p-10 text-center font-[family-name:var(--font-raleway)] text-[0.78rem] text-[#6b6460]">
         No bookings in this range yet.
       </div>
     );
@@ -78,7 +80,7 @@ export function AgentStatsCharts({ perAgent, serviceBreakdown }: Props) {
         <div className="flex items-center gap-3 mb-4">
           <span className="h-px w-7 shrink-0 bg-[#1a1614]" />
           <span className="text-[0.58rem] tracking-[0.28em] uppercase font-[family-name:var(--font-raleway)] font-[700] text-[#1a1614]">
-            Status breakdown
+            Outcome by agent
           </span>
         </div>
         <ResponsiveContainer width="100%" height={Math.max(220, stackedData.length * 40)}>
@@ -89,7 +91,7 @@ export function AgentStatsCharts({ perAgent, serviceBreakdown }: Props) {
           >
             <XAxis
               type="number"
-              tick={{ fontSize: 11, fill: "#8a8480" }}
+              tick={{ fontSize: 11, fill: "#6b6460" }}
               axisLine={false}
               tickLine={false}
             />
@@ -116,12 +118,8 @@ export function AgentStatsCharts({ perAgent, serviceBreakdown }: Props) {
               fill={STATUS_COLORS.confirmed}
               name="Confirmed"
             />
-            <Bar
-              dataKey="pending"
-              stackId="a"
-              fill={STATUS_COLORS.pending}
-              name="Pending"
-            />
+            <Bar dataKey="open" stackId="a" fill={STATUS_COLORS.open} name="Open" />
+            <Bar dataKey="lost" stackId="a" fill={STATUS_COLORS.lost} name="Lost" />
             <Bar
               dataKey="declined"
               stackId="a"
@@ -136,7 +134,7 @@ export function AgentStatsCharts({ perAgent, serviceBreakdown }: Props) {
       <div className="bg-white border border-[#ece8e3] p-5">
         <div className="flex items-center gap-3 mb-4">
           <span className="h-px w-7 shrink-0 bg-[#38bdf8]" />
-          <span className="text-[0.58rem] tracking-[0.28em] uppercase font-[family-name:var(--font-raleway)] font-[700] text-[#38bdf8]">
+          <span className="text-[0.58rem] tracking-[0.28em] uppercase font-[family-name:var(--font-raleway)] font-[700] text-[#0369a1]">
             Service mix
           </span>
         </div>

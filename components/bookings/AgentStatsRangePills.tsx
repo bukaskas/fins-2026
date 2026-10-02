@@ -41,10 +41,11 @@ export function AgentStatsRangePills({ rangeLabel }: { rangeLabel: string }) {
             <button
               key={o.value}
               onClick={() => setRange(o.value)}
+              aria-pressed={active}
               className={`px-3 py-1 rounded-full text-[0.65rem] font-[family-name:var(--font-raleway)] font-[600] tracking-[0.06em] transition-colors ${
                 active
                   ? "bg-[#1a1614] text-white"
-                  : "text-[#8a8480] hover:text-[#1a1614]"
+                  : "text-[#6b6460] hover:text-[#1a1614]"
               }`}
             >
               {o.label}
@@ -52,7 +53,7 @@ export function AgentStatsRangePills({ rangeLabel }: { rangeLabel: string }) {
           );
         })}
       </div>
-      <span className="ml-auto font-[family-name:var(--font-raleway)] text-[0.68rem] tracking-[0.08em] text-[#8a8480]">
+      <span className="ml-auto font-[family-name:var(--font-raleway)] text-[0.68rem] tracking-[0.08em] text-[#6b6460]">
         {isPending ? "…" : rangeLabel}
       </span>
     </div>

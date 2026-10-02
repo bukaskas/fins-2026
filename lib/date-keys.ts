@@ -97,3 +97,45 @@ export function isWithinDayUseBookingWindow(key: DateKey, now: Date = new Date()
   const { firstKey, lastKey } = getDayUseBookingWindow(now);
   return key >= firstKey && key <= lastKey;
 }
+
+/** Day key shifted by whole calendar days, independent of any timezone. */
+export function addDaysToKey(key: DateKey, days: number): DateKey {
+  const shifted = utcMidnightFromKey(key);
+  shifted.setUTCDate(shifted.getUTCDate() + days);
+  return dateKeyFromUtcMidnight(shifted);
+}
+
+/** Minutes Cairo's wall clock is ahead of UTC at `instant` (120, or 180 in DST). */
+function cairoOffsetMinutes(instant: Date): number {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: BUSINESS_TIME_ZONE,
+    hourCycle: "h23",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).formatToParts(instant);
+  const value = (type: string) => Number(parts.find((p) => p.type === type)?.value);
+  const wallClock = Date.UTC(
+    value("year"),
+    value("month") - 1,
+    value("day"),
+    value("hour"),
+    value("minute"),
+  );
+  return Math.round((wallClock - instant.getTime()) / 60000);
+}
+
+/**
+ * Day key → the instant that day starts in Cairo. For timestamps (`createdAt`
+ * and the like), which are instants — unlike booking dates, which are stored as
+ * UTC midnights and compared with `utcMidnightFromKey`.
+ */
+export function cairoDayStart(key: DateKey): Date {
+  const utcMidnight = utcMidnightFromKey(key).getTime();
+  const guess = new Date(utcMidnight - cairoOffsetMinutes(new Date(utcMidnight)) * 60000);
+  // The offset at UTC midnight can differ from the one at Cairo midnight on a
+  // DST switch day, so re-read it at the guessed instant.
+  return new Date(utcMidnight - cairoOffsetMinutes(guess) * 60000);
+}
