@@ -1,283 +1,271 @@
 import { getBookingCountsByDate } from "@/lib/actions/booking.actions";
 import { getClosedDates } from "@/lib/actions/closedDate.actions";
-import { getAutoConfirmBookings } from "@/lib/actions/settings.actions";
-import AutoConfirmToggle from "./AutoConfirmToggle";
 import { BookingCalendar } from "@/components/bookings/BookingCalendar";
-import { BookingStatus } from "@prisma/client";
-import { format, addMonths } from "date-fns";
+import {
+  CALENDAR_FILTERS,
+  parseCalendarFilter,
+  peopleFor,
+  visibleSlices,
+  type CalendarFilter,
+  type DayCount,
+} from "@/lib/bookings/calendar-counts";
+import { SERVICE_META } from "@/lib/bookings/status";
+import { format, addMonths, endOfMonth, startOfMonth } from "date-fns";
 import Link from "next/link";
+import { AlertTriangle, Settings } from "lucide-react";
 
 export const dynamic = "force-dynamic";
-export const revalidate = 0;
 
-const STATUS_FILTERS: {
-  label: string;
-  value: string;
-  statuses: BookingStatus[];
-}[] = [
-  { label: "All", value: "all", statuses: [] },
-  {
-    label: "Confirmed",
-    value: "confirmed",
-    statuses: [BookingStatus.CONFIRMED],
-  },
-  {
-    label: "Pending",
-    value: "pending",
-    statuses: [
-      BookingStatus.PENDING,
-      BookingStatus.REQUEST_SENT,
-      BookingStatus.UNDER_REVIEW,
-      BookingStatus.WAITING_PAYMENT,
-    ],
-  },
-];
+// Shown in place of the busiest-day line when the month has nothing to show.
+const EMPTY_MONTH: Record<CalendarFilter, string> = {
+  all: "No bookings",
+  confirmed: "No confirmed bookings",
+  payment: "Nobody waiting to pay",
+  review: "Nothing to review",
+};
+
+function dashboardHref(filter: CalendarFilter, month: string) {
+  const params = new URLSearchParams();
+  if (filter !== "all") params.set("status", filter);
+  params.set("month", month);
+  return `/bookings/dashboard?${params.toString()}`;
+}
 
 async function BookingsDashboardPage({
   searchParams,
 }: {
-  searchParams: Promise<{ status?: string }>;
+  searchParams: Promise<{ status?: string; month?: string }>;
 }) {
-  const { status = "all" } = await searchParams;
+  const sp = await searchParams;
+  const filter = parseCalendarFilter(sp.status);
 
-  const activeFilter =
-    STATUS_FILTERS.find((f) => f.value === status) ?? STATUS_FILTERS[0];
-
-  const [result, closedResult, autoConfirm] = await Promise.all([
-    getBookingCountsByDate(),
-    getClosedDates(new Date(), addMonths(new Date(), 6)),
-    getAutoConfirmBookings(),
-  ]);
-
-  type DayCount = {
-    date: string;
-    confirmedPeople: number;
-    confirmedCount: number;
-    activePeople: number;
-    activeCount: number;
-    totalPeople: number;
-    bookingCount: number;
-  };
-  const counts = result.success ? (result.data as DayCount[]) : [];
-
-  // The calendar always shows both numbers (confirmed + active); the filter
-  // tabs only refine which slice the month stats + busiest-day stat reflect.
-  const peopleOf = (c: DayCount) =>
-    activeFilter.value === "confirmed"
-      ? c.confirmedPeople
-      : activeFilter.value === "pending"
-        ? c.activePeople
-        : c.totalPeople;
-  const bookingsOf = (c: DayCount) =>
-    activeFilter.value === "confirmed"
-      ? c.confirmedCount
-      : activeFilter.value === "pending"
-        ? c.activeCount
-        : c.bookingCount;
-
-  const closedDateStrings = closedResult.success
-    ? closedResult.data.map((cd) => format(new Date(cd.date), "yyyy-MM-dd"))
-    : [];
-
+  // getBookingCountsByDate covers 3 months back to 3 months ahead; the
+  // calendar can't page outside that, and ?month= is clamped to it.
   const now = new Date();
   const thisMonth = format(now, "yyyy-MM");
+  const firstMonth = format(addMonths(now, -3), "yyyy-MM");
+  const lastMonth = format(addMonths(now, 3), "yyyy-MM");
+  const requested = /^\d{4}-\d{2}$/.test(sp.month ?? "") ? sp.month! : thisMonth;
+  const month =
+    requested < firstMonth ? firstMonth : requested > lastMonth ? lastMonth : requested;
 
-  const thisMonthCounts = counts.filter((c) => c.date.startsWith(thisMonth));
-  const totalBookingsThisMonth = thisMonthCounts.reduce(
-    (s, c) => s + bookingsOf(c),
-    0,
-  );
-  const totalPeopleThisMonth = thisMonthCounts.reduce(
-    (s, c) => s + peopleOf(c),
-    0,
-  );
+  const [result, closedResult] = await Promise.all([
+    getBookingCountsByDate(),
+    getClosedDates(
+      startOfMonth(addMonths(now, -3)),
+      endOfMonth(addMonths(now, 3)),
+    ),
+  ]);
 
+  const countsFailed = !result.success;
+  const closedFailed = !closedResult.success;
+  const counts = result.success ? (result.data as DayCount[]) : [];
+
+  const closedDateStrings = closedResult.success
+    ? closedResult.data.map((cd) => new Date(cd.date).toISOString().slice(0, 10))
+    : [];
+
+  // Busiest day in the month on screen, for the slice the tabs pick. In the
+  // current month only the days still ahead count.
   const today = format(now, "yyyy-MM-dd");
-  const futureCounts = counts.filter((c) => c.date >= today);
-  const busiestDay = futureCounts.reduce<{
-    date: string;
-    totalPeople: number;
-  } | null>(
-    (best, c) =>
-      !best || peopleOf(c) > best.totalPeople
-        ? { date: c.date, totalPeople: peopleOf(c) }
-        : best,
-    null,
-  );
-
-  const monthLabel = format(now, "MMMM");
-  const yearLabel = format(now, "yyyy");
+  const monthName = format(new Date(`${month}-01T00:00:00`), "MMMM");
+  const busiestDay = counts
+    .filter((c) => c.date.startsWith(month) && (month !== thisMonth || c.date >= today))
+    .reduce<{ date: string; people: number } | null>((best, c) => {
+      const people = peopleFor(filter, c);
+      return people > 0 && (!best || people > best.people)
+        ? { date: c.date, people }
+        : best;
+    }, null);
+  const busiestLabel =
+    month === thisMonth ? `Busiest day left in ${monthName}` : `Busiest day in ${monthName}`;
+  const reloadHref = dashboardHref(filter, month);
 
   return (
-    <div className="min-h-screen bg-[#faf9f7]">
+    <div className="min-h-screen bg-paper [&_a:focus-visible]:outline-2 [&_a:focus-visible]:outline-offset-2 [&_a:focus-visible]:outline-ink">
       {/* ── Header panel ── */}
-      <div className="bg-white border-b border-[#ece8e3]">
-        <div className="max-w-5xl mx-auto px-6 pt-8 pb-0">
-          {/* Top bar: back + new booking */}
-          <div className="flex items-center justify-between mb-8">
+      <div className="bg-white border-b border-paper-line">
+        <div className="max-w-5xl mx-auto px-4 pt-5 pb-0 sm:px-6 sm:pt-8">
+          {/* Top bar — phone: back + primary on one row, secondary links below */}
+          <div className="flex flex-wrap items-center justify-between gap-3 mb-6 sm:mb-8 sm:justify-start">
             <Link
               href="/bookings"
-              className="inline-flex items-center gap-1.5 text-[0.65rem] tracking-[0.2em] uppercase font-[family-name:var(--font-raleway)] font-[600] text-[#8a8480] hover:text-[#1a1614] transition-colors duration-150"
+              className="order-1 inline-flex min-h-11 items-center gap-1.5 text-[0.75rem] tracking-[0.14em] uppercase font-[family-name:var(--font-raleway)] font-[600] text-ink-muted hover:text-ink transition-colors duration-150"
             >
               ← Bookings
             </Link>
-            <div className="flex items-center gap-3">
+            <Link
+              href="/day-use/booking"
+              className="order-2 inline-flex min-h-11 items-center gap-2 bg-ink text-white text-[0.75rem] font-[700] tracking-[0.12em] uppercase px-5 font-[family-name:var(--font-raleway)] hover:bg-ink-hover transition-colors duration-200 sm:order-4"
+            >
+              + New Booking
+            </Link>
+            <div className="order-3 flex w-full gap-2 sm:ml-auto sm:w-auto sm:gap-3">
               <Link
                 href="/bookings/agents"
-                className="inline-flex items-center gap-1.5 text-[0.65rem] tracking-[0.18em] uppercase font-[family-name:var(--font-raleway)] font-[600] text-[#8a8480] hover:text-[#1a1614] border border-[#ece8e3] px-4 py-2.5 hover:border-[#d6d0c8] transition-colors duration-200"
+                className="flex-1 justify-center min-h-11 inline-flex items-center gap-1.5 text-[0.75rem] tracking-[0.14em] uppercase font-[family-name:var(--font-raleway)] font-[600] text-ink-muted hover:text-ink border border-paper-line px-4 hover:border-paper-line-strong transition-colors duration-200 sm:flex-none"
               >
                 Team Stats
               </Link>
               <Link
                 href="/bookings/closed-dates"
-                className="inline-flex items-center gap-1.5 text-[0.65rem] tracking-[0.18em] uppercase font-[family-name:var(--font-raleway)] font-[600] text-[#8a8480] hover:text-[#1a1614] border border-[#ece8e3] px-4 py-2.5 hover:border-[#d6d0c8] transition-colors duration-200"
+                className="flex-1 justify-center min-h-11 inline-flex items-center gap-1.5 text-[0.75rem] tracking-[0.14em] uppercase font-[family-name:var(--font-raleway)] font-[600] text-ink-muted hover:text-ink border border-paper-line px-4 hover:border-paper-line-strong transition-colors duration-200 sm:flex-none"
               >
                 Closed Dates
               </Link>
               <Link
-                href="/day-use/booking"
-                className="inline-flex items-center gap-2 bg-[#1a1614] text-white text-[0.72rem] font-[700] tracking-[0.14em] uppercase px-5 py-2.5 font-[family-name:var(--font-raleway)] hover:bg-[#2a2420] transition-colors duration-200"
+                href="/bookings/settings"
+                aria-label="Booking settings"
+                title="Booking settings"
+                className="inline-flex size-11 shrink-0 items-center justify-center text-ink-muted hover:text-ink border border-paper-line hover:border-paper-line-strong transition-colors duration-200"
               >
-                + New Booking
+                <Settings className="size-4" aria-hidden="true" />
               </Link>
             </div>
           </div>
 
-          {/* Month headline */}
-          <div className="flex items-baseline gap-4 mb-1">
-            <h1 className="font-[family-name:var(--font-raleway)] text-[clamp(3.5rem,10vw,7rem)] font-[100] tracking-[-0.03em] text-[#1a1614] leading-none">
-              {monthLabel}
-            </h1>
-            <span className="font-[family-name:var(--font-raleway)] text-[clamp(1rem,2.5vw,1.8rem)] font-[100] text-[#b0a89f] tracking-[-0.01em] mb-1 self-end">
-              {yearLabel}
-            </span>
-          </div>
-          <p className="font-[family-name:var(--font-raleway)] text-[0.62rem] tracking-[0.32em] uppercase font-[600] text-[#8a8480] mb-8">
-            Bookings Dashboard
-          </p>
+          <h1 className="font-[family-name:var(--font-raleway)] text-[1.75rem] sm:text-[2rem] font-[600] tracking-[-0.02em] text-ink leading-tight mb-4 sm:mb-6">
+            Bookings calendar
+          </h1>
 
-          {/* ── Filter tabs ── */}
-          <div className="flex gap-0 border-b border-[#ece8e3]">
-            {STATUS_FILTERS.map((f) => {
-              const isActive = activeFilter.value === f.value;
+          {/* ── Filter tabs: pick which numbers the calendar shows ── */}
+          <nav
+            aria-label="Show on calendar"
+            className="-mx-4 flex overflow-x-auto border-b border-paper-line px-4 sm:mx-0 sm:px-0"
+          >
+            {CALENDAR_FILTERS.map((f) => {
+              const isActive = filter === f.value;
               return (
                 <Link
                   key={f.value}
-                  href={
-                    f.value === "all"
-                      ? "/bookings/dashboard"
-                      : `/bookings/dashboard?status=${f.value}`
-                  }
-                  className="relative pb-3 mr-7 font-[family-name:var(--font-raleway)] text-[0.72rem] tracking-[0.1em] uppercase font-[600] transition-colors duration-150"
-                  style={{ color: isActive ? "#1a1614" : "#8a8480" }}
+                  href={dashboardHref(f.value, month)}
+                  aria-current={isActive ? "page" : undefined}
+                  className={`relative inline-flex min-h-11 shrink-0 items-center whitespace-nowrap mr-5 last:mr-0 sm:mr-7 font-[family-name:var(--font-raleway)] text-[0.875rem] font-[600] transition-colors duration-150 hover:text-ink ${isActive ? "text-ink" : "text-ink-muted"}`}
                 >
                   {f.label}
                   {isActive && (
-                    <span className="absolute bottom-0 left-0 right-0 h-[2px] bg-[#1a1614]" />
+                    <span className="absolute bottom-0 left-0 right-0 h-[2px] bg-ink" />
                   )}
                 </Link>
               );
             })}
-          </div>
+          </nav>
         </div>
       </div>
 
-      {/* ── Auto-confirm toggle ── */}
-      <div className="max-w-5xl mx-auto px-6 pt-6">
-        <AutoConfirmToggle initial={autoConfirm} />
-      </div>
-
-      {/* ── Stats row ── */}
-      <div className="max-w-5xl mx-auto px-6">
-        <div className="grid grid-cols-3 border-b border-[#ece8e3]">
-          {/* Stat: Bookings this month */}
-          <div className="py-10 pr-8 border-r border-[#ece8e3]">
-            <p className="font-[family-name:var(--font-raleway)] text-[0.58rem] tracking-[0.3em] uppercase font-[600] text-[#8a8480] mb-3">
-              Bookings · {format(now, "MMM")}
-            </p>
-            <p className="font-[family-name:var(--font-raleway)] text-[clamp(2.8rem,6vw,5rem)] font-[100] leading-none tracking-[-0.02em] text-[#1a1614]">
-              {totalBookingsThisMonth}
-            </p>
-          </div>
-
-          {/* Stat: People this month */}
-          <div className="py-10 px-8 border-r border-[#ece8e3]">
-            <p className="font-[family-name:var(--font-raleway)] text-[0.58rem] tracking-[0.3em] uppercase font-[600] text-[#8a8480] mb-3">
-              People · {format(now, "MMM")}
-            </p>
-            <p className="font-[family-name:var(--font-raleway)] text-[clamp(2.8rem,6vw,5rem)] font-[100] leading-none tracking-[-0.02em] text-[#1a1614]">
-              {totalPeopleThisMonth}
-            </p>
-          </div>
-
-          {/* Stat: Busiest upcoming day */}
-          <div className="py-10 pl-8">
-            <p className="font-[family-name:var(--font-raleway)] text-[0.58rem] tracking-[0.3em] uppercase font-[600] text-[#8a8480] mb-3">
-              Busiest Upcoming Day
-            </p>
-            {busiestDay ? (
-              <Link
-                href={`/bookings/date/${busiestDay.date}`}
-                className="group block"
-              >
-                <p className="font-[family-name:var(--font-raleway)] text-[clamp(2.8rem,6vw,5rem)] font-[100] leading-none tracking-[-0.02em] text-[#1a1614] group-hover:text-[#f59e0b] transition-colors duration-200">
-                  {format(new Date(busiestDay.date), "MMM d")}
-                </p>
-                <p className="font-[family-name:var(--font-raleway)] text-[0.68rem] tracking-[0.12em] uppercase font-[500] text-[#8a8480] mt-2 group-hover:text-[#f59e0b] transition-colors duration-200">
-                  {busiestDay.totalPeople} people →
-                </p>
-              </Link>
-            ) : (
-              <p className="font-[family-name:var(--font-raleway)] text-[clamp(2.8rem,6vw,5rem)] font-[100] leading-none text-[#d6d0c8]">
-                —
+      {(countsFailed || closedFailed) && (
+        <div className="max-w-5xl mx-auto px-4 pt-6 sm:px-6">
+          <div
+            role="alert"
+            className="flex items-start gap-3 border border-alert-line bg-alert-bg px-5 py-4"
+          >
+            <AlertTriangle
+              className="mt-0.5 size-5 shrink-0 text-alert-icon"
+              aria-hidden="true"
+            />
+            <div className="min-w-0 font-[family-name:var(--font-raleway)]">
+              <p className="text-[0.875rem] font-[700] text-alert-ink">
+                {countsFailed
+                  ? "Booking numbers didn’t load"
+                  : "Closed dates didn’t load"}
               </p>
-            )}
+              <p className="mt-1 text-[0.875rem] font-[400] leading-[1.5] text-alert-ink">
+                {countsFailed
+                  ? "The calendar counts below are missing, not zero. Don’t quote availability from this page until it loads."
+                  : "Closed days aren’t marked on the calendar. Check Closed Dates before promising a date."}{" "}
+                {countsFailed && closedFailed &&
+                  "Closed days aren’t marked either. "}
+                <Link
+                  href={reloadHref}
+                  className="font-[700] underline underline-offset-2 hover:text-ink"
+                >
+                  Reload
+                </Link>
+              </p>
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* ── Calendar ── */}
-      <div className="max-w-5xl mx-auto px-6 py-10">
-        <div className="bg-white border border-[#ece8e3]">
-          {/* Calendar header */}
-          <div className="flex items-center gap-3 px-8 pt-7 pb-5 border-b border-[#ece8e3]">
-            <span className="h-px w-7 shrink-0 bg-[#f59e0b]" />
-            <span className="text-[0.58rem] tracking-[0.32em] uppercase font-[family-name:var(--font-raleway)] font-[600] text-[#f59e0b]">
-              Calendar
-            </span>
-            <span className="text-[0.58rem] tracking-[0.2em] uppercase font-[family-name:var(--font-raleway)] font-[500] text-[#b0a89f]">
-              Click a date to see bookings
-            </span>
+      <div className="max-w-5xl mx-auto px-4 py-6 sm:px-6 sm:py-10">
+        <div className="bg-white border border-paper-line">
+          {/* Calendar header: what the numbers mean + busiest day */}
+          <div className="flex flex-wrap items-center gap-x-5 gap-y-1 px-4 py-2 border-b sm:px-8 sm:py-3 border-paper-line font-[family-name:var(--font-raleway)]">
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 py-2 text-[0.875rem] font-[500] text-ink-soft">
+              <span className="text-ink-muted">People per date:</span>
+              <ul className="contents">
+                {visibleSlices(filter).map((slice) => (
+                  <li key={slice.value} className="inline-flex items-center gap-1.5">
+                    <span
+                      aria-hidden="true"
+                      className="size-2.5 shrink-0"
+                      style={{ background: slice.color }}
+                    />
+                    <span style={{ color: slice.color }} className="font-[700]">
+                      {slice.label}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+            {!busiestDay && !countsFailed && (
+              <p className="py-2 sm:ml-auto text-[0.875rem] font-[500] text-ink-muted">
+                {EMPTY_MONTH[filter]} {month === thisMonth ? "left in" : "in"} {monthName}
+              </p>
+            )}
+            {busiestDay && (
+              <Link
+                href={`/bookings/date/${busiestDay.date}`}
+                className="inline-flex min-h-11 items-center gap-1.5 sm:ml-auto text-[0.875rem] font-[500] text-ink-muted hover:text-ink transition-colors duration-150"
+              >
+                {busiestLabel}:
+                <span className="font-[700] tabular-nums text-ink">
+                  {format(new Date(`${busiestDay.date}T00:00:00`), "EEE d MMM")}
+                </span>
+                · {busiestDay.people} people →
+              </Link>
+            )}
           </div>
 
-          <div className="px-4 py-6">
-            <BookingCalendar counts={counts} closedDates={closedDateStrings} />
+          <div className="px-1 py-4 sm:px-4 sm:py-6">
+            <BookingCalendar
+              counts={counts}
+              closedDates={closedDateStrings}
+              filter={filter}
+              month={month}
+              firstMonth={firstMonth}
+              lastMonth={lastMonth}
+            />
           </div>
+          <p className="border-t border-paper-line px-4 py-3 text-[0.875rem] text-ink-muted sm:px-8 font-[family-name:var(--font-raleway)]">
+            Tap a date to see its bookings.
+          </p>
         </div>
 
         {/* Quick nav links */}
-        <div className="flex items-center gap-6 mt-8 pt-6 border-t border-[#ece8e3]">
-          <p className="font-[family-name:var(--font-raleway)] text-[0.58rem] tracking-[0.28em] uppercase font-[600] text-[#b0a89f]">
+        <div className="flex flex-wrap items-center gap-x-6 gap-y-1 mt-8 pt-6 border-t border-paper-line">
+          <p className="font-[family-name:var(--font-raleway)] text-[0.75rem] tracking-[0.14em] uppercase font-[600] text-ink-muted w-full sm:w-auto">
             View by service
           </p>
           {[
             {
               label: "Kitesurfing",
               href: "/bookings/kitesurfing",
-              accent: "#38bdf8",
+              accent: SERVICE_META["kitesurfing-course"].dot,
             },
             { label: "Lessons", href: "/lessons", accent: "#34d399" },
-            { label: "Day Use", href: "/bookings/day-use", accent: "#fbbf24" },
+            { label: "Day Use", href: "/bookings/day-use", accent: SERVICE_META["day-use"].dot },
             {
               label: "Restaurant",
               href: "/bookings/restaurant",
-              accent: "#fb923c",
+              accent: SERVICE_META.restaurant.dot,
             },
           ].map((nav) => (
             <Link
               key={nav.href}
               href={nav.href}
-              className="group inline-flex items-center gap-2 font-[family-name:var(--font-raleway)] text-[0.72rem] tracking-[0.1em] uppercase font-[600] text-[#5a5450] hover:text-[#1a1614] transition-colors duration-150"
+              className="group inline-flex min-h-11 items-center gap-2 font-[family-name:var(--font-raleway)] text-[0.75rem] tracking-[0.1em] uppercase font-[600] text-ink-soft hover:text-ink transition-colors duration-150"
             >
               <span
                 className="w-1.5 h-1.5 rounded-full"

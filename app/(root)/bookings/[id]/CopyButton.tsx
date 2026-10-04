@@ -1,9 +1,8 @@
 "use client";
 
-import * as React from "react";
 import { Copy, Check } from "lucide-react";
-import { toast } from "sonner";
 import { FOCUS_RING } from "@/lib/bookings/status";
+import { useCopy } from "./useCopy";
 
 export function CopyButton({
   value,
@@ -14,18 +13,8 @@ export function CopyButton({
   toastLabel?: string;
   accessibleLabel?: string;
 }) {
-  const [copied, setCopied] = React.useState(false);
-
-  const onCopy = async () => {
-    try {
-      await navigator.clipboard.writeText(value);
-      setCopied(true);
-      toast.success(toastLabel);
-      setTimeout(() => setCopied(false), 1800);
-    } catch {
-      toast.error("Couldn't copy — try selecting manually");
-    }
-  };
+  const { copied, copy } = useCopy(toastLabel);
+  const onCopy = () => copy(value);
 
   return (
     <button

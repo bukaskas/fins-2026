@@ -26,6 +26,24 @@ export async function getAutoConfirmBookings(): Promise<boolean> {
   }
 }
 
+/**
+ * Same setting as getAutoConfirmBookings, but reports a failed read instead of
+ * silently falling back to OFF — for the settings screen, where showing "Off"
+ * when the real value is unknown would mislead staff.
+ */
+export async function readAutoConfirmSetting() {
+  try {
+    const row = await prisma.appSetting.findUnique({
+      where: { key: AUTO_CONFIRM_KEY },
+      select: { value: true },
+    });
+    return { success: true as const, enabled: row?.value === "true" };
+  } catch (error) {
+    console.error("Failed to read auto-confirm setting:", error);
+    return { success: false as const, message: "Couldn't load this setting." };
+  }
+}
+
 export async function setAutoConfirmBookings(enabled: boolean) {
   try {
     if (!(await hasCapability("bookings:manage"))) {
@@ -39,7 +57,7 @@ export async function setAutoConfirmBookings(enabled: boolean) {
       update: { value },
     });
 
-    revalidatePath("/bookings/dashboard");
+    revalidatePath("/bookings/settings");
     return { success: true as const, enabled };
   } catch (error) {
     console.error("Failed to update auto-confirm setting:", error);

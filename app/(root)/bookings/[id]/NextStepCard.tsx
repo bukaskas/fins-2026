@@ -4,16 +4,20 @@ import { Instagram, Check, MessageCircle, BookmarkCheck } from "lucide-react";
 import { CopyButton } from "./CopyButton";
 import PayDepositOnline from "./PayDepositOnline";
 import PaymentCountdown from "./PaymentCountdown";
-import { WAITING_PAYMENT_WINDOW_MS } from "@/lib/constants";
+import {
+  INSTAGRAM_DM_URL,
+  INSTAGRAM_HANDLE,
+  WAITING_PAYMENT_WINDOW_MS,
+  WHATSAPP_PHONE,
+} from "@/lib/constants";
+import { whatsappHref } from "@/lib/bookings/messages";
 import { FOCUS_RING } from "@/lib/bookings/status";
 
-const INSTAGRAM_URL = "https://ig.me/m/finskitesurfing";
-const INSTAGRAM_DISPLAY = "@finskitesurfing";
 const ACCOUNT_NUMBER = "1105202510010201";
 const BANK_NAME = "Arab African International Bank";
 const ACCOUNT_NAME = "Fins Kite Surfing";
-const WHATSAPP_NUMBER = "+201222144388";
-const WHATSAPP_URL = `https://wa.me/${WHATSAPP_NUMBER.replace(/\D/g, "")}`;
+const WHATSAPP_URL = whatsappHref(WHATSAPP_PHONE);
+const WHATSAPP_DISPLAY = `+20${WHATSAPP_PHONE.slice(1)}`;
 
 const SCREENSHOT_STATUSES: BookingStatus[] = [
   BookingStatus.REQUEST_SENT,
@@ -117,7 +121,7 @@ function MicroLabel({ children }: { children: React.ReactNode }) {
 function InstagramButton({ caption }: { caption: string }) {
   return (
     <a
-      href={INSTAGRAM_URL}
+      href={INSTAGRAM_DM_URL}
       target="_blank"
       rel="noopener noreferrer"
       className={`group flex min-h-12 items-center gap-4 rounded-2xl bg-[#1a1614] px-5 py-4 text-white transition-colors duration-150 hover:bg-[#2a2522] shadow-[0_8px_24px_-10px_rgba(26,22,20,0.5)] ${FOCUS_RING}`}
@@ -130,7 +134,7 @@ function InstagramButton({ caption }: { caption: string }) {
           {caption}
         </span>
         <span className="mt-0.5 font-[family-name:var(--font-roboto-mono)] text-[0.95rem] tracking-[0.04em]">
-          {INSTAGRAM_DISPLAY}
+          {INSTAGRAM_HANDLE}
         </span>
       </span>
     </a>
@@ -153,7 +157,7 @@ function WhatsAppButton({ caption }: { caption: string }) {
           {caption}
         </span>
         <span className="mt-0.5 font-[family-name:var(--font-roboto-mono)] text-[0.95rem] tracking-[0.04em]">
-          {WHATSAPP_NUMBER}
+          {WHATSAPP_DISPLAY}
         </span>
       </span>
     </a>
@@ -201,9 +205,6 @@ function PendingBody() {
         Please let us check the availability and we&rsquo;ll get back to you as
         soon as possible.
       </Body>
-      <div className="mt-7">
-        <WhatsAppButton caption="Contact us on WhatsApp" />
-      </div>
     </>
   );
 }

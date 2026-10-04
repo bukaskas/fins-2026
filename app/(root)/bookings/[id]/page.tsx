@@ -12,7 +12,13 @@ import { LOCATION_ADDRESS, VISIT_WORKING_HOURS } from "@/lib/constants";
 import { getBookingById } from "@/lib/actions/booking.actions";
 import { buildMetadata } from "@/lib/metadata";
 import { FOCUS_RING, MUTED, serviceLabel } from "@/lib/bookings/status";
+import {
+  buildStatusMessage,
+  isClosedBooking,
+  showsAskStaff,
+} from "@/lib/bookings/status-message";
 import NextStepCard from "./NextStepCard";
+import AskStaffCard from "./AskStaffCard";
 
 /**
  * The guest's booking page — the private link reception sends over WhatsApp.
@@ -263,6 +269,13 @@ export default async function BookingDetailPage({
           paymentLinkExpiresAt={booking.paymentLinkExpiresAt}
           waitingPaymentAt={booking.waitingPaymentAt}
         />
+
+        {showsAskStaff(booking.bookingStatus) && (
+          <AskStaffCard
+            message={buildStatusMessage(booking, status.label)}
+            closed={isClosedBooking(booking.bookingStatus)}
+          />
+        )}
 
         {/* hairline */}
         <div className="mb-8 h-px bg-gradient-to-r from-transparent via-[#ece8e3] to-transparent" />

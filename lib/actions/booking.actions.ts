@@ -726,24 +726,30 @@ export async function getBookingCountsByDate(statuses?: BookingStatus[]) {
       select: { date: true, numberOfPeople: true, bookingStatus: true },
     });
 
+    // Waiting payment is split out from review so the dashboard never folds
+    // "owes money, 24h clock running" into "needs a staff decision".
     type DayBreakdown = {
       confirmedPeople: number;
       confirmedCount: number;
-      activePeople: number;
-      activeCount: number;
+      paymentPeople: number;
+      paymentCount: number;
+      reviewPeople: number;
+      reviewCount: number;
     };
     const empty = (): DayBreakdown => ({
       confirmedPeople: 0,
       confirmedCount: 0,
-      activePeople: 0,
-      activeCount: 0,
+      paymentPeople: 0,
+      paymentCount: 0,
+      reviewPeople: 0,
+      reviewCount: 0,
     });
 
     const map = new Map<string, DayBreakdown>();
     bookings.forEach((b) => {
       const isConfirmed = CONFIRMED_STATUSES.includes(b.bookingStatus);
       const isActive = ACTIVE_PENDING_STATUSES.includes(b.bookingStatus);
-      // Declined/canceled/no-response contribute to neither number.
+      // Declined/canceled/no-response contribute to no number.
       if (!isConfirmed && !isActive) return;
 
       const key = b.date.toISOString().split('T')[0];
@@ -751,9 +757,12 @@ export async function getBookingCountsByDate(statuses?: BookingStatus[]) {
       if (isConfirmed) {
         day.confirmedPeople += b.numberOfPeople;
         day.confirmedCount += 1;
+      } else if (b.bookingStatus === BookingStatus.WAITING_PAYMENT) {
+        day.paymentPeople += b.numberOfPeople;
+        day.paymentCount += 1;
       } else {
-        day.activePeople += b.numberOfPeople;
-        day.activeCount += 1;
+        day.reviewPeople += b.numberOfPeople;
+        day.reviewCount += 1;
       }
       map.set(key, day);
     });
@@ -763,8 +772,8 @@ export async function getBookingCountsByDate(statuses?: BookingStatus[]) {
       data: Array.from(map.entries()).map(([date, v]) => ({
         date,
         ...v,
-        totalPeople: v.confirmedPeople + v.activePeople,
-        bookingCount: v.confirmedCount + v.activeCount,
+        totalPeople: v.confirmedPeople + v.paymentPeople + v.reviewPeople,
+        bookingCount: v.confirmedCount + v.paymentCount + v.reviewCount,
       })),
     };
   } catch (error) {

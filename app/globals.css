@@ -39,6 +39,24 @@
   --color-neu-primary-ink: #075985;
   --color-neu-focus: #0c4a6e;
   --color-neu-accent: #38bdf8;
+  /*
+   * Warm paper/ink palette used by the staff booking pages (/bookings/*).
+   * Text contrast on white: ink 17.6:1, ink-soft 11.6:1, ink-muted 7.4:1.
+   * The old greys #8a8480 (3.6:1) and #b0a89f (2.3:1) fail AA as text; use
+   * ink-muted instead. Lines are for borders only, never text.
+   */
+  --color-paper: #faf9f7;
+  --color-paper-line: #ece8e3;
+  --color-paper-line-strong: #d6d0c8;
+  --color-ink: #1a1614;
+  --color-ink-hover: #2a2420;
+  --color-ink-soft: #3d3834;
+  --color-ink-muted: #5a5450;
+  /* Error banner: alert-ink on alert-bg is 9.6:1. */
+  --color-alert-bg: #fdf3f2;
+  --color-alert-line: #f1c7c2;
+  --color-alert-icon: #b42318;
+  --color-alert-ink: #7a1a12;
   --shadow-neu:
     -6px -6px 14px rgba(255, 255, 255, 0.85),
     6px 6px 14px rgba(136, 152, 170, 0.55);
