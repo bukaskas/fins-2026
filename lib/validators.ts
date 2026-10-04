@@ -62,6 +62,18 @@ export const bookingFormSchema = z.object({
 });
 export type BookingFormData = z.infer<typeof bookingFormSchema>;
 
+// Kai unit owners & community registration for an event day. The date isn't
+// here: the server fixes it, so a client can't register for another day.
+export const kaiCommunityBookingSchema = z.object({
+  name: z.string().trim().min(2, "Name must be at least 2 characters long"),
+  phone: phoneSchema,
+  email: emailSchema,
+  unitNumber: z.string().trim().min(1, "Unit number is required").max(20, "Unit number is too long"),
+  numberOfPeople: z.number().int().min(1, "At least 1 adult required").max(20, "For more than 20 adults, please contact us"),
+  numberOfKids: z.number().int().min(0).max(20, "For more than 20 kids, please contact us"),
+});
+export type KaiCommunityBookingData = z.infer<typeof kaiCommunityBookingSchema>;
+
 export const updateBookingSchema = z.object({
   name:             z.string().min(2, "Name must be at least 2 characters long"),
   date:             z.date(),

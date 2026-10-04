@@ -1,11 +1,12 @@
 import { Resend } from "resend";
 import BookingEmail from "@/emails/emailTemplate";
 const resend = new Resend(process.env.RESEND_API_KEY);
-import { APP_NAME, EMAIL_ADDRESS, SERVER_URL, STAFF_EMAILS } from "@/lib/constants";
+import { APP_NAME, EMAIL_ADDRESS, PHARAOH_AIRSTYLE_DATE_KEY, SERVER_URL, STAFF_EMAILS } from "@/lib/constants";
 import type { PriceBreakdown } from "@/lib/pricing";
 import RegistrationEmail from "./registrationEmail";
 import StaffNotificationEmail from "./staffNotificationEmail";
 import PharaohAirstyleEmail from "./pharaohEmail";
+import PharaohConfirmedEmail from "./pharaohConfirmedEmail";
 import FullyBookedEmail from "./fullyBookedEmail";
 import BulkEmail from "./bulkEmail";
 import PasswordResetEmail from "./passwordResetEmail";
@@ -89,6 +90,34 @@ export async function sendBookingEmail(
 
   const bookingUrl = bookingId ? `${SERVER_URL}/bookings/${bookingId}` : undefined;
   const formattedDate = formatBookingDate(date);
+
+  // A confirmed seat on the Pharaoh Airstyle day gets the event email: the
+  // schedule, and no "your payment came through" line for the free Kai
+  // community registrations.
+  if (
+    confirmed &&
+    bookingType === "day-use" &&
+    date.toISOString().slice(0, 10) === PHARAOH_AIRSTYLE_DATE_KEY
+  ) {
+    await resend.emails.send({
+      from: EMAIL_FROM,
+      replyTo: EMAIL_ADDRESS,
+      to,
+      subject: `Pharaoh Airstyle — you're confirmed for ${formattedDate}`,
+      react: (
+        <PharaohConfirmedEmail
+          username={name}
+          date={formattedDate}
+          numberOfPeople={numberOfPeople}
+          numberOfKids={numberOfKids}
+          bookingUrl={bookingUrl}
+          amountPaidCents={amountPaidCents}
+          balanceDueCents={balanceDueCents}
+        />
+      ),
+    });
+    return;
+  }
   const prefix =
     (bookingType ? bookingSubjectPrefix[bookingType] : undefined) ??
     fallbackSubjectPrefix;

@@ -328,7 +328,7 @@ function PriceBreakdown({
 }
 
 /* ── Guest counter: 44px targets, typeable, clamped ── */
-function CountStepper({
+export function CountStepper({
   id,
   label,
   hint,

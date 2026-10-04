@@ -3,7 +3,7 @@
 import { prisma } from "@/db/prisma";
 import { isRedirectError } from "next/dist/client/components/redirect-error";
 import { revalidatePath } from "next/cache";
-import { BookingDepositData, bookingDepositSchema, BookingFormData, bookingFormSchema, bulkEmailSchema, CorporateBookingData, corporateBookingSchema, UpdateBookingData, updateBookingSchema } from "../validators";
+import { BookingDepositData, bookingDepositSchema, BookingFormData, bookingFormSchema, bulkEmailSchema, CorporateBookingData, corporateBookingSchema, KaiCommunityBookingData, kaiCommunityBookingSchema, UpdateBookingData, updateBookingSchema } from "../validators";
 import { sendBookingEmail, sendStaffNotificationEmail, sendFullyBookedEmail, sendBulkEmail } from "@/emails/index";
 import {
   Booking,
@@ -35,11 +35,12 @@ import {
 import {
   DAY_USE_BOOKING_HORIZON_MONTHS,
   dateKeyFromUtcMidnight,
+  dateKeyInCairo,
   isWithinDayUseBookingWindow,
 } from "@/lib/date-keys";
 import { createPaymentOrder, getFlashOrder, verifyWebhookSignature } from "@/lib/flash";
 import { getAutoConfirmBookings } from "./settings.actions";
-import { BOOKINGS_PAGE_SIZE, DAILY_CAPACITY, WAITING_PAYMENT_WINDOW_MS } from "@/lib/constants";
+import { BOOKINGS_PAGE_SIZE, DAILY_CAPACITY, PHARAOH_AIRSTYLE_DATE_KEY, WAITING_PAYMENT_WINDOW_MS } from "@/lib/constants";
 import { parseBookingStatusFilter } from "@/lib/bookings/status";
 import {
   ACTIVE_PENDING_STATUSES,
@@ -380,6 +381,80 @@ export async function createBooking(
   }
 }
 
+
+/** Pharaoh Airstyle day, stored the way the calendar stores dates. */
+const PHARAOH_AIRSTYLE_DATE = new Date(`${PHARAOH_AIRSTYLE_DATE_KEY}T00:00:00.000Z`);
+const KAI_COMMUNITY_NOTE = "Kai owner, Pharaoh airstyle";
+
+/**
+ * Kai unit owners & community registration for Pharaoh Airstyle. Unlike a
+ * public booking there's no review and no payment window: the row is CONFIRMED
+ * on insert, with no charge. The unit number travels in the booking comment,
+ * which is also how staff tell these apart from paying day-use guests.
+ */
+export async function createKaiCommunityBooking(data: KaiCommunityBookingData) {
+  try {
+    const v = kaiCommunityBookingSchema.parse(data);
+    const date = PHARAOH_AIRSTYLE_DATE;
+    if (dateKeyFromUtcMidnight(date) < dateKeyInCairo()) {
+      return { success: false, message: "Registration for this day is closed." };
+    }
+
+    const booking = await prisma.booking.create({
+      data: {
+        name: v.name,
+        date,
+        email: v.email,
+        phone: v.phone,
+        service: "day-use",
+        numberOfPeople: v.numberOfPeople,
+        numberOfKids: v.numberOfKids,
+        totalPriceCents: 0,
+        bookingStatus: BookingStatus.CONFIRMED,
+        contacts: {
+          create: {
+            channel: BookingContactChannel.OTHER,
+            outcome: BookingContactOutcome.REACHED,
+            note: `${KAI_COMMUNITY_NOTE} · Unit ${v.unitNumber}`,
+          },
+        },
+      },
+    });
+    await logBookingEvents([
+      {
+        bookingId: booking.id,
+        source: BookingEventSource.GUEST,
+        toStatus: booking.bookingStatus,
+      },
+    ]);
+
+    await sendBookingEmail(v.email, v.name, date, {
+      bookingType: "day-use",
+      numberOfPeople: v.numberOfPeople,
+      numberOfKids: v.numberOfKids,
+      bookingId: booking.id,
+      confirmed: true,
+      amountPaidCents: 0,
+      balanceDueCents: 0,
+    });
+    await sendStaffNotificationEmail(
+      v.name,
+      v.email,
+      v.phone,
+      date,
+      "day-use",
+      v.numberOfPeople,
+      v.numberOfKids,
+      0,
+      booking.id,
+    );
+
+    return { success: true as const, message: "You're confirmed!", bookingId: booking.id };
+  } catch (error) {
+    console.error("Kai community booking error:", error);
+    return { success: false, message: "Failed to register. Please try again or contact us." };
+  }
+}
 
 // ── /bookings list query ─────────────────────────────────────────────────────
 //
