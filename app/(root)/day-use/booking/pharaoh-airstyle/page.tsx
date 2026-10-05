@@ -1,6 +1,6 @@
 import DayUseBookingForm from "@/components/day-use/DayUseBookingForm";
 import pharaohPhoto from "@/public/images/kitesurfing/kite_booking_form_descktop.webp";
-import { VISIT_HOURS } from "@/lib/constants";
+import { PHARAOH_EVENT_HOURS } from "@/lib/constants";
 
 // Spectator registration for the Pharaoh Airstyle day. This is a day-use
 // booking in every respect — same rate, same "day-use" service, same emails,
@@ -31,11 +31,11 @@ export default function PharaohAirstyleDayUsePage() {
         photoClassName: "object-[center_28%]",
         rail: {
           eyebrow: "Fins Beach Club · Sokhna",
-          titleTop: "Come watch",
-          titleBottom: "the airstyle",
+          titleTop: "Pharaohs",
+          titleBottom: "Airstyle Competition",
           bullets: [
             "Friday 9 October 2026",
-            VISIT_HOURS,
+            PHARAOH_EVENT_HOURS,
             "Kite competition",
           ],
         },

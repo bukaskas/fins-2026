@@ -12,7 +12,7 @@ import { createKaiCommunityBooking } from "@/lib/actions/booking.actions";
 import { kaiCommunityBookingSchema, type KaiCommunityBookingData } from "@/lib/validators";
 import { cn } from "@/lib/utils";
 import pharaohPhoto from "@/public/images/kitesurfing/kite_booking_form_descktop.webp";
-import { VISIT_HOURS } from "@/lib/constants";
+import { PHARAOH_EVENT_HOURS } from "@/lib/constants";
 
 /* ─────────────────────────────────────────────────────────────
    Kai unit owners & community registration for Pharaoh Airstyle.
@@ -116,16 +116,16 @@ export default function KaiCommunityRegistrationForm() {
           </span>
           <p className="font-[family-name:var(--font-raleway)] text-white leading-[0.95] mb-4 sm:mb-6">
             <span className="block text-[clamp(2rem,6vw,4rem)] font-[100] tracking-[-0.02em]">
-              Come watch
+              Pharaohs
             </span>
             <span className="block text-[clamp(2rem,6vw,4rem)] font-[800] tracking-[-0.02em]">
-              the airstyle
+              Airstyle Competition
             </span>
           </p>
           <div className="hidden sm:flex flex-wrap gap-x-5 gap-y-2">
             {[
               <>Friday <b className="font-[700] text-white">9 October</b> 2026</>,
-              VISIT_HOURS,
+              PHARAOH_EVENT_HOURS,
               "Kite competition",
             ].map((item, i) => (
               <span key={i} className="text-white/75 text-[0.8125rem] font-[300]">
@@ -143,10 +143,10 @@ export default function KaiCommunityRegistrationForm() {
             className="font-[family-name:var(--font-raleway)] text-[1.375rem] font-[600] tracking-[-0.01em] mb-1"
             style={{ color: NAVY }}
           >
-            Kai owners & community
+            Kai Community & Owners
           </h1>
           <p className="text-[0.9375rem] leading-relaxed mb-7" style={{ color: MUTED }}>
-            Register for Pharaoh Airstyle. Your spot is confirmed as soon as you send this.
+            Register and join us for a day where the energy rises with the wind - featuring vibrant activities, live music, flavorful bites, and high-flying kitesurfing action.
           </p>
 
           <div className="space-y-5">

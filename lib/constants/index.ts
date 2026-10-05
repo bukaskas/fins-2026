@@ -23,6 +23,8 @@ export const STAFF_EMAILS = {
 // Beach club opening hours: the day-use pages, the guest emails, and the hours
 // staff answer WhatsApp all read this one string.
 export const VISIT_HOURS = "9:00 AM – 11:00 PM";
+// Pharaoh Airstyle runs on its own schedule, not the beach club's opening hours.
+export const PHARAOH_EVENT_HOURS = "9:30 AM – 7:00 PM";
 // Same today, kept apart so the restaurant can change without the beach club.
 export const RESTAURANT_HOURS = "9:00 AM – 11:00 PM";
 // How long a WAITING_PAYMENT booking is held before the cron sweep cancels
