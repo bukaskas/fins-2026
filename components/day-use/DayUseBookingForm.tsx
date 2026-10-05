@@ -81,6 +81,8 @@ export type DayUseBookingVariant = {
      *  stops being readable. */
     lede?: string;
     bullets: string[];
+    /** One-line date/time shown on the mobile banner, where `bullets` are hidden. */
+    mobileSummary?: string;
   };
   /** Replaces "When are you coming?" as the step 1 heading. */
   stepOneTitle: string;
@@ -703,7 +705,12 @@ function DayUseBookingForm({
       {/* ── Brand rail: a banner on mobile, a pinned column on desktop.
              Sticky so the headline and the beach stay in view however long the
              form column gets — otherwise both sit below the fold. ── */}
-      <div className="relative md:w-1/2 lg:w-[55%] h-52 sm:h-64 md:h-[calc(100vh-110px)] md:self-start md:sticky md:top-[110px] overflow-hidden">
+      <div
+        className={cn(
+          "relative md:w-1/2 lg:w-[55%] sm:h-64 md:h-[calc(100vh-110px)] md:self-start md:sticky md:top-[110px] overflow-hidden",
+          rail.mobileSummary ? "h-60" : "h-52",
+        )}
+      >
         <Image
           src={photo}
           alt=""
@@ -743,6 +750,11 @@ function DayUseBookingForm({
               <span className="block text-[clamp(2rem,6vw,4rem)] font-[800] tracking-[-0.02em]">
                 {rail.titleBottom}
               </span>
+            </p>
+          )}
+          {rail.mobileSummary && (
+            <p className="sm:hidden text-white/85 text-[0.8125rem] font-[400]">
+              {rail.mobileSummary}
             </p>
           )}
           <div className="hidden sm:flex flex-wrap gap-x-5 gap-y-2">

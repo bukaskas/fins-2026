@@ -33,6 +33,7 @@ export default function PharaohAirstyleDayUsePage() {
           eyebrow: "Fins Beach Club · Sokhna",
           titleTop: "Pharaohs",
           titleBottom: "Airstyle Competition",
+          mobileSummary: `Fri 9 Oct · ${PHARAOH_EVENT_HOURS}`,
           bullets: [
             "Friday 9 October 2026",
             PHARAOH_EVENT_HOURS,
