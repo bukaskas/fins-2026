@@ -42,6 +42,8 @@ import { createPaymentOrder, getFlashOrder, verifyWebhookSignature } from "@/lib
 import { getAutoConfirmBookings } from "./settings.actions";
 import { BOOKINGS_PAGE_SIZE, DAILY_CAPACITY, PHARAOH_AIRSTYLE_DATE_KEY, WAITING_PAYMENT_WINDOW_MS } from "@/lib/constants";
 import { parseBookingStatusFilter } from "@/lib/bookings/status";
+import { depositCents } from "@/lib/bookings/payment-window";
+import { emailPriceBreakdown, sendPaymentRequestEmail } from "@/lib/bookings/guest-emails";
 import {
   ACTIVE_PENDING_STATUSES,
   buildAgentStats,
@@ -327,9 +329,12 @@ export async function createBooking(
     const isPharaoh = validatedData.service === "pharaoh-airstyle";
     const includeTickets = isDayUse || isPharaoh;
     // Bookings that go straight to payment (existing customers, or any booking
-    // while auto-confirm is on) land on the payment page directly, so skip the
-    // "booking request received" guest email for them.
-    if (!goToPayment) {
+    // while auto-confirm is on) skip the review, so they get the "pay your
+    // deposit" email instead of the request receipt: the payment page they land
+    // on is gone once the tab is closed, and the hold still lapses in 24h.
+    if (goToPayment) {
+      await sendPaymentRequestEmail(booking.id);
+    } else {
       await sendBookingEmail(
         validatedData.email,
         validatedData.name,
@@ -342,7 +347,7 @@ export async function createBooking(
           bookingId: booking.id,
           // These rows are PENDING until someone reviews them, so the guest
           // gets a receipt, not a confirmation.
-          confirmed: false,
+          stage: "request",
         },
       );
     }
@@ -433,7 +438,7 @@ export async function createKaiCommunityBooking(data: KaiCommunityBookingData) {
       numberOfPeople: v.numberOfPeople,
       numberOfKids: v.numberOfKids,
       bookingId: booking.id,
-      confirmed: true,
+      stage: "confirmed",
       amountPaidCents: 0,
       balanceDueCents: 0,
     });
@@ -1401,6 +1406,9 @@ async function applyBookingStatusChange(
     // admin can retry from the booking page if it fails.
     if (status === BookingStatus.WAITING_PAYMENT) {
       const linkRes = await createBookingPaymentLink(id);
+      // Sent even when the link failed: the email points at the booking page,
+      // which issues a fresh link itself.
+      await sendPaymentRequestEmail(id);
       if (!linkRes.success) {
         return { success: true, warning: linkRes.message };
       }
@@ -1481,8 +1489,8 @@ export async function createBookingPaymentLink(bookingId: string) {
 
     // The online payment is a 50% deposit to confirm the booking; the rest is
     // paid on arrival. Subtract anything already paid so we never overcharge.
-    const depositCents = Math.round(booking.totalPriceCents / 2);
-    const dueCents = depositCents - booking.amountPaidCents;
+    const deposit = depositCents(booking.totalPriceCents);
+    const dueCents = deposit - booking.amountPaidCents;
     if (dueCents < FLASH_MIN_CENTS) {
       return {
         success: false,
@@ -1679,20 +1687,7 @@ async function sendBookingConfirmedEmailOnce(bookingId: string) {
       totalCents !== null
         ? Math.max(totalCents - booking.amountPaidCents, 0)
         : undefined;
-
-    // Day use prints per-person line items from the rates the booking was sold
-    // at (a legacy row without a snapshot falls back to today's rate). If the
-    // table would not sum to what the guest was actually charged - e.g. a
-    // hand-corrected total - it is dropped instead: the total on the row stays
-    // the single source of truth, exactly as at booking time.
-    const soldAt = isDayUse ? ratesFromSnapshot(booking) : null;
-    const recomputed = isDayUse
-      ? soldAt
-        ? priceFromUnitRates(soldAt, booking.numberOfPeople, booking.numberOfKids)
-        : calculateDayUsePrice(booking.date, booking.numberOfPeople, booking.numberOfKids)
-      : null;
-    const priceBreakdown =
-      recomputed && recomputed.totalCents === totalCents ? recomputed : undefined;
+    const priceBreakdown = emailPriceBreakdown(booking);
 
     await sendBookingEmail(booking.email, booking.name, booking.date, {
       bookingType: booking.service,
@@ -1700,7 +1695,7 @@ async function sendBookingConfirmedEmailOnce(bookingId: string) {
       numberOfKids: isDayUse ? booking.numberOfKids : undefined,
       priceBreakdown,
       bookingId: booking.id,
-      confirmed: true,
+      stage: "confirmed",
       amountPaidCents: booking.amountPaidCents,
       balanceDueCents,
     });
@@ -2339,6 +2334,9 @@ export async function createDayUseBookingAdmin(data: {
         toAgentId: creatorId,
       },
     ]);
+    if (booking.bookingStatus === BookingStatus.WAITING_PAYMENT) {
+      await sendPaymentRequestEmail(booking.id);
+    }
     revalidatePath("/bookings");
     revalidatePath("/bookings/day-use");
     return { success: true, bookingId: booking.id };

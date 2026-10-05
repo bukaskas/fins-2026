@@ -1,6 +1,7 @@
 import { buildMetadata } from "@/lib/metadata";
 import Link from "next/link";
 import menu from "@/lib/config/menu.json";
+import { RESTAURANT_HOURS } from "@/lib/constants";
 
 export const metadata = buildMetadata({
   title: "Food Menu",
@@ -112,7 +113,7 @@ function MenuPage() {
               Your table awaits
             </h2>
             <p className="mt-2 text-[0.95rem] font-[family-name:var(--font-raleway)] font-[400] text-neu-muted">
-              Open daily · 9:00 AM – 11:00 PM · {menu.note}.
+              Open daily · {RESTAURANT_HOURS} · {menu.note}.
             </p>
           </div>
           <div className="flex flex-wrap gap-4">

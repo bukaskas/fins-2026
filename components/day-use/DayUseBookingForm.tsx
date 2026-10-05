@@ -33,6 +33,8 @@ import {
   type DateKey,
   dateKeyFromUtcMidnight,
   dateKeyInCairo,
+  isDateKey,
+  isWithinDayUseBookingWindow,
   localCalendarDateFromKey,
   utcMidnightFromKey,
 } from "@/lib/date-keys";
@@ -423,13 +425,30 @@ export function CountStepper({
   );
 }
 
-function DayUseBookingForm({ variant }: { variant: DayUseBookingVariant }) {
+function DayUseBookingForm({
+  variant,
+  initialDateKey,
+}: {
+  variant: DayUseBookingVariant;
+  /** A day to pre-select (from a link). Ignored unless it is still bookable. */
+  initialDateKey?: string;
+}) {
   const { fixedDate, eventHighlights, notice, rail, photo } = variant;
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [step, setStep] = React.useState<1 | 2 | 3>(1);
   // Cairo today, fixed for the life of the page so the calendar, the past
   // check and the rates all agree on it.
   const [todayKey] = React.useState(() => dateKeyInCairo());
+  // Past and out-of-window days are known now; a closed day only once the
+  // closed dates load, so that check is the effect further down.
+  const [prefillKey] = React.useState<DateKey | null>(() =>
+    !fixedDate &&
+    initialDateKey &&
+    isDateKey(initialDateKey) &&
+    isWithinDayUseBookingWindow(initialDateKey)
+      ? initialDateKey
+      : null,
+  );
   // Set when the server refused a stale quote: the current rates for that
   // date, shown for review in place of the ones this bundle computes.
   const [serverRate, setServerRate] = React.useState<DayUseRate | null>(null);
@@ -517,8 +536,11 @@ function DayUseBookingForm({ variant }: { variant: DayUseBookingVariant }) {
   const form = useForm({
     defaultValues: {
       name: "",
-      // No default: the guest picks a day deliberately (PLAN.md decision 5).
-      date: fixedDate ?? (undefined as unknown as Date),
+      // No default: the guest picks a day deliberately (PLAN.md decision 5),
+      // unless a link already named one.
+      date:
+        fixedDate ??
+        (prefillKey ? utcMidnightFromKey(prefillKey) : (undefined as unknown as Date)),
       email: "",
       phone: "",
       service: "day-use",
@@ -602,6 +624,16 @@ function DayUseBookingForm({ variant }: { variant: DayUseBookingVariant }) {
       }
     },
   });
+
+  // A pre-selected day that turns out to be full falls back to the normal,
+  // empty picker rather than leaving a closed day selected.
+  React.useEffect(() => {
+    if (!prefillKey || !closedKeys.has(prefillKey)) return;
+    const current = form.getFieldValue("date");
+    if (current && dayKey(current) === prefillKey) {
+      form.setFieldValue("date", undefined as unknown as Date);
+    }
+  }, [prefillKey, closedKeys, form]);
 
   // A fixed-date form has exactly two dead ends, and both have to be met on
   // arrival: the server refuses a closed date (createBooking) and would

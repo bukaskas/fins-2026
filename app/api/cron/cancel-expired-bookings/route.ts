@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 
 import { cancelExpiredWaitingPayments } from "@/lib/actions/booking.actions";
+import { sendReleasedHoldEmails } from "@/lib/bookings/guest-emails";
 
 // Cancels bookings whose 24h WAITING_PAYMENT window has elapsed.
 //
@@ -30,7 +31,10 @@ export async function GET(req: Request) {
   try {
     const canceled = await cancelExpiredWaitingPayments();
     if (canceled > 0) revalidatePath("/bookings", "layout");
-    return NextResponse.json({ ok: true, canceled });
+    // Covers rows expired here and rows expired earlier on a staff page load,
+    // which never sends mail itself.
+    const released = await sendReleasedHoldEmails();
+    return NextResponse.json({ ok: true, canceled, released });
   } catch (error) {
     console.error("[cron] cancel-expired-bookings failed", error);
     return NextResponse.json(

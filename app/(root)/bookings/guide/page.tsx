@@ -1,6 +1,7 @@
 import { getServerSession } from "next-auth/next";
 import { redirect } from "next/navigation";
 import { authOptions } from "@/lib/auth";
+import { VISIT_HOURS } from "@/lib/constants";
 
 export default async function BookingGuidePage() {
   const session = await getServerSession(authOptions);
@@ -100,7 +101,7 @@ export default async function BookingGuidePage() {
                 💰 <strong>1,500 LE / per person</strong>
               </p>
               <p>
-                ⏰ <strong>9:00 AM – 11:00 PM</strong>
+                ⏰ <strong>{VISIT_HOURS}</strong>
               </p>
             </div>
 

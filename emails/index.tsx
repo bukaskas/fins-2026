@@ -1,5 +1,6 @@
 import { Resend } from "resend";
-import BookingEmail from "@/emails/emailTemplate";
+import BookingEmail, { type BookingEmailStage } from "@/emails/emailTemplate";
+import { formatPaymentDeadline, formatPaymentDeadlineShort } from "@/lib/bookings/payment-window";
 const resend = new Resend(process.env.RESEND_API_KEY);
 import { APP_NAME, EMAIL_ADDRESS, PHARAOH_AIRSTYLE_DATE_KEY, SERVER_URL, STAFF_EMAILS } from "@/lib/constants";
 import type { PriceBreakdown } from "@/lib/pricing";
@@ -52,12 +53,25 @@ interface BookingEmailOptions {
   /** Passed whole so the emailed line items always sum to the emailed total. */
   priceBreakdown?: PriceBreakdown;
   bookingId?: string;
-  /** Only for callers that actually hold a seat; everything else is a receipt. */
-  confirmed?: boolean;
-  /** Total taken so far. Only meaningful alongside `confirmed`. */
+  /** Defaults to "request": only callers that hold a seat may say otherwise. */
+  stage?: BookingEmailStage;
+  /** Total taken so far. Confirmed only. */
   amountPaidCents?: number;
-  /** What is still owed on arrival. Only meaningful alongside `confirmed`. */
+  /** What is still owed on arrival. Awaiting-payment and confirmed. */
   balanceDueCents?: number;
+  /** The deposit still to pay online. Awaiting-payment only. */
+  depositDueCents?: number;
+  /** When the payment window closes. Awaiting-payment and cancelled. */
+  deadline?: Date;
+}
+
+/** Where a guest whose hold was released can start over, if anywhere. */
+function rebookUrlFor(bookingType: string | undefined, date: Date): string | undefined {
+  if (bookingType === "day-use") {
+    return `${SERVER_URL}/day-use/booking?date=${date.toISOString().slice(0, 10)}`;
+  }
+  if (bookingType === "pharaoh-airstyle") return `${SERVER_URL}/kitesurfing/booking/pharaoh`;
+  return undefined;
 }
 
 export async function sendBookingEmail(
@@ -72,12 +86,16 @@ export async function sendBookingEmail(
     numberOfKids,
     priceBreakdown,
     bookingId,
-    confirmed = false,
+    stage = "request",
     amountPaidCents,
     balanceDueCents,
+    depositDueCents,
+    deadline,
   } = options;
 
-  if (bookingType === "pharaoh-airstyle") {
+  // The event's own mail only replaces the request receipt; the payment and
+  // release emails are the standard ones.
+  if (bookingType === "pharaoh-airstyle" && stage === "request") {
     await resend.emails.send({
       from: EMAIL_FROM,
       replyTo: EMAIL_ADDRESS,
@@ -95,7 +113,7 @@ export async function sendBookingEmail(
   // schedule, and no "your payment came through" line for the free Kai
   // community registrations.
   if (
-    confirmed &&
+    stage === "confirmed" &&
     bookingType === "day-use" &&
     date.toISOString().slice(0, 10) === PHARAOH_AIRSTYLE_DATE_KEY
   ) {
@@ -122,13 +140,20 @@ export async function sendBookingEmail(
     (bookingType ? bookingSubjectPrefix[bookingType] : undefined) ??
     fallbackSubjectPrefix;
 
+  // Never the signup email's subject: identical subjects get threaded together
+  // by Gmail and the confirmation disappears under the welcome mail.
+  const subject =
+    stage === "awaiting-payment"
+      ? `Pay your deposit to hold ${formattedDate}`
+      : stage === "cancelled"
+        ? `${bookingType === "day-use" ? "Your spot" : "Your booking"} for ${formattedDate} was released`
+        : `${stage === "confirmed" ? prefix.confirmed : prefix.request} — ${formattedDate}`;
+
   await resend.emails.send({
     from: EMAIL_FROM,
     replyTo: EMAIL_ADDRESS,
     to,
-    // Never the signup email's subject: identical subjects get threaded
-    // together by Gmail and the confirmation disappears under the welcome mail.
-    subject: `${confirmed ? prefix.confirmed : prefix.request} — ${formattedDate}`,
+    subject,
     react: (
       <BookingEmail
         username={name}
@@ -138,9 +163,13 @@ export async function sendBookingEmail(
         numberOfKids={numberOfKids}
         priceBreakdown={priceBreakdown}
         bookingUrl={bookingUrl}
-        confirmed={confirmed}
+        stage={stage}
         amountPaidCents={amountPaidCents}
         balanceDueCents={balanceDueCents}
+        depositDueCents={depositDueCents}
+        deadline={deadline ? formatPaymentDeadline(deadline) : undefined}
+        deadlineShort={deadline ? formatPaymentDeadlineShort(deadline) : undefined}
+        rebookUrl={stage === "cancelled" ? rebookUrlFor(bookingType, date) : undefined}
       />
     ),
   });

@@ -12,6 +12,7 @@ export const metadata = buildMetadata({
 import restaurantPhoto from "@/public/images/restaurant/restaurant.webp";
 import restaurantMobile from "@/public/images/restaurant/restaurant_mobilefins.webp";
 import webphoto17 from "@/public/images/webphotos_fins/webphoto_17.webp";
+import { RESTAURANT_HOURS } from "@/lib/constants";
 
 const menuHighlights = [
   {
@@ -95,7 +96,7 @@ function RestaurantPage() {
                 className="w-1 h-1 rounded-full flex-shrink-0"
                 style={{ background: "#d6cfc6" }}
               />
-              <span>9:00 AM – 11:00 PM</span>
+              <span>{RESTAURANT_HOURS}</span>
               <span
                 className="w-1 h-1 rounded-full flex-shrink-0"
                 style={{ background: "#d6cfc6" }}
@@ -273,7 +274,7 @@ function RestaurantPage() {
               className="text-[0.62rem] tracking-[0.16em] font-[family-name:var(--font-raleway)] font-[300] mt-2"
               style={{ color: "rgba(255,255,255,0.2)" }}
             >
-              Open daily · 9:00 AM – 11:00 PM · Sokhna Red Sea
+              Open daily · {RESTAURANT_HOURS} · Sokhna Red Sea
             </p>
           </div>
         </div>

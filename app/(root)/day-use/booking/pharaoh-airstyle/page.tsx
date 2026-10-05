@@ -1,5 +1,6 @@
 import DayUseBookingForm from "@/components/day-use/DayUseBookingForm";
 import pharaohPhoto from "@/public/images/kitesurfing/kite_booking_form_descktop.webp";
+import { VISIT_HOURS } from "@/lib/constants";
 
 // Spectator registration for the Pharaoh Airstyle day. This is a day-use
 // booking in every respect — same rate, same "day-use" service, same emails,
@@ -34,7 +35,7 @@ export default function PharaohAirstyleDayUsePage() {
           titleBottom: "the airstyle",
           bullets: [
             "Friday 9 October 2026",
-            "9:00 AM – 11:00 PM",
+            VISIT_HOURS,
             "Kite competition",
           ],
         },

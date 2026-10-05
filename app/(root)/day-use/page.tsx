@@ -32,7 +32,7 @@ import StickyReserveBar from "./StickyReserveBar";
 import { getClosedDates } from "@/lib/actions/closedDate.actions";
 import { RATE_LABELS, formatEGP, getDayUseRates, getUpcomingPeakDates } from "@/lib/pricing";
 import { dateKeyInCairo, utcMidnightFromKey } from "@/lib/date-keys";
-import { LOCATION_ADDRESS, WHATSAPP_PHONE } from "@/lib/constants";
+import { LOCATION_ADDRESS, WHATSAPP_PHONE, VISIT_HOURS } from "@/lib/constants";
 
 /* ─────────────────────────────────────────────────────────────
    Visual world — see .claude/design-system/pages/day-use.md,
@@ -220,7 +220,7 @@ function HeroSection({ adultPriceLabel }: { adultPriceLabel: string }) {
 
         <div className="hero-tags flex flex-wrap gap-2 mb-8">
           {[
-            "9:00 AM – 11:00 PM",
+            VISIT_HOURS,
             `From ${adultPriceLabel}`,
             "Beach · Pool · Lounge",
           ].map((tag) => (
@@ -589,7 +589,7 @@ function WhatsIncluded({
           )}
 
           <p className="text-[0.8125rem] tracking-[0.12em] uppercase font-[600] mb-8" style={{ color: ON_NAVY }}>
-            9:00 AM – 11:00 PM
+            {VISIT_HOURS}
           </p>
 
           <Link

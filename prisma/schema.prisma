@@ -190,6 +190,17 @@ model Booking {
   // redelivered; an unsendable email needs a durable guard, not an in-memory one.
   confirmationEmailSentAt DateTime?
 
+  // The `waitingPaymentAt` of the payment window the guest was last emailed a
+  // "pay your deposit" request for. A restarted window no longer matches, so
+  // the guest gets a fresh email carrying the new deadline instead of keeping
+  // one whose deadline is wrong.
+  paymentRequestEmailWindowAt DateTime?
+
+  // Claimed before the "we released your spot" email that follows an automatic
+  // (CRON) expiry. Expiry also runs on staff page loads, which must not send
+  // mail, so the cron route sends for every expired row still unclaimed.
+  cancellationEmailSentAt DateTime?
+
   // Day Use unit prices the guest was quoted, fixed at booking time. A party
   // edit multiplies these rather than today's config, so a later rate change
   // cannot silently reprice an existing booking; a date edit replaces all

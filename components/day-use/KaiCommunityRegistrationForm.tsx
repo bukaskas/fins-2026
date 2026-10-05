@@ -12,6 +12,7 @@ import { createKaiCommunityBooking } from "@/lib/actions/booking.actions";
 import { kaiCommunityBookingSchema, type KaiCommunityBookingData } from "@/lib/validators";
 import { cn } from "@/lib/utils";
 import pharaohPhoto from "@/public/images/kitesurfing/kite_booking_form_descktop.webp";
+import { VISIT_HOURS } from "@/lib/constants";
 
 /* ─────────────────────────────────────────────────────────────
    Kai unit owners & community registration for Pharaoh Airstyle.
@@ -122,7 +123,7 @@ export default function KaiCommunityRegistrationForm() {
             </span>
           </p>
           <div className="hidden sm:flex flex-wrap gap-x-5 gap-y-2">
-            {["Friday 9 October 2026", "9:00 AM – 11:00 PM", "Kite competition"].map((item) => (
+            {["Friday 9 October 2026", VISIT_HOURS, "Kite competition"].map((item) => (
               <span key={item} className="text-white/75 text-[0.8125rem] font-[300]">
                 {item}
               </span>

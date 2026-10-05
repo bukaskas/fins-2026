@@ -20,12 +20,11 @@ export const STAFF_EMAILS = {
   dayUse: parseEmails(process.env.STAFF_EMAIL_DAY_USE, 'audriusb88@gmail.com',),
   restaurant: parseEmails(process.env.STAFF_EMAIL_RESTAURANT, 'audriusb88@gmail.com'),
 };
-// Visit hours shown on a confirmed booking page.
-// Heads up: this string was hardcoded on the booking detail page as
-// "9:30 am - 12 pm", which disagrees with the "9:00 AM - 11:00 PM" stated in
-// the confirmation email (emails/emailTemplate.tsx) and on /day-use. The value
-// is preserved verbatim here rather than silently changed - confirm which is
-// correct, then fix it in this one place.
+// Beach club opening hours: the day-use pages, the guest emails, and the hours
+// staff answer WhatsApp all read this one string.
+export const VISIT_HOURS = "9:00 AM – 11:00 PM";
+// Same today, kept apart so the restaurant can change without the beach club.
+export const RESTAURANT_HOURS = "9:00 AM – 11:00 PM";
 // How long a WAITING_PAYMENT booking is held before the cron sweep cancels
 // it. The countdown, the server action and the guest card all read this.
 export const WAITING_PAYMENT_WINDOW_MS = 24 * 60 * 60 * 1000;

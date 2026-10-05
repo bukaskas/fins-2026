@@ -17,7 +17,7 @@ import {
   pixelBasedPreset,
 } from "@react-email/components";
 import { formatEGP } from "@/lib/pricing";
-import { LOCATION_ADDRESS, WHATSAPP_PHONE } from "@/lib/constants";
+import { LOCATION_ADDRESS, WHATSAPP_PHONE, VISIT_HOURS } from "@/lib/constants";
 
 // Same derivation the site footer uses: local Egyptian number -> wa.me form.
 const WHATSAPP_HREF = `https://wa.me/20${WHATSAPP_PHONE.substring(1)}`;
@@ -146,7 +146,7 @@ const PharaohConfirmedEmail = ({
             </Heading>
             {date && <MetaRow label="Date" value={date} />}
             {party && <MetaRow label="Guests" value={party} />}
-            <MetaRow label="Hours" value="9:00 AM – 11:00 PM" />
+            <MetaRow label="Hours" value={VISIT_HOURS} />
             {hasPayment && (
               <>
                 {amountPaidCents !== undefined && amountPaidCents > 0 && (
