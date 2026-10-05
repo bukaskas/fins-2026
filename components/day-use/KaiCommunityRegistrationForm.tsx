@@ -123,7 +123,7 @@ export default function KaiCommunityRegistrationForm() {
             </span>
           </p>
           <p className="sm:hidden text-white/85 text-[0.8125rem] font-[400]">
-            Fri 9 Oct · {PHARAOH_EVENT_HOURS}
+            <b className="font-[700] text-white">Fri 9 Oct</b> · {PHARAOH_EVENT_HOURS}
           </p>
           <div className="hidden sm:flex flex-wrap gap-x-5 gap-y-2">
             {[

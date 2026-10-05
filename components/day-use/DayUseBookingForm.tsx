@@ -82,7 +82,7 @@ export type DayUseBookingVariant = {
     lede?: string;
     bullets: string[];
     /** One-line date/time shown on the mobile banner, where `bullets` are hidden. */
-    mobileSummary?: string;
+    mobileSummary?: React.ReactNode;
   };
   /** Replaces "When are you coming?" as the step 1 heading. */
   stepOneTitle: string;
