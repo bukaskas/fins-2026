@@ -22,6 +22,7 @@ import { ReceptionAutoRefresh } from "@/components/reception/ReceptionAutoRefres
 import { BookingStatusBadge } from "@/components/bookings/StatusBadge";
 import { formatEGP } from "@/lib/commission";
 import { DAILY_CAPACITY } from "@/lib/constants";
+import { capacityState } from "@/lib/bookings/capacity";
 
 export const dynamic = "force-dynamic";
 
@@ -460,23 +461,19 @@ export default async function ReceptionPage() {
             <div className="overflow-x-auto px-4 py-4 sm:px-5">
               <div className="flex min-w-max gap-3">
                 {capacity.map((day) => {
-                  const percent = Math.min(
-                    100,
-                    Math.round((day.people / DAILY_CAPACITY) * 100),
-                  );
-                  const nearlyFull = !day.closed && percent >= 80;
+                  const { level, label } = capacityState(day.people, day.closed);
                   return (
                     <Link
                       key={day.date}
                       href={`/bookings/date/${day.date}`}
                       className={`flex min-h-24 w-32 shrink-0 flex-col justify-between rounded-xl border p-3 outline-none transition-colors focus-visible:ring-2 focus-visible:ring-[#0EA5E9] ${
-                        day.closed
+                        level === "closed"
                           ? "border-red-200 bg-red-50 text-red-900"
-                          : nearlyFull
+                          : level === "nearlyFull"
                             ? "border-amber-300 bg-amber-50 text-amber-950"
                             : "border-[#8898aa]/30 bg-[#D6E0EA] text-[#22303F] hover:border-[#8898aa]/60"
                       }`}
-                      aria-label={`${shortDateLabel(new Date(`${day.date}T00:00:00.000Z`))}: ${day.people} of ${DAILY_CAPACITY} guests${day.closed ? ", closed" : nearlyFull ? ", nearly full" : ""}`}
+                      aria-label={`${shortDateLabel(new Date(`${day.date}T00:00:00.000Z`))}: ${day.people} of ${DAILY_CAPACITY} guests, ${label.toLowerCase()}`}
                     >
                       <span className="text-xs font-semibold uppercase tracking-wide">
                         {shortDateLabel(new Date(`${day.date}T00:00:00.000Z`))}
@@ -485,7 +482,7 @@ export default async function ReceptionPage() {
                         {day.people}/{DAILY_CAPACITY}
                       </span>
                       <span className="text-xs font-medium">
-                        {day.closed ? "Closed" : nearlyFull ? "Nearly full" : "Available"}
+                        {label}
                       </span>
                     </Link>
                   );

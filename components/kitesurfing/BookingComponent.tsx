@@ -35,6 +35,7 @@ import {
   whatsappHref,
 } from "@/lib/bookings/messages";
 import {
+  CLOSING_STATUSES,
   FOCUS_RING,
   MUTED,
   SERVICE_META,
@@ -55,6 +56,7 @@ import {
 import { useAgents } from "@/components/bookings/AgentsProvider";
 import BookingStatusDialog from "@/components/bookings/BookingStatusDialog";
 import PayDepositDialog from "@/components/bookings/PayDepositDialog";
+import { copyText } from "@/lib/clipboard";
 
 type UserStub = { id: string; name: string | null; email: string };
 
@@ -62,32 +64,6 @@ const egp = new Intl.NumberFormat("en-EG");
 
 function formatEGP(cents: number): string {
   return `${egp.format(Math.round(cents / 100))} EGP`;
-}
-
-async function copyText(text: string): Promise<boolean> {
-  try {
-    if (navigator.clipboard && window.isSecureContext) {
-      await navigator.clipboard.writeText(text);
-      return true;
-    }
-  } catch {
-    // Fall through to the selection-based fallback.
-  }
-
-  try {
-    const textarea = document.createElement("textarea");
-    textarea.value = text;
-    textarea.setAttribute("readonly", "");
-    textarea.style.position = "fixed";
-    textarea.style.top = "-1000px";
-    document.body.appendChild(textarea);
-    textarea.select();
-    const copied = document.execCommand("copy");
-    document.body.removeChild(textarea);
-    return copied;
-  } catch {
-    return false;
-  }
 }
 
 /**
@@ -132,6 +108,9 @@ function BookingComponent({ booking }: { booking: BookingRow }) {
         : "Paid";
   const balanceColor =
     dueCents == null ? MUTED : dueCents > 0 ? "#b45309" : "#15803d";
+  // Declined, expired or canceled: nothing is owed and nothing needs doing,
+  // so the row steps back and drops the balance.
+  const isClosed = CLOSING_STATUSES.includes(status);
 
   const messageInput = {
     id: booking.id,
@@ -191,7 +170,7 @@ function BookingComponent({ booking }: { booking: BookingRow }) {
       `Phone: ${booking.phone}`,
       `Email: ${booking.email}`,
       `Status: ${STATUS_LABEL[status]}`,
-      totalPrice == null ? "Price: not set" : `Balance: ${balanceLabel}`,
+      isClosed ? null : totalPrice == null ? "Price: not set" : `Balance: ${balanceLabel}`,
       booking.instructor ? `Instructor: ${booking.instructor}` : null,
       `${window.location.origin}/bookings/${booking.id}`,
     ].filter(Boolean);
@@ -231,14 +210,22 @@ function BookingComponent({ booking }: { booking: BookingRow }) {
 
   return (
     <>
-      <article className="overflow-hidden rounded-2xl border border-[#ece8e3]/80 bg-white shadow-[0_1px_6px_rgba(26,22,20,0.07)]">
+      <article
+        className={`overflow-hidden rounded-2xl border border-[#ece8e3]/80 ${
+          isClosed ? "bg-[#faf9f7]" : "bg-white shadow-[0_1px_6px_rgba(26,22,20,0.07)]"
+        }`}
+      >
         <div className="flex min-h-[88px] items-stretch">
           <div className="w-px shrink-0" style={{ background: accentColor }} />
 
           <div className="flex min-w-0 flex-1 flex-col gap-3 px-3.5 py-3.5 sm:flex-row sm:items-center sm:gap-5 sm:px-4">
             <div className="min-w-0 flex-1 space-y-1.5">
               <div className="flex min-w-0 items-center gap-2">
-                <span className="truncate font-[family-name:var(--font-raleway)] text-[0.95rem] font-[700] leading-snug text-[#1a1614]">
+                <span
+                  className={`truncate font-[family-name:var(--font-raleway)] text-[0.95rem] leading-snug ${
+                    isClosed ? "font-[600] text-[#6b6460]" : "font-[700] text-[#1a1614]"
+                  }`}
+                >
                   {booking.name}
                 </span>
                 <span
@@ -346,12 +333,14 @@ function BookingComponent({ booking }: { booking: BookingRow }) {
                     </span>
                   }
                 />
-                <span
-                  className="whitespace-nowrap font-[family-name:var(--font-roboto)] text-[0.8rem] font-[600] tabular-nums"
-                  style={{ color: balanceColor }}
-                >
-                  {balanceLabel}
-                </span>
+                {!isClosed && (
+                  <span
+                    className="whitespace-nowrap font-[family-name:var(--font-roboto)] text-[0.8rem] font-[600] tabular-nums"
+                    style={{ color: balanceColor }}
+                  >
+                    {balanceLabel}
+                  </span>
+                )}
               </div>
 
               <div className="flex min-w-0 items-center gap-2">
@@ -361,7 +350,11 @@ function BookingComponent({ booking }: { booking: BookingRow }) {
                   rel="noopener noreferrer"
                   onClick={() => recordContact(BookingContactChannel.WHATSAPP)}
                   aria-label={`${primaryMessage?.label ?? "Open WhatsApp"} for ${booking.name}`}
-                  className={`inline-flex min-h-11 min-w-0 flex-1 items-center justify-center gap-2 rounded-full bg-[#1a1614] px-4 text-white transition-colors hover:bg-[#2a2522] sm:min-w-44 ${FOCUS_RING}`}
+                  className={`inline-flex min-h-11 min-w-0 flex-1 items-center justify-center gap-2 rounded-full px-4 transition-colors sm:min-w-44 ${
+                    isClosed
+                      ? "border border-[#d6d0c8] text-[#5b5650] hover:border-[#8a8480] hover:text-[#1a1614]"
+                      : "bg-[#1a1614] text-white hover:bg-[#2a2522]"
+                  } ${FOCUS_RING}`}
                 >
                   <MessageCircle
                     className="size-4 shrink-0"

@@ -1,7 +1,10 @@
 "use client";
 
-import { useRouter, usePathname, useSearchParams } from "next/navigation";
-import { useTransition } from "react";
+import { usePathname } from "next/navigation";
+import { ChevronDown, User } from "lucide-react";
+
+import { FOCUS_RING } from "@/lib/bookings/status";
+import { useFilterTransition } from "./FilterTransition";
 
 type AgentOption = { id: string; label: string };
 
@@ -12,44 +15,32 @@ export function AgentFilter({
   agents: AgentOption[];
   value: string;
 }) {
-  const router = useRouter();
   const pathname = usePathname();
-  const searchParams = useSearchParams();
-  const [, startTransition] = useTransition();
+  const { navigate } = useFilterTransition();
 
   function handleChange(e: React.ChangeEvent<HTMLSelectElement>) {
-    const params = new URLSearchParams(searchParams.toString());
+    const params = new URLSearchParams(window.location.search);
     const v = e.target.value;
     if (v && v !== "all") {
       params.set("agent", v);
     } else {
       params.delete("agent");
     }
-    startTransition(() => {
-      router.replace(`${pathname}?${params.toString()}`);
-    });
+    const qs = params.toString();
+    navigate(qs ? `${pathname}?${qs}` : pathname, { replace: true });
   }
 
   return (
     <div className="relative mt-5 md:mt-0 md:ml-3 md:w-60">
-      <svg
-        className="absolute left-3 top-1/2 -translate-y-1/2 text-[#b0a89f] pointer-events-none"
-        width="14"
-        height="14"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      >
-        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-        <circle cx="12" cy="7" r="4" />
-      </svg>
+      <User
+        className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[#b0a89f] pointer-events-none"
+        aria-hidden="true"
+      />
       <select
+        aria-label="Filter by agent"
         value={value}
         onChange={handleChange}
-        className="appearance-none w-full pl-9 pr-9 py-2 text-sm bg-[#f5f3f0] border border-[#ece8e3] text-[#1a1614] focus:outline-none focus:border-[#8a8480] font-[family-name:var(--font-raleway)] rounded-sm"
+        className={`appearance-none w-full min-h-11 pl-9 pr-9 py-2 text-base sm:text-[0.72rem] bg-[#f5f3f0] border border-[#ece8e3] text-[#1a1614] focus:border-[#8a8480] font-[family-name:var(--font-raleway)] rounded-sm ${FOCUS_RING}`}
       >
         <option value="all">All agents</option>
         <option value="unassigned">Unassigned</option>
@@ -59,19 +50,10 @@ export function AgentFilter({
           </option>
         ))}
       </select>
-      <svg
-        className="absolute right-3 top-1/2 -translate-y-1/2 text-[#b0a89f] pointer-events-none"
-        width="12"
-        height="12"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      >
-        <polyline points="6 9 12 15 18 9" />
-      </svg>
+      <ChevronDown
+        className="absolute right-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[#6b6460] pointer-events-none"
+        aria-hidden="true"
+      />
     </div>
   );
 }

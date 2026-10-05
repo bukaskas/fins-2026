@@ -112,7 +112,7 @@ export default function KaiCommunityRegistrationForm() {
         />
         <div className="relative h-full flex flex-col justify-end md:justify-center p-6 sm:p-8 md:p-12 lg:p-16">
           <span className={cn(eyebrow, "mb-3 sm:mb-4")} style={{ color: SKY }}>
-            Fins Beach Club · Sokhna
+            Fins Beach Club, Kai Sokhna
           </span>
           <p className="font-[family-name:var(--font-raleway)] text-white leading-[0.95] mb-4 sm:mb-6">
             <span className="block text-[clamp(2rem,6vw,4rem)] font-[100] tracking-[-0.02em]">
@@ -123,8 +123,12 @@ export default function KaiCommunityRegistrationForm() {
             </span>
           </p>
           <div className="hidden sm:flex flex-wrap gap-x-5 gap-y-2">
-            {["Friday 9 October 2026", VISIT_HOURS, "Kite competition"].map((item) => (
-              <span key={item} className="text-white/75 text-[0.8125rem] font-[300]">
+            {[
+              <>Friday <b className="font-[700] text-white">9 October</b> 2026</>,
+              VISIT_HOURS,
+              "Kite competition",
+            ].map((item, i) => (
+              <span key={i} className="text-white/75 text-[0.8125rem] font-[300]">
                 {item}
               </span>
             ))}
@@ -136,7 +140,7 @@ export default function KaiCommunityRegistrationForm() {
       <div className="md:w-1/2 lg:w-[45%] flex flex-col justify-center px-4 sm:px-8 lg:px-14 py-8 md:py-12">
         <form onSubmit={onSubmit} noValidate className="w-full max-w-md mx-auto">
           <h1
-            className="font-[family-name:var(--font-raleway)] text-[1.75rem] font-[600] tracking-[-0.01em] mb-1"
+            className="font-[family-name:var(--font-raleway)] text-[1.375rem] font-[600] tracking-[-0.01em] mb-1"
             style={{ color: NAVY }}
           >
             Kai owners & community

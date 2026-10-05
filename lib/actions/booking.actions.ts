@@ -41,7 +41,12 @@ import {
 import { createPaymentOrder, getFlashOrder, verifyWebhookSignature } from "@/lib/flash";
 import { getAutoConfirmBookings } from "./settings.actions";
 import { BOOKINGS_PAGE_SIZE, DAILY_CAPACITY, PHARAOH_AIRSTYLE_DATE_KEY, WAITING_PAYMENT_WINDOW_MS } from "@/lib/constants";
-import { parseBookingStatusFilter } from "@/lib/bookings/status";
+import {
+  NEEDS_CONTACT_STATUSES,
+  NEEDS_REVIEW_STATUSES,
+  parseBookingStatusFilter,
+} from "@/lib/bookings/status";
+import { CAPACITY_STATUSES } from "@/lib/bookings/capacity";
 import { depositCents } from "@/lib/bookings/payment-window";
 import { emailPriceBreakdown, sendPaymentRequestEmail } from "@/lib/bookings/guest-emails";
 import {
@@ -89,10 +94,6 @@ function bookingIdFromAggregatorId(aggregatorOrderId: string): string | null {
 // status (i.e. after `waitingPaymentAt`) if it hasn't been paid/confirmed.
 
 const BUSINESS_TIME_ZONE = "Africa/Cairo";
-const CAPACITY_STATUSES: BookingStatus[] = [
-  BookingStatus.CONFIRMED,
-  BookingStatus.ARRIVED,
-];
 
 // Booking dates and closed dates are stored as UTC midnights; all calendar-day
 // math in this module works in UTC to stay server-timezone independent.
@@ -984,6 +985,7 @@ export async function sendFullyBookedEmails(date: string) {
     });
 
     const sentIds: string[] = [];
+    let canceledCount = 0;
     let skippedNoEmail = 0;
     let failed = 0;
 
@@ -1017,12 +1019,15 @@ export async function sendFullyBookedEmails(date: string) {
           toStatus: BookingStatus.CANCELED,
         })),
       );
+      canceledCount = canceled.length;
       revalidatePath('/bookings', 'layout');
     }
 
     return {
       success: true,
       sent: sentIds.length,
+      // Can trail `sent` if staff moved a booking out of PENDING mid-batch.
+      canceled: canceledCount,
       skippedNoEmail,
       failed,
       totalPending: pending.length,
@@ -2398,15 +2403,8 @@ const RECEPTION_ACTIVE_STATUSES: BookingStatus[] = [
   BookingStatus.ARRIVED,
 ];
 
-const RECEPTION_REVIEW_STATUSES: BookingStatus[] = [
-  BookingStatus.PENDING,
-  BookingStatus.UNDER_REVIEW,
-];
-
-const RECEPTION_CONTACT_STATUSES: BookingStatus[] = [
-  BookingStatus.REQUEST_SENT,
-  BookingStatus.WAITING_PAYMENT,
-];
+const RECEPTION_REVIEW_STATUSES = NEEDS_REVIEW_STATUSES;
+const RECEPTION_CONTACT_STATUSES = NEEDS_CONTACT_STATUSES;
 
 const receptionBookingInclude = {
   agent: { select: { id: true, name: true, email: true } },

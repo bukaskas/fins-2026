@@ -133,6 +133,27 @@ export const CLOSING_STATUSES: BookingStatus[] = [
 ];
 
 /**
+ * The desk's to-do statuses, shared with /reception. Review: staff decide
+ * (new request, payment proof). Contact: staff chase the guest.
+ */
+export const NEEDS_REVIEW_STATUSES: BookingStatus[] = [
+  BookingStatus.PENDING,
+  BookingStatus.UNDER_REVIEW,
+];
+export const NEEDS_CONTACT_STATUSES: BookingStatus[] = [
+  BookingStatus.REQUEST_SENT,
+  BookingStatus.WAITING_PAYMENT,
+];
+
+/** Sort rank for a list: review first, then contact, then settled, then closed. */
+export function actionRank(status: BookingStatus): number {
+  if (NEEDS_REVIEW_STATUSES.includes(status)) return 0;
+  if (NEEDS_CONTACT_STATUSES.includes(status)) return 1;
+  if (CLOSING_STATUSES.includes(status)) return 3;
+  return 2;
+}
+
+/**
  * Transitions that start machinery, make a promise to the guest, or close the
  * booking. These always require an explicit second confirmation in staff UI.
  */
