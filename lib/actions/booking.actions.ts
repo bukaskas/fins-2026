@@ -3,7 +3,7 @@
 import { prisma } from "@/db/prisma";
 import { isRedirectError } from "next/dist/client/components/redirect-error";
 import { revalidatePath } from "next/cache";
-import { BookingDepositData, bookingDepositSchema, BookingFormData, bookingFormSchema, bulkEmailSchema, CorporateBookingData, corporateBookingSchema, KaiCommunityBookingData, kaiCommunityBookingSchema, UpdateBookingData, updateBookingSchema } from "../validators";
+import { BookingDepositData, bookingDepositSchema, BookingFormData, bookingFormSchema, bulkEmailSchema, CorporateBookingData, corporateBookingSchema, KaiCommunityBookingData, kaiCommunityBookingSchema, KiteCommunityBookingData, kiteCommunityBookingSchema, UpdateBookingData, updateBookingSchema } from "../validators";
 import { sendBookingEmail, sendStaffNotificationEmail, sendFullyBookedEmail, sendBulkEmail } from "@/emails/index";
 import {
   Booking,
@@ -27,6 +27,7 @@ import { upsertClosedDate } from "@/lib/closed-dates";
 import {
   calculateDayUsePrice,
   computeBookingTotalCents,
+  KITE_COMMUNITY_PRICE_CENTS,
   priceFromUnitRates,
   ratesFromSnapshot,
   snapshotFromRate,
@@ -391,6 +392,7 @@ export async function createBooking(
 /** Pharaoh Airstyle day, stored the way the calendar stores dates. */
 const PHARAOH_AIRSTYLE_DATE = new Date(`${PHARAOH_AIRSTYLE_DATE_KEY}T00:00:00.000Z`);
 const KAI_COMMUNITY_NOTE = "Kai owner, Pharaoh airstyle";
+const KITE_COMMUNITY_NOTE = "Kite community, Pharaoh airstyle";
 
 /**
  * Kai unit owners & community registration for Pharaoh Airstyle. Unlike a
@@ -458,6 +460,72 @@ export async function createKaiCommunityBooking(data: KaiCommunityBookingData) {
     return { success: true as const, message: "You're confirmed!", bookingId: booking.id };
   } catch (error) {
     console.error("Kai community booking error:", error);
+    return { success: false, message: "Failed to register. Please try again or contact us." };
+  }
+}
+
+/** Kite community registration: confirmed on insert, 800 EGP per person due on arrival. */
+export async function createKiteCommunityBooking(data: KiteCommunityBookingData) {
+  try {
+    const v = kiteCommunityBookingSchema.parse(data);
+    const date = PHARAOH_AIRSTYLE_DATE;
+    if (dateKeyFromUtcMidnight(date) < dateKeyInCairo()) {
+      return { success: false, message: "Registration for this day is closed." };
+    }
+    const totalCents = v.numberOfPeople * KITE_COMMUNITY_PRICE_CENTS;
+
+    const booking = await prisma.booking.create({
+      data: {
+        name: v.name,
+        date,
+        email: v.email,
+        phone: v.phone,
+        service: "day-use",
+        numberOfPeople: v.numberOfPeople,
+        numberOfKids: 0,
+        totalPriceCents: totalCents,
+        bookingStatus: BookingStatus.CONFIRMED,
+        contacts: {
+          create: {
+            channel: BookingContactChannel.OTHER,
+            outcome: BookingContactOutcome.REACHED,
+            note: `${KITE_COMMUNITY_NOTE} · Spot ${v.localSpot}`,
+          },
+        },
+      },
+    });
+    await logBookingEvents([
+      {
+        bookingId: booking.id,
+        source: BookingEventSource.GUEST,
+        toStatus: booking.bookingStatus,
+      },
+    ]);
+
+    await sendBookingEmail(v.email, v.name, date, {
+      bookingType: "day-use",
+      numberOfPeople: v.numberOfPeople,
+      numberOfKids: 0,
+      bookingId: booking.id,
+      stage: "confirmed",
+      amountPaidCents: 0,
+      balanceDueCents: totalCents,
+    });
+    await sendStaffNotificationEmail(
+      v.name,
+      v.email,
+      v.phone,
+      date,
+      "day-use",
+      v.numberOfPeople,
+      0,
+      totalCents,
+      booking.id,
+    );
+
+    return { success: true as const, message: "You're confirmed!", bookingId: booking.id };
+  } catch (error) {
+    console.error("Kite community booking error:", error);
     return { success: false, message: "Failed to register. Please try again or contact us." };
   }
 }

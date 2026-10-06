@@ -20,6 +20,8 @@ export type { RateType } from "@/lib/pricing-config";
 
 export const PHARAOH_ADULT_PRICE_CENTS = 120000; // 1,200 EGP
 export const PHARAOH_KIDS_PRICE_CENTS = 60000;   // 600 EGP
+/** Kite community registrations: flat rate per person, paid on arrival. */
+export const KITE_COMMUNITY_PRICE_CENTS = 80000;  // 800 EGP
 
 /** Guest-facing names. Every Day Use surface uses these and only these. */
 export const RATE_LABELS: Record<RateType, string> = {

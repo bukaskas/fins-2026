@@ -74,6 +74,16 @@ export const kaiCommunityBookingSchema = z.object({
 });
 export type KaiCommunityBookingData = z.infer<typeof kaiCommunityBookingSchema>;
 
+// Kite community registration: flat per-person rate, no kids tier.
+export const kiteCommunityBookingSchema = z.object({
+  name: z.string().trim().min(2, "Name must be at least 2 characters long"),
+  phone: phoneSchema,
+  email: emailSchema,
+  localSpot: z.string().trim().min(1, "Local spot is required").max(40, "Local spot is too long"),
+  numberOfPeople: z.number().int().min(1, "At least 1 person required").max(20, "For more than 20 people, please contact us"),
+});
+export type KiteCommunityBookingData = z.infer<typeof kiteCommunityBookingSchema>;
+
 export const updateBookingSchema = z.object({
   name:             z.string().min(2, "Name must be at least 2 characters long"),
   date:             z.date(),
