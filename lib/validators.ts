@@ -7,7 +7,7 @@ const emailSchema = z
   .trim()
   .toLowerCase()
   .email("Invalid email address");
-import { BookingStatus, CommissionType, ExpenseType, PaymentMethod } from "@prisma/client";
+import { BookingGroup, BookingStatus, CommissionType, ExpenseType, PaymentMethod } from "@prisma/client";
 import { isValidPhoneNumber } from "libphonenumber-js";
 
 // E.164 phone validator. isValidPhoneNumber enforces the per-country
@@ -98,6 +98,9 @@ export const updateBookingSchema = z.object({
   amountPaidCents:  z.number().int().min(0).default(0),
   instructor:       z.string().nullable().default(null),
   time:             z.string().nullable().default(null),
+  // undefined leaves the group untouched; null clears it.
+  bookingGroup:     z.nativeEnum(BookingGroup).nullable().optional(),
+  groupDetail:      z.string().trim().max(60, "Detail is too long").nullable().optional(),
 });
 export type UpdateBookingData = z.infer<typeof updateBookingSchema>;
 

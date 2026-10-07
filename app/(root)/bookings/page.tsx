@@ -47,6 +47,7 @@ type SearchParams = {
   q?: string;
   service?: string;
   agent?: string;
+  kind?: string;
   range?: string;
   group?: string;
   sort?: string;
@@ -60,6 +61,7 @@ const PARAM_DEFAULTS: Record<string, string> = {
   status: "all",
   service: "all",
   agent: "all",
+  kind: "all",
   range: "upcoming",
   group: "date",
   sort: "date",
@@ -92,6 +94,7 @@ async function BookingsPage({
     q = "",
     service = "all",
     agent = "all",
+    kind = "all",
     range = "upcoming",
     group = "date",
     sort = "date",
@@ -121,6 +124,7 @@ async function BookingsPage({
     q,
     service,
     agent,
+    kind,
     range,
     sort,
     dir,
@@ -216,6 +220,7 @@ async function BookingsPage({
     q !== "" ||
     service !== "all" ||
     agent !== "all" ||
+    kind !== "all" ||
     range !== "upcoming" ||
     unpaid !== "";
 

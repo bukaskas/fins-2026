@@ -10,6 +10,7 @@ import {
   BookingContactChannel,
   BookingContactOutcome,
   BookingEventSource,
+  BookingGroup,
   BookingStatus,
   PaymentMethod,
   Prisma,
@@ -419,6 +420,8 @@ export async function createKaiCommunityBooking(data: KaiCommunityBookingData) {
         numberOfKids: v.numberOfKids,
         totalPriceCents: 0,
         bookingStatus: BookingStatus.CONFIRMED,
+        bookingGroup: BookingGroup.KAI_OWNER,
+        groupDetail: v.unitNumber,
         contacts: {
           create: {
             channel: BookingContactChannel.OTHER,
@@ -485,6 +488,8 @@ export async function createKiteCommunityBooking(data: KiteCommunityBookingData)
         numberOfKids: 0,
         totalPriceCents: totalCents,
         bookingStatus: BookingStatus.CONFIRMED,
+        bookingGroup: BookingGroup.KITE_COMMUNITY,
+        groupDetail: v.localSpot,
         contacts: {
           create: {
             channel: BookingContactChannel.OTHER,
@@ -550,6 +555,8 @@ const BOOKING_ROW_SELECT = {
   instructor: true,
   instagram: true,
   bookingStatus: true,
+  bookingGroup: true,
+  groupDetail: true,
   totalPriceCents: true,
   amountPaidCents: true,
   createdAt: true,
@@ -563,6 +570,8 @@ export type BookingsQuery = {
   status?: string;
   service?: string;
   agent?: string;
+  /** "KAI_OWNER" | "KITE_COMMUNITY" | "none"; anything else means all. */
+  kind?: string;
   q?: string;
   range?: string;
   sort?: string;
@@ -584,7 +593,7 @@ export type BookingsPageResult = {
 const BOOKINGS_MAX_LIMIT = 2000;
 
 function bookingsWhere(query: BookingsQuery): Prisma.BookingWhereInput {
-  const { status, service, agent, q, unpaid, range = "upcoming" } = query;
+  const { status, service, agent, kind, q, unpaid, range = "upcoming" } = query;
   const where: Prisma.BookingWhereInput = {};
 
   const statuses = parseBookingStatusFilter(status);
@@ -595,6 +604,9 @@ function bookingsWhere(query: BookingsQuery): Prisma.BookingWhereInput {
   }
 
   if (service && service !== "all") where.service = service;
+
+  if (kind === "none") where.bookingGroup = null;
+  else if (kind === BookingGroup.KAI_OWNER || kind === BookingGroup.KITE_COMMUNITY) where.bookingGroup = kind;
 
   if (unpaid === "1") where.amountPaidCents = 0;
 
@@ -607,6 +619,7 @@ function bookingsWhere(query: BookingsQuery): Prisma.BookingWhereInput {
       { name:  { contains: term, mode: "insensitive" } },
       { email: { contains: term, mode: "insensitive" } },
       { phone: { contains: term } },
+      { groupDetail: { contains: term, mode: "insensitive" } },
     ];
 
     // Pasted phone numbers often contain spaces or punctuation while stored
@@ -1279,6 +1292,14 @@ export async function updateBooking(id: string, data: UpdateBookingData) {
         amountPaidCents: validatedData.amountPaidCents,
         instructor: validatedData.instructor ?? null,
         time: validatedData.time ?? null,
+        ...(validatedData.bookingGroup !== undefined
+          ? {
+              bookingGroup: validatedData.bookingGroup,
+              groupDetail: validatedData.bookingGroup
+                ? validatedData.groupDetail || null
+                : null,
+            }
+          : {}),
         ...pricingData,
       },
     });

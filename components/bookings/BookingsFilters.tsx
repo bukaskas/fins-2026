@@ -25,6 +25,13 @@ const SERVICE_OPTIONS = [
   { value: "restaurant", label: "Restaurant" },
 ];
 
+const KIND_OPTIONS = [
+  { value: "all", label: "All guests" },
+  { value: "KAI_OWNER", label: "Kai owners" },
+  { value: "KITE_COMMUNITY", label: "Kite community" },
+  { value: "none", label: "No group" },
+];
+
 const RANGE_OPTIONS = [
   { value: "today", label: "Today" },
   { value: "week", label: "This week" },
@@ -180,6 +187,7 @@ export function BookingsFilters({
   const q = searchParams.get("q") ?? "";
   const service = searchParams.get("service") ?? "all";
   const agent = searchParams.get("agent") ?? "all";
+  const kind = searchParams.get("kind") ?? "all";
   const range = searchParams.get("range") ?? "upcoming";
   const group = searchParams.get("group") ?? "date";
   const sort = searchParams.get("sort") ?? "date";
@@ -217,6 +225,7 @@ export function BookingsFilters({
     selectedStatuses.length > 0 ||
     q !== "" ||
     service !== "all" ||
+    kind !== "all" ||
     agent !== "all" ||
     range !== "upcoming" ||
     unpaid !== "";
@@ -238,6 +247,7 @@ export function BookingsFilters({
       status: "all",
       q: "",
       service: "all",
+      kind: "all",
       agent: "all",
       range: "upcoming",
       unpaid: "",
@@ -254,7 +264,7 @@ export function BookingsFilters({
             type="text"
             ref={searchInputRef}
             aria-label="Search bookings"
-            placeholder="Name, phone or email…"
+            placeholder="Name, phone, email or unit…"
             defaultValue={q}
             onChange={(e) => handleSearch(e.target.value)}
             className={`min-h-11 w-full rounded-full border border-[#ece8e3] bg-[#faf9f7] py-2 pl-8 pr-3 text-base font-[family-name:var(--font-raleway)] text-[#1a1614] placeholder:text-[#6b6460] transition-colors focus:border-[#1a1614] sm:text-[0.85rem] ${FOCUS_RING}`}
@@ -267,6 +277,18 @@ export function BookingsFilters({
           onChange={(v) => push({ service: v })}
         >
           {SERVICE_OPTIONS.map((o) => (
+            <option key={o.value} value={o.value}>
+              {o.label}
+            </option>
+          ))}
+        </SelectPill>
+
+        <SelectPill
+          label="Guest group"
+          value={kind}
+          onChange={(v) => push({ kind: v })}
+        >
+          {KIND_OPTIONS.map((o) => (
             <option key={o.value} value={o.value}>
               {o.label}
             </option>

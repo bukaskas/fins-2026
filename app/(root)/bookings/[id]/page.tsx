@@ -17,6 +17,7 @@ import {
   isClosedBooking,
   showsAskStaff,
 } from "@/lib/bookings/status-message";
+import { GroupBadge } from "@/components/bookings/GroupBadge";
 import NextStepCard from "./NextStepCard";
 import AskStaffCard from "./AskStaffCard";
 
@@ -176,6 +177,10 @@ export default async function BookingDetailPage({
                   {status.label}
                 </span>
               </div>
+
+              {canManage && (
+                <GroupBadge group={booking.bookingGroup} detail={booking.groupDetail} />
+              )}
 
               <div className="text-right">
                 <div

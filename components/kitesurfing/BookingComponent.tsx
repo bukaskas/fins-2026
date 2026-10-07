@@ -43,6 +43,7 @@ import {
   STATUS_LABEL,
   STATUS_TEXT,
 } from "@/lib/bookings/status";
+import { GroupBadge } from "@/components/bookings/GroupBadge";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -328,6 +329,7 @@ function BookingComponent({ booking }: { booking: BookingRow }) {
                     </span>
                   }
                 />
+                <GroupBadge group={booking.bookingGroup} detail={booking.groupDetail} />
                 {!isClosed && (
                   <span
                     className="whitespace-nowrap font-[family-name:var(--font-roboto)] text-[0.8rem] font-[600] tabular-nums"

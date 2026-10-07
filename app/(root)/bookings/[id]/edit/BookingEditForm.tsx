@@ -4,6 +4,7 @@ import React from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "@tanstack/react-form";
 import { toast } from "sonner";
+import type { BookingGroup } from "@prisma/client";
 import Image from "next/image";
 import { UpdateBookingData, updateBookingSchema } from "@/lib/validators";
 import { updateBooking, deleteBooking, assignBookingAgent, type BookingWithAgent } from "@/lib/actions/booking.actions";
@@ -54,6 +55,8 @@ function BookingEditForm({ booking, instructors, allUsers }: Props) {
   const [peopleInput, setPeopleInput] = React.useState(String(booking.numberOfPeople ?? 1));
   const [kidsInput, setKidsInput] = React.useState(String(booking.numberOfKids ?? 0));
   const [amountInput, setAmountInput] = React.useState(String(Math.round((booking.amountPaidCents ?? 0) / 100)));
+  const [groupValue, setGroupValue] = React.useState<string>(booking.bookingGroup ?? "none");
+  const [groupDetail, setGroupDetail] = React.useState(booking.groupDetail ?? "");
   const router = useRouter();
 
   const form = useForm({
@@ -89,6 +92,8 @@ function BookingEditForm({ booking, instructors, allUsers }: Props) {
             ...value,
             instructor: isKitesurfingService(value.service) ? (value.instructor ?? null) : null,
             time: value.time ?? null,
+            bookingGroup: groupValue === "none" ? null : (groupValue as BookingGroup),
+            groupDetail: groupValue === "none" ? null : groupDetail.trim() || null,
           }),
           assignBookingAgent(booking.id, agentId),
         ]);
@@ -417,6 +422,36 @@ function BookingEditForm({ booking, instructors, allUsers }: Props) {
                   ) : null;
                 }}
               />
+              <Field>
+                <FieldLabel>Guest group</FieldLabel>
+                <Select value={groupValue} onValueChange={setGroupValue} disabled={isSubmitting}>
+                  <SelectTrigger className="w-full rounded-full">
+                    <SelectValue placeholder="None" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectGroup>
+                      <SelectItem value="none">None</SelectItem>
+                      <SelectItem value="KAI_OWNER">Kai owner</SelectItem>
+                      <SelectItem value="KITE_COMMUNITY">Kite community</SelectItem>
+                    </SelectGroup>
+                  </SelectContent>
+                </Select>
+              </Field>
+              {groupValue !== "none" && (
+                <Field>
+                  <FieldLabel htmlFor="groupDetail">
+                    {groupValue === "KAI_OWNER" ? "Unit number" : "Local spot"}
+                  </FieldLabel>
+                  <Input
+                    id="groupDetail"
+                    type="text"
+                    maxLength={60}
+                    value={groupDetail}
+                    onChange={(e) => setGroupDetail(e.target.value)}
+                    disabled={isSubmitting}
+                  />
+                </Field>
+              )}
               <Field>
                 <FieldLabel>Agent</FieldLabel>
                 <Select

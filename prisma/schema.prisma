@@ -121,6 +121,12 @@ enum PaymentMethod {
   USD
 }
 
+/// Who a booking was registered for outside the public day-use flow.
+enum BookingGroup {
+  KAI_OWNER
+  KITE_COMMUNITY
+}
+
 enum BookingStatus {
   PENDING
   REQUEST_SENT
@@ -211,7 +217,13 @@ model Booking {
   /// "regular" | "peak" | "best-value" (lib/pricing-config.ts RATE_TYPES)
   dayUseRateType      String?
 
+  /// Event registration group, null for ordinary bookings. `groupDetail` is the
+  /// Kai unit number or the kite community's local spot.
+  bookingGroup BookingGroup?
+  groupDetail  String?
+
   @@index([bookingStatus, waitingPaymentAt])
+  @@index([bookingGroup])
   // /bookings filters and sorts by date on every load; the composite covers
   // the same query narrowed to one status.
   @@index([date])

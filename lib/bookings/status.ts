@@ -1,4 +1,4 @@
-import { BookingStatus } from "@prisma/client";
+import { BookingGroup, BookingStatus } from "@prisma/client";
 
 /**
  * Canonical booking status + service tokens for the whole /bookings section.
@@ -174,3 +174,19 @@ export const STATUS_CONSEQUENCE: Partial<Record<BookingStatus, string>> = {
   NO_RESPONSE_EXPIRED: "Closes the booking. This cannot be undone from here.",
   CANCELED: "Closes the booking. This cannot be undone from here.",
 };
+
+/** Event registration groups (Booking.bookingGroup) — staff-facing labels and tones. */
+export const BOOKING_GROUP_META: Record<
+  BookingGroup,
+  { label: string; detailLabel: string; text: string; bg: string; ring: string }
+> = {
+  KAI_OWNER:      { label: "Kai owner",      detailLabel: "Unit", text: "#16554F", bg: "#DDEFEE", ring: "#B6D9D6" },
+  KITE_COMMUNITY: { label: "Kite community", detailLabel: "Spot", text: "#1E4F72", bg: "#E4F1FA", ring: "#BCD8EA" },
+};
+
+/** "Kai owner · Unit 12", or just "Kai owner" when no detail was recorded. */
+export function bookingGroupLabel(group: BookingGroup, detail?: string | null): string {
+  const meta = BOOKING_GROUP_META[group];
+  const d = detail?.trim();
+  return d ? `${meta.label} · ${meta.detailLabel} ${d}` : meta.label;
+}

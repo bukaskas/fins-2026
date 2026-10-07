@@ -22,6 +22,7 @@ import PaymentPanel from "./PaymentPanel";
 import PartyDialog from "./PartyDialog";
 import { RATE_LABELS, formatEGPAmount, ratesFromSnapshot } from "@/lib/pricing";
 import StatusDialog from "@/components/bookings/BookingStatusDialog";
+import { GroupBadge } from "@/components/bookings/GroupBadge";
 import ContactLog from "./ContactLog";
 
 /*
@@ -149,6 +150,11 @@ export default async function BookingDeskPage({
                 <span className="mx-1.5 text-[#d6d0c8]">·</span>
                 {partyLabel}
               </p>
+              {booking.bookingGroup && (
+                <div className="mt-2">
+                  <GroupBadge group={booking.bookingGroup} detail={booking.groupDetail} />
+                </div>
+              )}
             </div>
 
             <div className="flex items-end gap-4">
