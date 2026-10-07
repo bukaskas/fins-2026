@@ -100,12 +100,7 @@ function BookingComponent({ booking }: { booking: BookingRow }) {
   const totalPrice = booking.totalPriceCents;
   const dueCents =
     totalPrice == null ? null : Math.max(totalPrice - amountPaid, 0);
-  const balanceLabel =
-    dueCents == null
-      ? "Price not set"
-      : dueCents > 0
-        ? `${formatEGP(dueCents)} due`
-        : "Paid";
+  const balanceLabel = `${formatEGP(amountPaid)} paid`;
   const balanceColor =
     dueCents == null ? MUTED : dueCents > 0 ? "#b45309" : "#15803d";
   // Declined, expired or canceled: nothing is owed and nothing needs doing,
@@ -170,7 +165,7 @@ function BookingComponent({ booking }: { booking: BookingRow }) {
       `Phone: ${booking.phone}`,
       `Email: ${booking.email}`,
       `Status: ${STATUS_LABEL[status]}`,
-      isClosed ? null : totalPrice == null ? "Price: not set" : `Balance: ${balanceLabel}`,
+      isClosed ? null : `Paid: ${formatEGP(amountPaid)}`,
       booking.instructor ? `Instructor: ${booking.instructor}` : null,
       `${window.location.origin}/bookings/${booking.id}`,
     ].filter(Boolean);
