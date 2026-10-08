@@ -14,6 +14,7 @@ import { capacityPeople, capacityState } from "@/lib/bookings/capacity";
 import { SearchInput } from "./SearchInput";
 import { CapacityBar } from "./CapacityBar";
 import { AgentFilter } from "./AgentFilter";
+import { GroupFilter, GROUP_OPTIONS } from "./GroupFilter";
 import { DateHeaderActions } from "./DateHeaderActions";
 import { FilterTransitionProvider, PendingRegion, TransitionLink } from "./FilterTransition";
 
@@ -78,15 +79,17 @@ async function BookingsByDatePage({
   searchParams,
 }: {
   params: Promise<{ date: string }>;
-  searchParams: Promise<{ status?: string; q?: string; agent?: string }>;
+  searchParams: Promise<{ status?: string; q?: string; agent?: string; group?: string }>;
 }) {
-  const [{ date }, { status = "all", q = "", agent = "all" }] = await Promise.all([
+  const [{ date }, { status = "all", q = "", agent = "all", group: groupParam = "all" }] = await Promise.all([
     params,
     searchParams,
   ]);
 
   // A malformed date would otherwise throw inside date-fns and 500 the page.
   if (!isDateKey(date)) notFound();
+
+  const group = GROUP_OPTIONS.some((o) => o.value === groupParam) ? groupParam : "all";
 
   const activeFilter =
     STATUS_FILTERS.find((f) => f.value === status) ?? STATUS_FILTERS[0];
@@ -110,6 +113,7 @@ async function BookingsByDatePage({
     const params = new URLSearchParams();
     if (activeFilter.value !== "all") params.set("status", activeFilter.value);
     if (agent !== "all") params.set("agent", agent);
+    if (group !== "all") params.set("group", group);
     const qs = params.toString();
     return qs ? `/bookings/date/${key}?${qs}` : `/bookings/date/${key}`;
   };
@@ -121,6 +125,7 @@ async function BookingsByDatePage({
     if (activeFilter.value !== "all") reloadParams.set("status", activeFilter.value);
     if (q) reloadParams.set("q", q);
     if (agent !== "all") reloadParams.set("agent", agent);
+    if (group !== "all") reloadParams.set("group", group);
     const reloadHref = reloadParams.size ? `${baseHref}?${reloadParams}` : baseHref;
 
     return (
@@ -175,8 +180,10 @@ async function BookingsByDatePage({
     return b.agentId === agent;
   };
 
+  const matchesGroup = (b: BookingWithAgent) => group === "all" || b.bookingGroup === group;
+
   const bookings = rawBookings.filter((b) => {
-    if (!matchesAgent(b)) return false;
+    if (!matchesAgent(b) || !matchesGroup(b)) return false;
     if (!query) return true;
     return (
       b.name?.toLowerCase().includes(query) ||
@@ -224,7 +231,7 @@ async function BookingsByDatePage({
   );
 
   // People count per status filter tab, derived from all bookings (respects agent filter)
-  const agentScopedAll = allBookings.filter(matchesAgent);
+  const agentScopedAll = allBookings.filter((b) => matchesAgent(b) && matchesGroup(b));
   const statusPeople = STATUS_FILTERS.map((f) => {
     const matched = agentScopedAll.filter((b) => f.statuses.includes(b.bookingStatus));
     return { value: f.value, people: matched.reduce((s, b) => s + b.numberOfPeople, 0) };
@@ -235,6 +242,7 @@ async function BookingsByDatePage({
   const archiveParams = new URLSearchParams({ status: archive.value });
   if (q) archiveParams.set("q", q);
   if (agent !== "all") archiveParams.set("agent", agent);
+  if (group !== "all") archiveParams.set("group", group);
   const archiveHref = `${baseHref}?${archiveParams}`;
 
   const headerActions = {
@@ -312,6 +320,7 @@ async function BookingsByDatePage({
               if (f.value !== "all") params.set("status", f.value);
               if (q) params.set("q", q);
               if (agent !== "all") params.set("agent", agent);
+              if (group !== "all") params.set("group", group);
               const qs = params.toString();
               const href = qs ? `${baseHref}?${qs}` : baseHref;
               const isActive = activeFilter.value === f.value;
@@ -357,6 +366,7 @@ async function BookingsByDatePage({
               agents={allUsers.map((u) => ({ id: u.id, label: u.name ?? u.email }))}
               value={agent}
             />
+            <GroupFilter value={group} />
           </div>
         </div>
       </div>
