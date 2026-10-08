@@ -723,7 +723,7 @@ function DayUseBookingForm({
              form column gets — otherwise both sit below the fold. ── */}
       <div
         className={cn(
-          "relative md:w-1/2 lg:w-[55%] sm:h-64 md:h-[calc(100vh-110px)] md:self-start md:sticky md:top-[110px] overflow-hidden",
+          "relative md:w-1/2 lg:w-[55%] sm:h-64 md:h-[calc(100vh-96px)] lg:h-[calc(100vh-110px)] md:self-start md:sticky md:top-[96px] lg:top-[110px] overflow-hidden",
           rail.mobileSummary ? "h-60" : "h-52",
         )}
       >

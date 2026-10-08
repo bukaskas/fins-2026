@@ -11,7 +11,7 @@ export default function DayUseBookingLoading() {
       {/* Brand rail placeholder — same footprint as the real one so the layout
           doesn't jump when it resolves. */}
       <div
-        className="h-52 sm:h-64 md:h-[calc(100vh-110px)] md:w-1/2 lg:w-[55%] md:self-start animate-pulse"
+        className="h-52 sm:h-64 md:h-[calc(100vh-96px)] lg:h-[calc(100vh-110px)] md:w-1/2 lg:w-[55%] md:self-start animate-pulse"
         style={{ background: "#0c1a2e" }}
       />
 

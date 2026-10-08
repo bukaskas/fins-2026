@@ -3,21 +3,36 @@ import { getAllRentals, markOverdueRentals } from "@/lib/actions/rental.actions"
 import { RentalStatusBadge } from "@/components/rentals/RentalStatusBadge";
 import { ReturnRentalButton } from "@/components/rentals/ReturnRentalButton";
 import { formatElapsed } from "@/lib/utils";
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "@/lib/auth";
 
 export default async function RentalsPage() {
   await markOverdueRentals();
   const rentals = await getAllRentals();
+  // The guide page is ADMIN-only; don't offer a link that bounces everyone else.
+  const session = await getServerSession(authOptions);
+  const isAdmin = (session?.user as { role?: string } | undefined)?.role === "ADMIN";
 
   return (
     <main className="mx-auto max-w-6xl p-6">
       <div className="mb-4 flex items-center justify-between">
         <h1 className="text-2xl font-semibold">Rentals</h1>
-        <Link
-          href="/rentals/new"
-          className="rounded bg-black px-4 py-2 text-sm text-white"
-        >
-          New Rental
-        </Link>
+        <div className="flex items-center gap-4">
+          {isAdmin && (
+            <Link
+              href="/rentals/guide"
+              className="text-sm text-muted-foreground underline underline-offset-4 hover:text-foreground"
+            >
+              Rental guide
+            </Link>
+          )}
+          <Link
+            href="/rentals/new"
+            className="rounded bg-black px-4 py-2 text-sm text-white"
+          >
+            New Rental
+          </Link>
+        </div>
       </div>
 
       <div className="overflow-x-auto rounded-md border">

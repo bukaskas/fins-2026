@@ -287,7 +287,7 @@ async function BookingsPage({
 
         {/* Filters — sticky from `sm` up only. Stacked for mobile this card is
           ~230px tall; sticking it would hold a third of a phone screen. */}
-        <div className="mb-6 rounded-2xl border border-[#ece8e3] bg-white p-3 shadow-[0_1px_6px_rgba(26,22,20,0.065)] sm:sticky sm:top-[6.5rem] sm:z-20 sm:p-4 md:top-[7.25rem]">
+        <div className="mb-6 rounded-2xl border border-[#ece8e3] bg-white p-3 shadow-[0_1px_6px_rgba(26,22,20,0.065)] sm:sticky sm:top-[6.5rem] sm:z-20 sm:p-4 lg:top-[7.25rem]">
           <BookingsFilters
             total={total}
             agents={allUsers.map((u) => ({

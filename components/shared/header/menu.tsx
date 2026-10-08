@@ -6,7 +6,7 @@ import {
   SheetTrigger,
   SheetClose,
 } from "@/components/ui/sheet";
-import { Menu as MenuIcon, X } from "lucide-react";
+import { ClipboardCheck, Menu as MenuIcon, X } from "lucide-react";
 import Link from "next/link";
 import { APP_NAME } from "@/lib/constants";
 import Image from "next/image";
@@ -15,6 +15,8 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { UserAuthButton } from "./UserAuthButton";
 import { AdminLinks, AdminLinksMobile, visibleGroupsForRole } from "./adminLinks";
+import { NavItem } from "./NavItem";
+import { roleHasCapability } from "@/lib/permissions";
 
 const links = [
   { title: "Day Use",      href: "/day-use" },
@@ -44,57 +46,55 @@ async function Menu() {
   const role = (session?.user as any)?.role as string | undefined;
   // Back-office dropdown shows for any role with at least one capability
   // (links are filtered per role inside AdminLinks).
-  const hasBackOffice = visibleGroupsForRole(role).length > 0;
+  const adminGroups = visibleGroupsForRole(role);
+  const hasBackOffice = adminGroups.length > 0;
   const isInstructor = role === "INSTRUCTOR" || (session?.user as any)?.isInstructor === true;
+  const showMySchedule = isInstructor && role !== "ADMIN";
+  // Roles that run the desk get a one-tap shortcut at the top of the sheet.
+  const hasDesk = roleHasCapability(role, "bookings:manage");
 
   return (
     <div className="flex md:justify-center z-10 w-full">
 
       {/* ── DESKTOP ── */}
-      <nav className="hidden md:flex md:items-center md:justify-center gap-6 lg:gap-10 py-3 w-full font-[family-name:var(--font-raleway)]">
+      {/* Three columns with equal side tracks keep the logo centred while the
+          account cluster sits in flow, so it can never overlap the links (it
+          used to be absolute right-5). Below lg there isn't room for links +
+          cluster on both sides of a centred logo, so tablets get the sheet. */}
+      <nav aria-label="Main" className="hidden lg:grid lg:grid-cols-[1fr_auto_1fr] lg:items-center py-3 px-5 w-full font-[family-name:var(--font-raleway)]">
 
         {/* Left links */}
-        <div className="flex items-center gap-6 lg:gap-8">
+        <div className="flex items-center justify-end gap-8">
           <NavLink href="/day-use">Day Use</NavLink>
           <NavLink href="/kitesurfing">Kitesurfing</NavLink>
         </div>
 
         {/* Logo — centred */}
-        <Link className="flex flex-col items-center mx-4 lg:mx-6 flex-shrink-0" href="/">
+        <Link className="flex flex-col items-center mx-6 flex-shrink-0" href="/">
           <Image
             src={logo}
             width={80}
             height={80}
             alt={APP_NAME}
           />
-          <span className="hidden lg:block text-[0.75rem] tracking-[0.28em] uppercase text-neu-muted font-[400] -mt-1 whitespace-nowrap">
+          <span className="text-[0.75rem] tracking-[0.28em] uppercase text-neu-muted font-[400] -mt-1 whitespace-nowrap">
             kite surfing center
           </span>
         </Link>
 
-        {/* Right links */}
-        <div className="flex items-center gap-6 lg:gap-8">
+        {/* Right links + account cluster */}
+        <div className="flex min-w-0 items-center gap-8">
           <NavLink href="/restaurant">Restaurant</NavLink>
           <NavLink href="/about">About</NavLink>
-        </div>
-
-        {/* Admin + Auth — pushed right */}
-        <div className="absolute right-5 flex items-center gap-3">
-          {isInstructor && role !== "ADMIN" && (
-            <Link
-              href="/my-schedule"
-              className="text-[0.75rem] font-[500] tracking-[0.18em] uppercase font-[family-name:var(--font-raleway)] text-neu-fg hover:text-neu-primary-ink transition-colors"
-            >
-              My Schedule
-            </Link>
-          )}
-          {hasBackOffice && <AdminLinks role={role} />}
-          <UserAuthButton session={session} />
+          <div className="ml-auto flex shrink-0 items-center gap-3">
+            {hasBackOffice && <AdminLinks role={role} groups={adminGroups} showMySchedule={showMySchedule} />}
+            <UserAuthButton session={session} compact />
+          </div>
         </div>
       </nav>
 
       {/* ── MOBILE ── */}
-      <nav className="md:hidden flex justify-center items-center w-full py-3 px-4 relative">
+      <nav aria-label="Main" className="lg:hidden flex justify-center items-center w-full py-3 px-4 relative">
         <Link className="flex flex-col items-center" href="/">
           <Image
             src={logo}
@@ -105,7 +105,7 @@ async function Menu() {
         </Link>
 
         <Sheet>
-          <SheetTrigger className="absolute right-4 p-1 text-neu-fg hover:text-neu-primary-ink transition-colors cursor-pointer">
+          <SheetTrigger aria-label="Open menu" className="absolute right-2 size-11 flex items-center justify-center text-neu-fg hover:text-neu-primary-ink transition-colors cursor-pointer">
             <MenuIcon size={26} strokeWidth={1.5} />
           </SheetTrigger>
 
@@ -114,19 +114,34 @@ async function Menu() {
             className="[&>button:first-of-type]:hidden flex flex-col w-[280px] bg-neu-base text-neu-fg border-l-0 p-0"
           >
             {/* Sheet header */}
-            <div className="flex items-center justify-between px-6 pt-8 pb-6 border-b border-[#8898aa]/20">
+            <div className="flex items-center justify-between px-6 pt-8 pb-6 border-b border-neu-line/20">
               <SheetTitle className="text-xs tracking-[0.3em] uppercase font-[500] font-[family-name:var(--font-raleway)] text-neu-muted">
                 Menu
               </SheetTitle>
               <SheetClose asChild>
-                <button className="h-8 w-8 flex items-center justify-center text-neu-muted hover:text-neu-fg transition-colors cursor-pointer">
-                  <X className="h-4 w-4" strokeWidth={1.5} />
+                <button aria-label="Close menu" className="size-11 -mr-2 flex items-center justify-center rounded-xl text-neu-muted hover:text-neu-fg transition-colors cursor-pointer">
+                  <X className="size-5" strokeWidth={1.5} aria-hidden="true" />
                 </button>
               </SheetClose>
             </div>
 
             {/* Scrollable content area */}
             <div className="flex-1 overflow-y-auto">
+              {/* Desk shortcut — staff open the sheet to get back to work, so
+                  the desk sits above the marketing links, not below them. */}
+              {hasDesk && (
+                <div className="px-4 pt-4">
+                  <NavItem
+                    variant="sheet"
+                    href="/reception"
+                    className="min-h-12 gap-3 rounded-2xl text-base font-[600] tracking-[0.04em] shadow-(--shadow-neu-sm)"
+                  >
+                    <ClipboardCheck className="size-5 shrink-0" strokeWidth={1.7} aria-hidden="true" />
+                    Reception desk
+                  </NavItem>
+                </div>
+              )}
+
               {/* Main nav links */}
               <div className="flex flex-col px-4 py-4 gap-0.5">
                 {links.map((link) => (
@@ -142,7 +157,7 @@ async function Menu() {
               </div>
 
               {/* Instructor schedule link (mobile) */}
-              {isInstructor && role !== "ADMIN" && (
+              {showMySchedule && (
                 <div className="px-4 pb-2">
                   <SheetClose asChild>
                     <Link
@@ -156,11 +171,11 @@ async function Menu() {
               )}
 
               {/* Admin links (mobile) */}
-              {hasBackOffice && <AdminLinksMobile role={role} />}
+              {hasBackOffice && <AdminLinksMobile role={role} groups={adminGroups} />}
             </div>
 
             {/* Auth at the bottom */}
-            <div className="border-t border-[#8898aa]/20 px-4 py-5">
+            <div className="border-t border-neu-line/20 px-4 py-5">
               <UserAuthButton
                 session={session}
                 className="w-full justify-start text-base font-[400] tracking-wide text-neu-fg hover:text-neu-primary-ink hover:bg-neu-inset h-11 px-3"

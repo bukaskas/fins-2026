@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 const OTHER_VIEWS = [
-  { label: "Dashboard", href: "/bookings/dashboard", icon: Gauge },
+  { label: "Bookings calendar", href: "/bookings/dashboard", icon: Gauge },
   { label: "Agents", href: "/bookings/agents", icon: Users },
   { label: "Kitesurfing", href: "/bookings/kitesurfing", icon: Waves },
   { label: "Lessons", href: "/lessons", icon: GraduationCap },

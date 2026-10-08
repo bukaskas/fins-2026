@@ -17,6 +17,8 @@
      if it held everywhere. This clears AA on all three (5.34 / 4.81 / 4.82) and
      stays clearly secondary to the foreground. */
   --color-neu-muted: #526070;
+  /* Hairline/divider tint (always used with an opacity modifier, e.g. border-neu-line/20). Not text. */
+  --color-neu-line: #8898aa;
   /*
    * The accent lives at three steps of one sky ramp, each with a fixed job.
    * Splitting it this way is not decoration: #0ea5e9 is 2.30:1 on the base and

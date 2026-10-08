@@ -94,7 +94,7 @@ export default function KaiCommunityRegistrationForm() {
   return (
     <div className="min-h-screen md:flex" style={{ background: TINT }}>
       {/* ── Brand rail: same as the public Pharaoh Airstyle form ── */}
-      <div className="relative md:w-1/2 lg:w-[55%] h-60 sm:h-64 md:h-[calc(100vh-110px)] md:self-start md:sticky md:top-[110px] overflow-hidden">
+      <div className="relative md:w-1/2 lg:w-[55%] h-60 sm:h-64 md:h-[calc(100vh-96px)] lg:h-[calc(100vh-110px)] md:self-start md:sticky md:top-[96px] lg:top-[110px] overflow-hidden">
         <Image
           src={pharaohPhoto}
           alt=""
