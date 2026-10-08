@@ -14,7 +14,8 @@ import { capacityPeople, capacityState } from "@/lib/bookings/capacity";
 import { SearchInput } from "./SearchInput";
 import { CapacityBar } from "./CapacityBar";
 import { AgentFilter } from "./AgentFilter";
-import { GroupFilter, GROUP_OPTIONS } from "./GroupFilter";
+import { GroupFilter } from "./GroupFilter";
+import { GROUP_OPTIONS } from "./group-options";
 import { DateHeaderActions } from "./DateHeaderActions";
 import { FilterTransitionProvider, PendingRegion, TransitionLink } from "./FilterTransition";
 

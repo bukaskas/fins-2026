@@ -54,6 +54,7 @@ import { cn } from "@/lib/utils";
 
 // Instagram is optional in the shared schema (other forms, e.g. Pharaoh
 // event booking, don't collect it) but required for day-use bookings.
+// Spectator passes don't ask for it, so they use the shared schema as is.
 const dayUseBookingFormSchema = bookingFormSchema.extend({
   instagram: z.string().trim().min(1, "Instagram account is required"),
 });
@@ -564,7 +565,9 @@ function DayUseBookingForm({
     } as BookingFormData,
     validators: {
       onSubmit: ({ value }) => {
-        const result = dayUseBookingFormSchema.safeParse(value);
+        const result = (
+          spectator ? bookingFormSchema : dayUseBookingFormSchema
+        ).safeParse(value);
         if (result.success) return;
         return toFieldErrors(result.error);
       },
@@ -1221,6 +1224,7 @@ function DayUseBookingForm({
                           );
                         }}
                       />
+                      {!spectator && (
                       <form.Field
                         name="instagram"
                         children={(field) => {
@@ -1268,6 +1272,7 @@ function DayUseBookingForm({
                           );
                         }}
                       />
+                      )}
                     </FieldGroup>
 
                     {/* What actually happens after Reserve */}

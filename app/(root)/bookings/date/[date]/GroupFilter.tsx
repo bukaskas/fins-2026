@@ -5,13 +5,7 @@ import { ChevronDown, Users } from "lucide-react";
 
 import { FOCUS_RING } from "@/lib/bookings/status";
 import { useFilterTransition } from "./FilterTransition";
-
-export const GROUP_OPTIONS = [
-  { value: "all", label: "All groups" },
-  { value: "KAI_OWNER", label: "Kai owners" },
-  { value: "SPECTATOR", label: "Spectators" },
-  { value: "KITE_COMMUNITY", label: "Kite community" },
-];
+import { GROUP_OPTIONS } from "./group-options";
 
 export function GroupFilter({ value }: { value: string }) {
   const pathname = usePathname();
