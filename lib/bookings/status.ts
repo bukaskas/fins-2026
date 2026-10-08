@@ -182,6 +182,8 @@ export const BOOKING_GROUP_META: Record<
 > = {
   KAI_OWNER:      { label: "Kai owner",      detailLabel: "Unit", text: "#16554F", bg: "#DDEFEE", ring: "#B6D9D6" },
   KITE_COMMUNITY: { label: "Kite community", detailLabel: "Spot", text: "#1E4F72", bg: "#E4F1FA", ring: "#BCD8EA" },
+  // Spectators carry no detail: the pass is the same for everyone.
+  SPECTATOR:      { label: "Spectator",      detailLabel: "",     text: "#7A3E0B", bg: "#FCEBD6", ring: "#F1CFA3" },
 };
 
 /** "Kai owner · Unit 12", or just "Kai owner" when no detail was recorded. */

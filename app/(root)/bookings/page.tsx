@@ -136,7 +136,7 @@ async function BookingsPage({
     getBookingsPage(query),
     listAgents(),
   ]);
-  const { rows: bookings, total, hasMore, stats } = page;
+  const { rows: bookings, total, hasMore, stats, spectators } = page;
 
   const todayStr = dateKey(new Date());
   const tomorrowStr = dateKey(addDays(new Date(), 1));
@@ -238,6 +238,26 @@ async function BookingsPage({
         <div className="mb-6">
           <BookingsNavigation />
         </div>
+
+        {/* Bean bags for the Pharaoh Airstyle spectators. Counts every pass that
+            still holds a place; the confirmed share is what is certain. */}
+        {spectators.bookings > 0 && (
+          <Link
+            href={buildHref(sp, { kind: "SPECTATOR", range: "all", status: "all", unpaid: "", limit: "" })}
+            className="mb-3 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 rounded-2xl border border-[#F1CFA3] bg-[#FCEBD6] px-4 py-3 text-[#7A3E0B] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1a1614] focus-visible:ring-offset-2"
+          >
+            <span className="font-[family-name:var(--font-raleway)] text-[0.72rem] font-[650] uppercase tracking-[0.12em] sm:text-[0.68rem]">
+              Spectators · bean bags
+            </span>
+            <span className="font-[family-name:var(--font-raleway)] text-[0.95rem] font-[600]">
+              {spectators.guests} {spectators.guests === 1 ? "guest" : "guests"}
+              <span className="font-[500]">
+                {" "}· {spectators.confirmedGuests} confirmed · {spectators.bookings}{" "}
+                {spectators.bookings === 1 ? "booking" : "bookings"}
+              </span>
+            </span>
+          </Link>
+        )}
 
         {/* Stats bar */}
         <div className="mb-6 grid grid-cols-2 gap-2.5 sm:gap-3 md:grid-cols-4">

@@ -46,6 +46,8 @@ export default function NextStepCard({
   paymentLink = null,
   paymentLinkExpiresAt = null,
   waitingPaymentAt = null,
+  spectator = false,
+  paysInFull = false,
 }: {
   status: BookingStatus;
   totalPriceCents?: number;
@@ -54,6 +56,10 @@ export default function NextStepCard({
   paymentLink?: string | null;
   paymentLinkExpiresAt?: Date | string | null;
   waitingPaymentAt?: Date | string | null;
+  /** Pharaoh Airstyle bean-bag spectator pass: its own wording. */
+  spectator?: boolean;
+  /** Paid in full online rather than a 50% deposit. */
+  paysInFull?: boolean;
 }) {
   const variant = getVariant(status);
   if (!variant) return null;
@@ -69,7 +75,7 @@ export default function NextStepCard({
     <section className="mt-8">
       <div className="rounded-2xl border border-[#ece8e3] bg-white shadow-[0_1px_6px_rgba(26,22,20,0.08)]">
         <div className="px-6 py-6 md:px-8 md:py-7">
-          {variant === "pending" && <PendingBody />}
+          {variant === "pending" && <PendingBody spectator={spectator} />}
           {variant === "screenshots" && <ScreenshotsBody />}
           {variant === "payment" && (
             <PaymentBody
@@ -83,10 +89,11 @@ export default function NextStepCard({
                   : null
               }
               deadline={paymentDeadline}
+              paysInFull={paysInFull}
             />
           )}
           {variant === "confirmed" && (
-            <ConfirmedBody amountPaidCents={amountPaidCents} />
+            <ConfirmedBody amountPaidCents={amountPaidCents} spectator={spectator} />
           )}
         </div>
       </div>
@@ -164,7 +171,13 @@ function WhatsAppButton({ caption }: { caption: string }) {
   );
 }
 
-function ConfirmedBody({ amountPaidCents }: { amountPaidCents: number }) {
+function ConfirmedBody({
+  amountPaidCents,
+  spectator,
+}: {
+  amountPaidCents: number;
+  spectator: boolean;
+}) {
   return (
     <div className="flex items-start gap-4">
       <span
@@ -174,8 +187,14 @@ function ConfirmedBody({ amountPaidCents }: { amountPaidCents: number }) {
         <Check className="h-5 w-5" strokeWidth={2.25} aria-hidden="true" />
       </span>
       <div className="min-w-0">
-        <Heading>Thank you for booking at Fins</Heading>
-        <Body>Please show this reservation page on arrival.</Body>
+        <Heading>
+          {spectator ? "Your spectator pass is confirmed" : "Thank you for booking at Fins"}
+        </Heading>
+        <Body>
+          {spectator
+            ? "Bean bag seating only. No tables or reserved seats. Please show this page at the gate on arrival."
+            : "Please show this reservation page on arrival."}
+        </Body>
 
         {amountPaidCents > 0 && (
           <div className="mt-5 inline-flex items-baseline gap-2 rounded-2xl bg-white/70 ring-1 ring-[#ece8e3] px-4 py-3">
@@ -197,7 +216,19 @@ function ConfirmedBody({ amountPaidCents }: { amountPaidCents: number }) {
   );
 }
 
-function PendingBody() {
+function PendingBody({ spectator }: { spectator: boolean }) {
+  if (spectator) {
+    return (
+      <>
+        <Heading>Thank you for your spectator request</Heading>
+        <Body>
+          We&rsquo;ll check your request and send you a link to pay for your
+          pass. Bean bag seating only. No tables or reserved seats, as the day
+          is focused on the event. Join us to watch the kite show.
+        </Body>
+      </>
+    );
+  }
   return (
     <>
       <Heading>Thank you for your booking request</Heading>
@@ -232,7 +263,9 @@ function PaymentBody({
   paymentLink,
   paymentLinkExpiresAt,
   deadline,
+  paysInFull,
 }: {
+  paysInFull: boolean;
   totalCents: number;
   amountPaidCents: number;
   bookingId: string;
@@ -240,17 +273,18 @@ function PaymentBody({
   paymentLinkExpiresAt: string | null;
   deadline: string | null;
 }) {
-  const depositCents = Math.round(totalCents / 2);
+  const depositCents = paysInFull ? totalCents : Math.round(totalCents / 2);
   const remainingCents = totalCents - depositCents;
   // What's still owed to reach the 50% deposit (in case part was already paid).
   const depositDueCents = Math.max(0, depositCents - amountPaidCents);
 
   return (
     <>
-      <Heading>Pay 50% to confirm</Heading>
+      <Heading>{paysInFull ? "Pay now to confirm" : "Pay 50% to confirm"}</Heading>
       <Body>
-        Your booking is held for 24 hours. The deposit is non-refundable and
-        cannot be moved to another date.
+        {paysInFull
+          ? "Your pass is held for 24 hours. Payment is non-refundable and the pass cannot be moved to another date."
+          : "Your booking is held for 24 hours. The deposit is non-refundable and cannot be moved to another date."}
       </Body>
 
       {deadline && (
@@ -275,6 +309,7 @@ function PaymentBody({
             </dd>
           </div>
 
+          {remainingCents > 0 && (
           <div className="flex items-baseline justify-between gap-4 py-3">
             <dt className="font-[family-name:var(--font-raleway)] text-[0.88rem] font-[500] text-[#3a3531]">
               On arrival
@@ -291,6 +326,7 @@ function PaymentBody({
               </span>
             </dd>
           </div>
+          )}
         </dl>
       )}
 
@@ -300,6 +336,7 @@ function PaymentBody({
           bookingId={bookingId}
           paymentLink={paymentLink}
           paymentLinkExpiresAt={paymentLinkExpiresAt}
+          paysInFull={paysInFull}
         />
       </div>
 

@@ -1,14 +1,21 @@
 import { WAITING_PAYMENT_WINDOW_MS } from "@/lib/constants";
 import { BUSINESS_TIME_ZONE } from "@/lib/date-keys";
 
-/** The online payment is a 50% deposit; the rest is settled at reception. */
-export function depositCents(totalPriceCents: number): number {
-  return Math.round(totalPriceCents / 2);
+/**
+ * The online payment is a 50% deposit; the rest is settled at reception. A
+ * spectator pass (`paysInFull`) is a ticket, so it is paid in full online.
+ */
+export function depositCents(totalPriceCents: number, paysInFull = false): number {
+  return paysInFull ? totalPriceCents : Math.round(totalPriceCents / 2);
 }
 
 /** What the guest still has to pay online to hold the booking. */
-export function depositDueCents(totalPriceCents: number, amountPaidCents: number): number {
-  return Math.max(depositCents(totalPriceCents) - amountPaidCents, 0);
+export function depositDueCents(
+  totalPriceCents: number,
+  amountPaidCents: number,
+  paysInFull = false,
+): number {
+  return Math.max(depositCents(totalPriceCents, paysInFull) - amountPaidCents, 0);
 }
 
 /** When an unpaid WAITING_PAYMENT booking is released. */

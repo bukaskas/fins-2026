@@ -32,6 +32,9 @@ import {
   priceFromUnitRates,
   ratesFromSnapshot,
   snapshotFromRate,
+  isSpectatorRate,
+  spectatorRate,
+  spectatorSnapshot,
   type QuotedDayUseRates,
 } from "@/lib/pricing";
 import {
@@ -49,7 +52,7 @@ import {
   parseBookingStatusFilter,
 } from "@/lib/bookings/status";
 import { CAPACITY_STATUSES } from "@/lib/bookings/capacity";
-import { depositCents } from "@/lib/bookings/payment-window";
+import { depositCents, depositDueCents } from "@/lib/bookings/payment-window";
 import { emailPriceBreakdown, sendPaymentRequestEmail } from "@/lib/bookings/guest-emails";
 import {
   ACTIVE_PENDING_STATUSES,
@@ -197,10 +200,25 @@ export async function createBooking(
   /** The Day Use unit rates the guest reviewed. A mismatch is refused, never
    *  silently booked at the new amount (see PLAN.md decision 19). */
   quotedRates?: QuotedDayUseRates,
+  /** Pharaoh Airstyle bean-bag spectator pass: fixed date, flat rate, always
+   *  reviewed by staff before payment is requested. */
+  options: { spectator?: boolean } = {},
 ) {
   try {
     const validatedData = bookingFormSchema.parse(data);
     const isDayUseService = validatedData.service === "day-use";
+    const isSpectator = options.spectator === true;
+    if (isSpectator) {
+      if (
+        !isDayUseService ||
+        dateKeyFromUtcMidnight(utcDayStart(validatedData.date)) !== PHARAOH_AIRSTYLE_DATE_KEY
+      ) {
+        return {
+          success: false,
+          message: "Spectator passes are only available for the Pharaoh Airstyle day.",
+        };
+      }
+    }
 
     // Gate: block closed dates for non-staff. Closed dates are stored as UTC
     // midnights (see lib/closed-dates.ts), so compare in UTC.
@@ -238,11 +256,17 @@ export async function createBooking(
     // confirmation email can print line items that are guaranteed to sum to
     // the number stored on the row.
     const dayUseBreakdown = isDayUseService
-      ? calculateDayUsePrice(
-          validatedData.date,
-          validatedData.numberOfPeople,
-          validatedData.numberOfKids ?? 0,
-        )
+      ? isSpectator
+        ? priceFromUnitRates(
+            spectatorRate(dateKeyFromUtcMidnight(validatedData.date)),
+            validatedData.numberOfPeople,
+            validatedData.numberOfKids ?? 0,
+          )
+        : calculateDayUsePrice(
+            validatedData.date,
+            validatedData.numberOfPeople,
+            validatedData.numberOfKids ?? 0,
+          )
       : null;
 
     // The rate moved between the guest's review and this request (a pricing
@@ -296,7 +320,8 @@ export async function createBooking(
     // admin "auto-confirm" toggle is on, brand-new customers do too; otherwise
     // they start as PENDING for availability review.
     const autoConfirm = await getAutoConfirmBookings();
-    const goToPayment = isExisting || autoConfirm;
+    // A spectator request is always reviewed first, whoever sends it.
+    const goToPayment = !isSpectator && (isExisting || autoConfirm);
 
     const booking = await prisma.booking.create({
       data: {
@@ -308,7 +333,11 @@ export async function createBooking(
         numberOfPeople: validatedData.numberOfPeople,
         numberOfKids: validatedData.numberOfKids ?? 0,
         totalPriceCents,
-        ...(dayUseBreakdown ? snapshotFromRate(dayUseBreakdown) : {}),
+        ...(dayUseBreakdown
+          ? isSpectator
+            ? { ...spectatorSnapshot(), bookingGroup: BookingGroup.SPECTATOR }
+            : snapshotFromRate(dayUseBreakdown)
+          : {}),
         instagram: validatedData.instagram?.trim() || null,
         bookingStatus: goToPayment
           ? BookingStatus.WAITING_PAYMENT
@@ -348,6 +377,7 @@ export async function createBooking(
           numberOfKids: isDayUse ? (validatedData.numberOfKids ?? 0) : undefined,
           priceBreakdown: dayUseBreakdown ?? undefined,
           bookingId: booking.id,
+          spectator: isSpectator,
           // These rows are PENDING until someone reviews them, so the guest
           // gets a receipt, not a confirmation.
           stage: "request",
@@ -364,6 +394,7 @@ export async function createBooking(
       includeTickets ? (validatedData.numberOfKids ?? 0) : undefined,
       includeTickets ? (totalPriceCents ?? undefined) : undefined,
       booking.id,
+      isSpectator,
     );
 
     return ({
@@ -570,7 +601,7 @@ export type BookingsQuery = {
   status?: string;
   service?: string;
   agent?: string;
-  /** "KAI_OWNER" | "KITE_COMMUNITY" | "none"; anything else means all. */
+  /** A BookingGroup value or "none"; anything else means all. */
   kind?: string;
   q?: string;
   range?: string;
@@ -588,7 +619,19 @@ export type BookingsPageResult = {
   hasMore: boolean;
   /** Unfiltered counts behind the four stat chips. */
   stats: { today: number; week: number; waiting: number; unpaid: number };
+  /**
+   * Bean bags to bring: guests (adults + children) on spectator passes that
+   * are still alive, with the part already confirmed. Unfiltered, like `stats`.
+   */
+  spectators: { bookings: number; guests: number; confirmedGuests: number };
 };
+
+/** Statuses that no longer hold a place. */
+const DEAD_BOOKING_STATUSES: BookingStatus[] = [
+  BookingStatus.DECLINED,
+  BookingStatus.NO_RESPONSE_EXPIRED,
+  BookingStatus.CANCELED,
+];
 
 const BOOKINGS_MAX_LIMIT = 2000;
 
@@ -606,7 +649,7 @@ function bookingsWhere(query: BookingsQuery): Prisma.BookingWhereInput {
   if (service && service !== "all") where.service = service;
 
   if (kind === "none") where.bookingGroup = null;
-  else if (kind === BookingGroup.KAI_OWNER || kind === BookingGroup.KITE_COMMUNITY) where.bookingGroup = kind;
+  else if ((Object.values(BookingGroup) as string[]).includes(kind ?? "")) where.bookingGroup = kind as BookingGroup;
 
   if (unpaid === "1") where.amountPaidCents = 0;
 
@@ -663,7 +706,7 @@ export async function getBookingsPage(query: BookingsQuery): Promise<BookingsPag
   const tomorrowStart = addUtcDays(todayStart, 1);
   const weekEnd = addUtcDays(todayStart, 8);
 
-  const [rows, total, today, week, waiting, unpaid] = await Promise.all([
+  const [rows, total, today, week, waiting, unpaid, spectatorRows] = await Promise.all([
     prisma.booking.findMany({
       where,
       orderBy: bookingsOrderBy(query.sort, query.dir),
@@ -677,7 +720,29 @@ export async function getBookingsPage(query: BookingsQuery): Promise<BookingsPag
     prisma.booking.count({
       where: { bookingStatus: BookingStatus.CONFIRMED, amountPaidCents: 0 },
     }),
+    prisma.booking.groupBy({
+      by: ["bookingStatus"],
+      where: {
+        bookingGroup: BookingGroup.SPECTATOR,
+        bookingStatus: { notIn: DEAD_BOOKING_STATUSES },
+      },
+      _count: { _all: true },
+      _sum: { numberOfPeople: true, numberOfKids: true },
+    }),
   ]);
+
+  const spectators = spectatorRows.reduce(
+    (acc, r) => {
+      const guests = (r._sum.numberOfPeople ?? 0) + (r._sum.numberOfKids ?? 0);
+      acc.bookings += r._count._all;
+      acc.guests += guests;
+      if (r.bookingStatus === BookingStatus.CONFIRMED || r.bookingStatus === BookingStatus.ARRIVED) {
+        acc.confirmedGuests += guests;
+      }
+      return acc;
+    },
+    { bookings: 0, guests: 0, confirmedGuests: 0 },
+  );
 
   const hasMore = rows.length > limit;
 
@@ -686,6 +751,7 @@ export async function getBookingsPage(query: BookingsQuery): Promise<BookingsPag
     total,
     hasMore,
     stats: { today, week, waiting, unpaid },
+    spectators,
   };
 }
 
@@ -1583,7 +1649,7 @@ export async function createBookingPaymentLink(bookingId: string) {
 
     // The online payment is a 50% deposit to confirm the booking; the rest is
     // paid on arrival. Subtract anything already paid so we never overcharge.
-    const deposit = depositCents(booking.totalPriceCents);
+    const deposit = depositCents(booking.totalPriceCents, isSpectatorRate(booking));
     const dueCents = deposit - booking.amountPaidCents;
     if (dueCents < FLASH_MIN_CENTS) {
       return {
@@ -1789,6 +1855,7 @@ async function sendBookingConfirmedEmailOnce(bookingId: string) {
       numberOfKids: isDayUse ? booking.numberOfKids : undefined,
       priceBreakdown,
       bookingId: booking.id,
+      spectator: booking.bookingGroup === BookingGroup.SPECTATOR,
       stage: "confirmed",
       amountPaidCents: booking.amountPaidCents,
       balanceDueCents,
@@ -1894,6 +1961,7 @@ async function applyFlashPayment(opts: {
         amountPaidCents: true,
         flashOrderId: true,
         paymentLinkAttempt: true,
+        dayUseRateType: true,
       },
     });
     if (!booking) {
@@ -1924,9 +1992,10 @@ async function applyFlashPayment(opts: {
 
     const expectedAmountCents = booking.totalPriceCents === null
       ? null
-      : Math.max(
-          Math.round(booking.totalPriceCents / 2) - booking.amountPaidCents,
-          0,
+      : depositDueCents(
+          booking.totalPriceCents,
+          booking.amountPaidCents,
+          isSpectatorRate(booking),
         );
     const expectedAggregatorOrderId = flashAggregatorId(
       booking.id,

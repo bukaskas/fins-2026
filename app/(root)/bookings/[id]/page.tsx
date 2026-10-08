@@ -18,6 +18,7 @@ import {
   showsAskStaff,
 } from "@/lib/bookings/status-message";
 import { GroupBadge } from "@/components/bookings/GroupBadge";
+import { isSpectatorRate } from "@/lib/pricing";
 import NextStepCard from "./NextStepCard";
 import AskStaffCard from "./AskStaffCard";
 
@@ -273,6 +274,8 @@ export default async function BookingDetailPage({
           paymentLink={booking.paymentLink}
           paymentLinkExpiresAt={booking.paymentLinkExpiresAt}
           waitingPaymentAt={booking.waitingPaymentAt}
+          spectator={booking.bookingGroup === "SPECTATOR"}
+          paysInFull={isSpectatorRate(booking)}
         />
 
         {showsAskStaff(booking.bookingStatus) && (

@@ -1,4 +1,4 @@
-import { Booking, BookingEventSource, BookingStatus } from "@prisma/client";
+import { Booking, BookingEventSource, BookingGroup, BookingStatus } from "@prisma/client";
 
 import { prisma } from "@/db/prisma";
 import { sendBookingEmail } from "@/emails/index";
@@ -6,6 +6,7 @@ import { depositDueCents, paymentDeadline } from "@/lib/bookings/payment-window"
 import { dateKeyInCairo, utcMidnightFromKey } from "@/lib/date-keys";
 import {
   calculateDayUsePrice,
+  isSpectatorRate,
   priceFromUnitRates,
   ratesFromSnapshot,
   type PriceBreakdown,
@@ -80,7 +81,9 @@ export async function sendPaymentRequestEmail(bookingId: string) {
     const isDayUse = booking.service === "day-use";
     const total = booking.totalPriceCents;
     const depositDue =
-      total !== null ? depositDueCents(total, booking.amountPaidCents) : undefined;
+      total !== null
+        ? depositDueCents(total, booking.amountPaidCents, isSpectatorRate(booking))
+        : undefined;
     const arrival =
       total !== null && depositDue !== undefined
         ? Math.max(total - booking.amountPaidCents - depositDue, 0)
@@ -92,6 +95,7 @@ export async function sendPaymentRequestEmail(bookingId: string) {
       numberOfKids: isDayUse ? booking.numberOfKids : undefined,
       priceBreakdown: emailPriceBreakdown(booking),
       bookingId: booking.id,
+      spectator: booking.bookingGroup === BookingGroup.SPECTATOR,
       stage: "awaiting-payment",
       depositDueCents: depositDue,
       balanceDueCents: arrival,
@@ -172,6 +176,7 @@ export async function sendReleasedHoldEmails(): Promise<number> {
         numberOfPeople: isDayUse ? booking.numberOfPeople : undefined,
         numberOfKids: isDayUse ? booking.numberOfKids : undefined,
         bookingId: booking.id,
+        spectator: booking.bookingGroup === BookingGroup.SPECTATOR,
         stage: "cancelled",
         deadline: booking.waitingPaymentAt
           ? paymentDeadline(booking.waitingPaymentAt)

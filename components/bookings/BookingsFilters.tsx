@@ -29,6 +29,7 @@ const KIND_OPTIONS = [
   { value: "all", label: "All guests" },
   { value: "KAI_OWNER", label: "Kai owners" },
   { value: "KITE_COMMUNITY", label: "Kite community" },
+  { value: "SPECTATOR", label: "Spectators" },
   { value: "none", label: "No group" },
 ];
 

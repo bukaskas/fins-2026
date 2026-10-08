@@ -21,6 +21,8 @@ interface StaffNotificationEmailProps {
   numberOfKids?: number;
   totalPriceCents?: number;
   bookingId?: string;
+  /** Pharaoh Airstyle bean-bag spectator pass, still to be reviewed. */
+  spectator?: boolean;
 }
 
 const StaffNotificationEmail = ({
@@ -33,6 +35,7 @@ const StaffNotificationEmail = ({
   numberOfKids,
   totalPriceCents,
   bookingId,
+  spectator = false,
 }: StaffNotificationEmailProps) => {
   const isDayUse = service === "day-use";
   const isPharaoh = service === "pharaoh-airstyle";
@@ -56,7 +59,7 @@ const StaffNotificationEmail = ({
       <Preview>
         {isKitesurfingCourse
           ? `Kitesurf booking at ${date}`
-          : `New booking: ${customerName} — ${service} on ${date}`}
+          : `New ${spectator ? "SPECTATOR " : ""}booking: ${customerName} — ${service} on ${date}`}
       </Preview>
       <Tailwind>
         <Body className="m-auto font-sans">
@@ -68,7 +71,7 @@ const StaffNotificationEmail = ({
               <Text className="text-sm m-0"><strong>Customer:</strong> {customerName}</Text>
               <Text className="text-sm m-0"><strong>Email:</strong> {customerEmail}</Text>
               <Text className="text-sm m-0"><strong>Phone:</strong> {customerPhone}</Text>
-              <Text className="text-sm m-0"><strong>Service:</strong> {service}</Text>
+              <Text className="text-sm m-0"><strong>Service:</strong> {service}{spectator ? " · SPECTATOR (bean bags)" : ""}</Text>
               <Text className="text-sm m-0"><strong>Date:</strong> {date}</Text>
               {showTickets ? (
                 <>

@@ -23,6 +23,40 @@ export const PHARAOH_KIDS_PRICE_CENTS = 60000;   // 600 EGP
 /** Kite community registrations: flat rate per person, paid on arrival. */
 export const KITE_COMMUNITY_PRICE_CENTS = 80000;  // 800 EGP
 
+/**
+ * Pharaoh Airstyle spectator pass: bean-bag seating, one flat price for adults
+ * and children alike. Stored on the booking as `dayUseRateType` so a later
+ * change to these figures cannot reprice a pass already sold, and so the rest
+ * of the system can tell a spectator pass (paid in full online) from ordinary
+ * day use (50% deposit).
+ */
+export const SPECTATOR_UNIT_PRICE_CENTS = 150000; // 1,500 EGP
+export const SPECTATOR_RATE_TYPE = "spectator";
+
+/** True for a booking sold at the spectator rate. */
+export function isSpectatorRate(row: { dayUseRateType: string | null }): boolean {
+  return row.dayUseRateType === SPECTATOR_RATE_TYPE;
+}
+
+/** The spectator rate as a day-use quote; `rateType` is only a display fallback. */
+export function spectatorRate(dateKey: DateKey): DayUseRate {
+  return {
+    dateKey,
+    adultUnitCents: SPECTATOR_UNIT_PRICE_CENTS,
+    kidsUnitCents: SPECTATOR_UNIT_PRICE_CENTS,
+    rateType: "regular",
+  };
+}
+
+/** The Booking columns for a spectator pass (the frozen rates plus the marker). */
+export function spectatorSnapshot(): DayUseRateSnapshot {
+  return {
+    adultUnitPriceCents: SPECTATOR_UNIT_PRICE_CENTS,
+    kidsUnitPriceCents: SPECTATOR_UNIT_PRICE_CENTS,
+    dayUseRateType: SPECTATOR_RATE_TYPE,
+  };
+}
+
 /** Guest-facing names. Every Day Use surface uses these and only these. */
 export const RATE_LABELS: Record<RateType, string> = {
   regular: "Regular",

@@ -65,6 +65,9 @@ export interface BookingEmailProps {
   deadlineShort?: string;
   /** Where a released guest can start over. Cancelled only. */
   rebookUrl?: string;
+  /** Pharaoh Airstyle bean-bag spectator pass (day-use only): its own wording
+   *  and event programme; the pass is paid in full online. */
+  spectator?: boolean;
 }
 
 interface BodyFacts {
@@ -159,6 +162,41 @@ const fallbackContent: Required<ServiceCopy> = {
   },
 };
 
+/**
+ * Spectator pass wording. Replaces the day-use copy stage for stage; the stage
+ * is the same, only what it says changes.
+ */
+const SPECTATOR_NOTE =
+  "Bean bag seating only. No tables or reserved seats, as the day is focused on the event.";
+
+const spectatorContent: Required<ServiceCopy> = {
+  request: {
+    heading: "We've received your spectator request",
+    body: `Thanks for registering for the Pharaoh Airstyle spectator pass. ${SPECTATOR_NOTE} Join us to watch the kite show. We'll check your request and come back to you.`,
+  },
+  "awaiting-payment": {
+    heading: "Pay to confirm your spectator pass",
+    body: `Good news — we have room for you. Pay the full amount below to confirm your Pharaoh Airstyle spectator pass. ${SPECTATOR_NOTE}`,
+  },
+  confirmed: {
+    heading: "Your spectator pass is confirmed",
+    body: `Your payment came through and your Pharaoh Airstyle spectator pass is confirmed. ${SPECTATOR_NOTE} We can't wait to have you watch the kite show.`,
+  },
+  cancelled: {
+    heading: "We released your spectator pass",
+    body: ({ date, deadline }) =>
+      `We didn’t receive your payment ${deadline ? `by ${deadline}` : "in time"}, so we released your spectator pass${date ? ` for ${date}` : ""}.`,
+  },
+};
+
+/** What a spectator is invited to. Times on the water shift with the wind. */
+const SPECTATOR_PROGRAMME: { time: string; what: string }[] = [
+  { time: "From 9:30 AM", what: "Arrival" },
+  { time: "10:00 AM", what: "Rider heats begin" },
+  { time: "2:00 PM", what: "Kite Hopper" },
+  { time: "5:30 PM", what: "Sunset kite show" },
+];
+
 /** Day use is sold as a beach club; kitesurfing stays out of its emails. */
 const footerName: Record<string, string> = {
   "day-use": "Fins Beach Club",
@@ -213,6 +251,7 @@ interface PaymentRowsProps {
   amountPaidCents?: number;
   balanceDueCents?: number;
   depositDueCents?: number;
+  spectator?: boolean;
 }
 
 /**
@@ -224,12 +263,13 @@ const PaymentRows = ({
   amountPaidCents,
   balanceDueCents,
   depositDueCents,
+  spectator = false,
 }: PaymentRowsProps) => {
   if (stage === "awaiting-payment") {
     return (
       <>
         {depositDueCents !== undefined && (
-          <AmountRow label="Deposit to pay now" value={formatEGP(depositDueCents)} strong />
+          <AmountRow label={spectator ? "To pay now" : "Deposit to pay now"} value={formatEGP(depositDueCents)} strong />
         )}
         {balanceDueCents !== undefined && balanceDueCents > 0 && (
           <AmountRow label="Due on arrival" value={formatEGP(balanceDueCents)} />
@@ -272,6 +312,7 @@ interface DayUseDetailsProps {
   amountPaidCents?: number;
   balanceDueCents?: number;
   depositDueCents?: number;
+  spectator?: boolean;
 }
 
 const DayUseDetails = ({
@@ -283,6 +324,7 @@ const DayUseDetails = ({
   amountPaidCents,
   balanceDueCents,
   depositDueCents,
+  spectator = false,
 }: DayUseDetailsProps) => {
   const adults = numberOfPeople ?? 0;
   const kids = numberOfKids ?? 0;
@@ -301,19 +343,25 @@ const DayUseDetails = ({
           the plain-text alternative. */}
       {date && <MetaRow label="Date" value={date} />}
       {party && <MetaRow label="Guests" value={party} />}
-      <MetaRow label="Hours" value={VISIT_HOURS} />
+      {spectator ? (
+        <MetaRow label="Pass" value="Spectator · bean bag seating" />
+      ) : (
+        <MetaRow label="Hours" value={VISIT_HOURS} />
+      )}
 
       {/* Right under the request: a group that doesn't qualify should find out
           before it reads about lockers. */}
-      <Section className="mt-4 rounded-[8px] bg-[#F2F6FA] px-4 py-3">
-        <Text className="text-[15px] leading-relaxed text-[#22303F] font-semibold m-0">
-          Mixed groups and families only
-        </Text>
-        <Text className={`${muted} mt-1`}>
-          This one decides entry at the gate, so please check it before you
-          travel.
-        </Text>
-      </Section>
+      {!spectator && (
+        <Section className="mt-4 rounded-[8px] bg-[#F2F6FA] px-4 py-3">
+          <Text className="text-[15px] leading-relaxed text-[#22303F] font-semibold m-0">
+            Mixed groups and families only
+          </Text>
+          <Text className={`${muted} mt-1`}>
+            This one decides entry at the gate, so please check it before you
+            travel.
+          </Text>
+        </Section>
+      )}
 
       {/* Prices are rendered only when the booking was actually priced. An
           invented per-person figure was wrong on peak, best-value and
@@ -326,7 +374,9 @@ const DayUseDetails = ({
             {stage === "confirmed" ? "Your payment" : "What you’ll pay"}
           </Heading>
           <Text className={`${muted} mb-3`}>
-            {RATE_LABELS[priceBreakdown.rateType]} rate for this date.
+            {spectator
+              ? "One price per person for the spectator pass."
+              : `${RATE_LABELS[priceBreakdown.rateType]} rate for this date.`}
           </Text>
 
           <Section>
@@ -380,25 +430,71 @@ const DayUseDetails = ({
               amountPaidCents={amountPaidCents}
               balanceDueCents={balanceDueCents}
               depositDueCents={depositDueCents}
+              spectator={spectator}
             />
           </Section>
 
           {/* So the payment link that follows the review isn't a surprise. */}
           {stage === "request" && (
             <Text className={`${text} mt-3`}>
-              Once we confirm, you&rsquo;ll pay a 50% deposit online; the rest
-              is settled at reception.
+              {spectator
+                ? "Once we confirm, you’ll pay the full amount online."
+                : "Once we confirm, you’ll pay a 50% deposit online; the rest is settled at reception."}
             </Text>
           )}
 
-          <Text className={`${muted} mt-3`}>
-            Children under 5 join free — they don&rsquo;t need a ticket, so they
-            aren&rsquo;t counted above.
-          </Text>
+          {!spectator && (
+            <Text className={`${muted} mt-3`}>
+              Children under 5 join free — they don&rsquo;t need a ticket, so
+              they aren&rsquo;t counted above.
+            </Text>
+          )}
         </>
       )}
 
       <Hr className={rule} />
+
+      {spectator && (
+        <>
+          <Heading as="h2" className={sectionHeading}>
+            What to expect
+          </Heading>
+          <Section>
+            {SPECTATOR_PROGRAMME.map((item, i) => (
+              <Row key={item.what}>
+                <Column
+                  style={{ borderTop: i === 0 ? undefined : "1px solid #EEF2F6" }}
+                  className="w-[130px] py-2 pr-3 align-top text-[14px] font-semibold text-[#0369a1] whitespace-nowrap"
+                >
+                  {item.time}
+                </Column>
+                <Column
+                  style={{ borderTop: i === 0 ? undefined : "1px solid #EEF2F6" }}
+                  className="py-2 align-top text-[15px] text-[#22303F]"
+                >
+                  {item.what}
+                </Column>
+              </Row>
+            ))}
+          </Section>
+          <Text className={`${muted} mt-3`}>
+            Times on the water depend on the wind and may shift on the day.
+          </Text>
+
+          <Hr className={rule} />
+
+          <Heading as="h2" className={sectionHeading}>
+            Please leave at home
+          </Heading>
+          <Text className={text}>Pets</Text>
+          <Text className={text}>Cooler boxes</Text>
+          <Text className={text}>Speakers</Text>
+          <Text className={text}>Outside food and drinks</Text>
+        </>
+      )}
+
+      {!spectator && (
+        <>
 
       <Heading as="h2" className={sectionHeading}>
         What&rsquo;s included
@@ -420,6 +516,8 @@ const DayUseDetails = ({
       <Text className={text}>Cooler boxes</Text>
       <Text className={text}>Speakers</Text>
       <Text className={text}>Outside food and drinks</Text>
+        </>
+      )}
     </>
   );
 };
@@ -430,10 +528,29 @@ function whatHappensNext({
   depositDueCents,
   deadline,
   rebookUrl,
+  spectator,
 }: Pick<
   BookingEmailProps,
-  "balanceDueCents" | "depositDueCents" | "deadline" | "rebookUrl"
+  "balanceDueCents" | "depositDueCents" | "deadline" | "rebookUrl" | "spectator"
 > & { stage: BookingEmailStage }): string {
+  if (spectator) {
+    switch (stage) {
+      case "request":
+        return `We check every request by hand and reply on WhatsApp during our opening hours, ${VISIT_HOURS}. Once we confirm, we'll email you a link to pay for your spectator pass in full. You'll have 24 hours to pay before it is released.`;
+      case "awaiting-payment": {
+        const what =
+          depositDueCents !== undefined
+            ? `the ${formatEGP(depositDueCents)} for your pass`
+            : "your spectator pass";
+        const by = deadline ? ` by ${deadline}` : " within 24 hours";
+        return `Pay ${what}${by} to confirm it. If it hasn't arrived by then, the pass is released for other guests. Trouble paying? Message us on WhatsApp.`;
+      }
+      case "confirmed":
+        return "You're on the list. Show your booking page at the gate on arrival. If anything changes, message us on WhatsApp and we'll sort it out.";
+      case "cancelled":
+        return "If you'd still like to come, message us on WhatsApp and we'll see what we can do.";
+    }
+  }
   switch (stage) {
     case "request":
       return `We check every request by hand and reply on WhatsApp during our opening hours, ${VISIT_HOURS}. If you booked late at night, expect to hear from us the next morning. Once we confirm, we'll email you a link to pay a 50% deposit. You'll have 24 hours to pay before the spot is released.`;
@@ -471,8 +588,14 @@ const BookingEmail = ({
   deadline,
   deadlineShort,
   rebookUrl,
+  spectator: spectatorFlag = false,
 }: BookingEmailProps) => {
-  const mapped = bookingType ? serviceContent[bookingType] : undefined;
+  const spectator = spectatorFlag && bookingType === "day-use";
+  const mapped = spectator
+    ? spectatorContent
+    : bookingType
+      ? serviceContent[bookingType]
+      : undefined;
   if (bookingType && !mapped) {
     // Surface the gap instead of sending a guest the wrong service's email.
     console.error(
@@ -501,7 +624,7 @@ const BookingEmail = ({
   const previewParts: (string | null | undefined)[] =
     stage === "awaiting-payment"
       ? [
-          `${depositDueCents !== undefined ? formatEGP(depositDueCents) : "Deposit"} due${
+          `${depositDueCents !== undefined ? formatEGP(depositDueCents) : spectator ? "Payment" : "Deposit"} due${
             deadlineShort ? ` by ${deadlineShort}` : ""
           }`,
           isDayUse ? party : null,
@@ -520,6 +643,7 @@ const BookingEmail = ({
               ? `${formatEGP(balanceDueCents)} due on arrival`
               : null,
             stage === "confirmed" ? "See you on the beach" : "We'll confirm on WhatsApp",
+            spectator ? "Spectator pass" : null,
           ];
   const previewText = previewParts.filter(Boolean).join(" · ");
 
@@ -569,6 +693,7 @@ const BookingEmail = ({
                 amountPaidCents={amountPaidCents}
                 balanceDueCents={balanceDueCents}
                 depositDueCents={depositDueCents}
+                spectator={spectator}
               />
             )}
 
@@ -577,7 +702,7 @@ const BookingEmail = ({
               <>
                 <Hr className={rule} />
                 <Heading as="h2" className={sectionHeading}>
-                  The booking we released
+                  {spectator ? "The pass we released" : "The booking we released"}
                 </Heading>
                 {date && <MetaRow label="Date" value={date} />}
                 {party && <MetaRow label="Guests" value={party} />}
@@ -621,13 +746,14 @@ const BookingEmail = ({
                 depositDueCents,
                 deadline,
                 rebookUrl,
+                spectator,
               })}
             </Text>
 
             {stage === "awaiting-payment" && bookingUrl && (
               <Section className="mt-6 mb-2">
                 <Button className={primaryButton} href={bookingUrl}>
-                  Pay deposit
+                  {spectator ? "Pay now" : "Pay deposit"}
                 </Button>
               </Section>
             )}
@@ -714,6 +840,21 @@ export const bookingEmailPreviewBase = {
     rateType: "peak",
   },
   bookingUrl: "https://www.finskitesurfing.com/bookings/preview",
+} satisfies BookingEmailProps;
+
+export const spectatorEmailPreviewBase = {
+  ...bookingEmailPreviewBase,
+  date: "Friday, 9 October",
+  numberOfKids: 1,
+  priceBreakdown: {
+    adultUnitCents: 150000,
+    kidsUnitCents: 150000,
+    adultTotalCents: 300000,
+    kidsTotalCents: 150000,
+    totalCents: 450000,
+    rateType: "regular",
+  },
+  spectator: true,
 } satisfies BookingEmailProps;
 
 BookingEmail.PreviewProps = {

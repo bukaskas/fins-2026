@@ -33,7 +33,7 @@ const SCHEDULE: { time: string; what: string }[] = [
   { time: "10:00 AM – 1:00 PM", what: "Rider heats" },
   { time: "1:00 – 2:00 PM", what: "Lunch break" },
   { time: "2:00 PM", what: "Kids activities" },
-  { time: "3:30 – 5:30 PM", what: "Kite Hopper" },
+  { time: "2:00 PM", what: "Kite Hopper" },
   { time: "5:30 PM", what: "Sunset kite show" },
   { time: "7:00 PM", what: "After party" },
 ];

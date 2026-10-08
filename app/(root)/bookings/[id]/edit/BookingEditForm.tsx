@@ -93,7 +93,7 @@ function BookingEditForm({ booking, instructors, allUsers }: Props) {
             instructor: isKitesurfingService(value.service) ? (value.instructor ?? null) : null,
             time: value.time ?? null,
             bookingGroup: groupValue === "none" ? null : (groupValue as BookingGroup),
-            groupDetail: groupValue === "none" ? null : groupDetail.trim() || null,
+            groupDetail: groupValue === "none" || groupValue === "SPECTATOR" ? null : groupDetail.trim() || null,
           }),
           assignBookingAgent(booking.id, agentId),
         ]);
@@ -433,11 +433,12 @@ function BookingEditForm({ booking, instructors, allUsers }: Props) {
                       <SelectItem value="none">None</SelectItem>
                       <SelectItem value="KAI_OWNER">Kai owner</SelectItem>
                       <SelectItem value="KITE_COMMUNITY">Kite community</SelectItem>
+                      <SelectItem value="SPECTATOR">Spectator</SelectItem>
                     </SelectGroup>
                   </SelectContent>
                 </Select>
               </Field>
-              {groupValue !== "none" && (
+              {groupValue !== "none" && groupValue !== "SPECTATOR" && (
                 <Field>
                   <FieldLabel htmlFor="groupDetail">
                     {groupValue === "KAI_OWNER" ? "Unit number" : "Local spot"}

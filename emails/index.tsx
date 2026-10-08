@@ -63,6 +63,8 @@ interface BookingEmailOptions {
   depositDueCents?: number;
   /** When the payment window closes. Awaiting-payment and cancelled. */
   deadline?: Date;
+  /** Pharaoh Airstyle bean-bag spectator pass: its own wording at every stage. */
+  spectator?: boolean;
 }
 
 /** Where a guest whose hold was released can start over, if anywhere. */
@@ -91,6 +93,7 @@ export async function sendBookingEmail(
     balanceDueCents,
     depositDueCents,
     deadline,
+    spectator = false,
   } = options;
 
   // The event's own mail only replaces the request receipt; the payment and
@@ -114,6 +117,7 @@ export async function sendBookingEmail(
   // community registrations.
   if (
     stage === "confirmed" &&
+    !spectator &&
     bookingType === "day-use" &&
     date.toISOString().slice(0, 10) === PHARAOH_AIRSTYLE_DATE_KEY
   ) {
@@ -142,8 +146,14 @@ export async function sendBookingEmail(
 
   // Never the signup email's subject: identical subjects get threaded together
   // by Gmail and the confirmation disappears under the welcome mail.
-  const subject =
-    stage === "awaiting-payment"
+  const subject = spectator
+    ? {
+        request: `Spectator pass request received — ${formattedDate}`,
+        "awaiting-payment": `Pay to confirm your spectator pass — ${formattedDate}`,
+        confirmed: `Spectator pass confirmed — ${formattedDate}`,
+        cancelled: `Your spectator pass for ${formattedDate} was released`,
+      }[stage]
+    : stage === "awaiting-payment"
       ? `Pay your deposit to hold ${formattedDate}`
       : stage === "cancelled"
         ? `${bookingType === "day-use" ? "Your spot" : "Your booking"} for ${formattedDate} was released`
@@ -169,7 +179,8 @@ export async function sendBookingEmail(
         depositDueCents={depositDueCents}
         deadline={deadline ? formatPaymentDeadline(deadline) : undefined}
         deadlineShort={deadline ? formatPaymentDeadlineShort(deadline) : undefined}
-        rebookUrl={stage === "cancelled" ? rebookUrlFor(bookingType, date) : undefined}
+        rebookUrl={stage === "cancelled" && !spectator ? rebookUrlFor(bookingType, date) : undefined}
+        spectator={spectator}
       />
     ),
   });
@@ -192,6 +203,7 @@ export async function sendStaffNotificationEmail(
   numberOfKids?: number,
   totalPriceCents?: number,
   bookingId?: string,
+  spectator = false,
 ) {
   const staffEmails = serviceToStaffEmails[service];
   if (!staffEmails?.length) return;
@@ -199,7 +211,7 @@ export async function sendStaffNotificationEmail(
   const subject =
     service === "kitesurfing-course"
       ? `Kitesurf booking at ${date.toDateString()}`
-      : `New booking: ${customerName} — ${service}`;
+      : `New ${spectator ? "spectator " : ""}booking: ${customerName} — ${service}`;
 
   await resend.emails.send({
     from: EMAIL_FROM,
@@ -216,6 +228,7 @@ export async function sendStaffNotificationEmail(
         numberOfKids={numberOfKids}
         totalPriceCents={totalPriceCents}
         bookingId={bookingId}
+        spectator={spectator}
       />
     ),
   });

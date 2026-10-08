@@ -51,3 +51,15 @@ describe("formatPaymentDeadline", () => {
     );
   });
 });
+
+describe("pay in full (spectator pass)", () => {
+  it("asks for the whole total online", () => {
+    expect(depositCents(450000, true)).toBe(450000);
+    expect(depositDueCents(450000, 0, true)).toBe(450000);
+    expect(depositDueCents(450000, 450000, true)).toBe(0);
+  });
+
+  it("leaves the 50% default alone", () => {
+    expect(depositCents(450000)).toBe(225000);
+  });
+});

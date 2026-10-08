@@ -125,6 +125,8 @@ enum PaymentMethod {
 enum BookingGroup {
   KAI_OWNER
   KITE_COMMUNITY
+  /// Pharaoh Airstyle bean-bag spectator pass: no table, pays the full price online.
+  SPECTATOR
 }
 
 enum BookingStatus {

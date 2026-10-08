@@ -74,7 +74,7 @@ export function PharaohHero() {
         {/* Actions */}
         <div className="flex flex-wrap items-center gap-x-7 gap-y-3">
           <Link
-            href="/day-use/booking/pharaoh-airstyle"
+            href="/day-use/booking/pharaoh-airstyle/spectator"
             className={`group inline-flex min-h-14 items-center gap-3 rounded-full bg-[#19AEE8] px-9 text-[0.8rem] font-[700] uppercase tracking-[0.2em] text-[#031E2D] transition-colors duration-200 hover:bg-[#45c0f0] motion-reduce:transition-none ${focusRing}`}
           >
             Reserve

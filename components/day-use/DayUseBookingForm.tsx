@@ -27,6 +27,7 @@ import {
   formatEGP,
   priceFromUnitRates,
   resolveDayUseRate,
+  spectatorRate,
   type DayUseRate,
 } from "@/lib/pricing";
 import {
@@ -67,6 +68,9 @@ const dayUseBookingFormSchema = bookingFormSchema.extend({
 export type DayUseBookingVariant = {
   /** Set → step 1 states this date instead of opening a picker. */
   fixedDate?: Date;
+  /** Bean-bag spectator pass: flat spectator rate, reviewed by staff, paid in
+   *  full once approved. Needs `fixedDate`. */
+  spectator?: boolean;
   /** Lines shown under a fixed date: what the day actually is. */
   eventHighlights?: string[];
   /** Standing banner (postponement, weather) above step 1. */
@@ -270,10 +274,12 @@ function PriceBreakdown({
   rate,
   adults,
   kids,
+  spectator = false,
 }: {
   rate: DayUseRate;
   adults: number;
   kids: number;
+  spectator?: boolean;
 }) {
   const breakdown = priceFromUnitRates(rate, adults, kids);
   const meta = RATE_META[breakdown.rateType];
@@ -288,7 +294,7 @@ function PriceBreakdown({
           style={{ background: meta.dot }}
         />
         <span className={eyebrow} style={{ color: meta.color }}>
-          {meta.label} rate · {format(localCalendarDateFromKey(rate.dateKey), "d MMM")}
+          {spectator ? "Spectator pass" : `${meta.label} rate`} · {format(localCalendarDateFromKey(rate.dateKey), "d MMM")}
         </span>
       </div>
       <div className="space-y-2.5">
@@ -436,6 +442,7 @@ function DayUseBookingForm({
   initialDateKey?: string;
 }) {
   const { fixedDate, eventHighlights, notice, rail, photo } = variant;
+  const spectator = !!variant.spectator && !!fixedDate;
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [step, setStep] = React.useState<1 | 2 | 3>(1);
   // Cairo today, fixed for the life of the page so the calendar, the past
@@ -520,9 +527,11 @@ function DayUseBookingForm({
   const rateFor = React.useCallback(
     (date: Date): DayUseRate => {
       const key = dayKey(date);
+      // A spectator pass has one price; the server never re-quotes it.
+      if (spectator) return spectatorRate(key);
       return serverRate?.dateKey === key ? serverRate : resolveDayUseRate(key);
     },
-    [serverRate],
+    [serverRate, spectator],
   );
 
   // Move focus to the new step heading so the change is announced and keyboard
@@ -587,10 +596,14 @@ function DayUseBookingForm({
           totalPriceCents: breakdown.totalCents,
           instagram: value.instagram?.trim() || null,
         };
-        const result = await createBooking(normalizedValue, {
-          adultUnitCents: rate.adultUnitCents,
-          kidsUnitCents: rate.kidsUnitCents,
-        });
+        const result = await createBooking(
+          normalizedValue,
+          {
+            adultUnitCents: rate.adultUnitCents,
+            kidsUnitCents: rate.kidsUnitCents,
+          },
+          { spectator },
+        );
         if (result.success && result.bookingId) {
           toast.success(result.message);
           router.push(`/bookings/${result.bookingId}`);
@@ -893,7 +906,7 @@ function DayUseBookingForm({
                           const event = eventFor(field.state.value);
                           return event && <SelectedDayEventCard event={event} />;
                         })()}
-                        {field.state.value && (
+                        {field.state.value && !spectator && (
                           <SelectedDayRateCard rate={rateFor(field.state.value)} />
                         )}
                         {isInvalid && (
@@ -962,6 +975,7 @@ function DayUseBookingForm({
                         rate={rateFor(date)}
                         adults={adults}
                         kids={kids ?? 0}
+                        spectator={spectator}
                       />
                     )}
 
@@ -1331,7 +1345,7 @@ function DayUseBookingForm({
                 )}
                 style={{ background: SKY, color: NAVY }}
               >
-                {isSubmitting ? "Sending…" : "Request my day"}
+                {isSubmitting ? "Sending…" : spectator ? "Request my spectator pass" : "Request my day"}
               </Button>
             )}
           </div>

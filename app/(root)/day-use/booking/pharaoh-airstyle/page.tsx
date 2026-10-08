@@ -1,50 +1,7 @@
-import DayUseBookingForm from "@/components/day-use/DayUseBookingForm";
-import pharaohPhoto from "@/public/images/kitesurfing/kite_booking_form_descktop.webp";
-import { PHARAOH_EVENT_HOURS } from "@/lib/constants";
+import { redirect } from "next/navigation";
 
-// Spectator registration for the Pharaoh Airstyle day. This is a day-use
-// booking in every respect — same rate, same "day-use" service, same emails,
-// same payment path — so it lands in the day-use numbers where it belongs.
-// The only difference is that the date is stated rather than chosen.
-//
-// Built the way the calendar stores a selection: UTC midnight, so a
-// late-night booker doesn't persist the 8th.
-const PHARAOH_DAY_USE_DATE = new Date(Date.UTC(2026, 9, 9));
-
-// A single sentence rather than a bullet list — FixedDatePanel drops the
-// bullet dot when there's only one line, since one bullet isn't a list.
-const EVENT_HIGHLIGHTS = [
-  "Join us for a day packed with activities, music, flavorful bites, and high-flying kitesurfing tricks",
-];
-
+// The seated Pharaoh Airstyle booking is closed: the event day now sells
+// bean-bag spectator passes only. Old links and bookmarks land on the pass.
 export default function PharaohAirstyleDayUsePage() {
-  return (
-    <DayUseBookingForm
-      variant={{
-        fixedDate: PHARAOH_DAY_USE_DATE,
-        eventHighlights: EVENT_HIGHLIGHTS,
-        stepOneTitle: "Pharaoh Airstyle · 9 October",
-        photo: pharaohPhoto,
-        // The kiter is high in this frame, so the day-use crop (which biases
-        // low, to below a horizon) would cut the subject off entirely —
-        // especially on mobile, where the rail is a short banner.
-        photoClassName: "object-[center_28%]",
-        rail: {
-          eyebrow: "Fins Beach Club · Sokhna",
-          titleTop: "Pharaohs",
-          titleBottom: "Airstyle Competition",
-          mobileSummary: (
-            <>
-              <b className="font-[700] text-white">Fri 9 Oct</b> · {PHARAOH_EVENT_HOURS}
-            </>
-          ),
-          bullets: [
-            "Friday 9 October 2026",
-            PHARAOH_EVENT_HOURS,
-            "Kite competition",
-          ],
-        },
-      }}
-    />
-  );
+  redirect("/day-use/booking/pharaoh-airstyle/spectator");
 }

@@ -17,10 +17,12 @@ export default function PayDepositOnline({
   bookingId,
   paymentLink,
   paymentLinkExpiresAt = null,
+  paysInFull = false,
 }: {
   bookingId: string;
   paymentLink: string | null;
   paymentLinkExpiresAt?: string | null;
+  paysInFull?: boolean;
 }) {
   const [loading, setLoading] = React.useState(false);
 
@@ -72,7 +74,7 @@ export default function PayDepositOnline({
           aria-live="polite"
           className="font-[family-name:var(--font-raleway)] text-[0.75rem] tracking-[0.16em] uppercase font-[600]"
         >
-          {loading ? "Preparing secure checkout…" : "Pay deposit online"}
+          {loading ? "Preparing secure checkout…" : paysInFull ? "Pay online" : "Pay deposit online"}
         </span>
       </button>
       <div
