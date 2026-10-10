@@ -5,10 +5,8 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { KitesurfingHero } from "./KitesurfingHero";
 import { DayUseHero } from "./DayUseHero";
 import { RestaurantHero } from "./RestaurantHero";
-import { PharaohHero } from "./PharaohHero";
 
 const heroComponents = [
-  PharaohHero,
   DayUseHero,
   KitesurfingHero,
   RestaurantHero,
