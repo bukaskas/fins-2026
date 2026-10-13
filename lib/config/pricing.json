@@ -13,7 +13,7 @@
     "2026-05-30": { "adultPriceCents": 160000, "rateType": "peak" }
   },
   "groupDiscount": {
-    "minAdults": 5,
+    "minAdults": 3,
     "perAdultCents": { "regular": 40000, "peak": 40000, "best-value": 30000 }
   }
 }
