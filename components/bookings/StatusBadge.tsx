@@ -10,6 +10,7 @@ const BOOKING_STATUS_STYLES: Record<BookingStatus, { label: string; className: s
   DECLINED:            { label: "Declined",         className: "bg-red-100 text-red-800" },
   NO_RESPONSE_EXPIRED: { label: "No Response",      className: "bg-gray-200 text-gray-500" },
   CANCELED:            { label: "Canceled",         className: "bg-gray-100 text-gray-600" },
+  EXPIRED:             { label: "Expired",          className: "bg-stone-100 text-stone-600" },
 };
 
 export function BookingStatusBadge({ status }: { status: BookingStatus }) {

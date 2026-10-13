@@ -16,6 +16,7 @@ const CLOSED_STATUSES: BookingStatus[] = [
   BookingStatus.DECLINED,
   BookingStatus.CANCELED,
   BookingStatus.NO_RESPONSE_EXPIRED,
+  BookingStatus.EXPIRED,
 ];
 
 /** ARRIVED: the guest is on the beach — nothing left to ask over chat. */

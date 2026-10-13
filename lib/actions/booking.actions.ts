@@ -631,6 +631,7 @@ const DEAD_BOOKING_STATUSES: BookingStatus[] = [
   BookingStatus.DECLINED,
   BookingStatus.NO_RESPONSE_EXPIRED,
   BookingStatus.CANCELED,
+  BookingStatus.EXPIRED,
 ];
 
 const BOOKINGS_MAX_LIMIT = 2000;
@@ -1491,6 +1492,44 @@ export async function getBookingById(id: string) {
  */
 export async function cancelExpiredWaitingPayments() {
   return expireWaitingPayments();
+}
+
+/**
+ * Close bookings still open after their visit date (Cairo) as EXPIRED, each
+ * recorded as a cron change. Nothing is emailed: the outcome is unknown, so
+ * the guest is not told their spot was released for a day already gone.
+ * Idempotent; the first run also sweeps the season's backlog.
+ */
+export async function expirePastOpenBookings(): Promise<number> {
+  const stale = await prisma.booking.findMany({
+    where: {
+      bookingStatus: { in: ACTIVE_PENDING_STATUSES },
+      date: { lt: cairoBusinessDayStart() },
+    },
+    select: { id: true, bookingStatus: true },
+  });
+  if (stale.length === 0) return 0;
+
+  // Re-check the status in the write so a booking confirmed since the read
+  // is left alone.
+  const expired = await prisma.booking.updateManyAndReturn({
+    where: {
+      id: { in: stale.map((b) => b.id) },
+      bookingStatus: { in: ACTIVE_PENDING_STATUSES },
+    },
+    data: { bookingStatus: BookingStatus.EXPIRED },
+    select: { id: true },
+  });
+  const fromStatus = new Map(stale.map((b) => [b.id, b.bookingStatus]));
+  await logBookingEvents(
+    expired.map((b) => ({
+      bookingId: b.id,
+      source: BookingEventSource.CRON,
+      fromStatus: fromStatus.get(b.id),
+      toStatus: BookingStatus.EXPIRED,
+    })),
+  );
+  return expired.length;
 }
 
 export async function updateBookingStatus(id: string, status: BookingStatus) {

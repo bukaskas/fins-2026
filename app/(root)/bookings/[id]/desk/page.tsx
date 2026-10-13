@@ -94,7 +94,8 @@ export default async function BookingDeskPage({
   const isClosed =
     booking.bookingStatus === BookingStatus.CANCELED ||
     booking.bookingStatus === BookingStatus.DECLINED ||
-    booking.bookingStatus === BookingStatus.NO_RESPONSE_EXPIRED;
+    booking.bookingStatus === BookingStatus.NO_RESPONSE_EXPIRED ||
+    booking.bookingStatus === BookingStatus.EXPIRED;
 
   return (
     <div className="min-h-screen bg-[#faf9f7] pb-28 sm:pb-24">

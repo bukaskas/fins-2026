@@ -46,6 +46,7 @@ const STATUS_TONE: Record<
   DECLINED:            { label: "Declined",        bg: "#FBE3E1", ring: "#F1C0BB", text: "#7E2A23", dot: "#D86158" },
   NO_RESPONSE_EXPIRED: { label: "No response",     bg: "#EFEEEC", ring: "#D9D6D1", text: "#4B4640", dot: "#9C9690" },
   CANCELED:            { label: "Canceled",        bg: "#F2F1EE", ring: "#DCD9D3", text: "#615C55", dot: "#A8A39B" },
+  EXPIRED:             { label: "Expired",         bg: "#F2F1EE", ring: "#DCD9D3", text: "#57534E", dot: "#A8A29E" },
 };
 
 function fmtEGP(cents: number): string {

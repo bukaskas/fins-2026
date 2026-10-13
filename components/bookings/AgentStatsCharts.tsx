@@ -34,7 +34,7 @@ const SERVICE_COLORS = [
 const STATUS_COLORS = {
   confirmed: "#34d399",
   open: "#fbbf24",
-  lost: "#f87171",
+  expired: "#f87171",
   declined: "#94a3b8",
 };
 
@@ -52,12 +52,12 @@ function serviceLabel(value: string) {
 
 export function AgentStatsCharts({ perAgent, serviceBreakdown, hasBookings }: Props) {
   const stackedData = perAgent
-    .filter((a) => a.confirmedCount + a.openCount + a.lostCount + a.declinedCount > 0)
+    .filter((a) => a.confirmedCount + a.openCount + a.lostCount + a.declinedCount + a.expiredCount > 0)
     .map((a) => ({
       name: a.name,
       confirmed: a.confirmedCount,
       open: a.openCount,
-      lost: a.lostCount,
+      expired: a.lostCount + a.expiredCount,
       declined: a.declinedCount,
     }));
 
@@ -119,13 +119,14 @@ export function AgentStatsCharts({ perAgent, serviceBreakdown, hasBookings }: Pr
               name="Confirmed"
             />
             <Bar dataKey="open" stackId="a" fill={STATUS_COLORS.open} name="Open" />
-            <Bar dataKey="lost" stackId="a" fill={STATUS_COLORS.lost} name="Lost" />
+            <Bar dataKey="expired" stackId="a" fill={STATUS_COLORS.expired} name="Expired" />
             <Bar
               dataKey="declined"
               stackId="a"
               fill={STATUS_COLORS.declined}
               name="Declined"
             />
+
           </BarChart>
         </ResponsiveContainer>
       </div>

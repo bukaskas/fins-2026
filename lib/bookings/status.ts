@@ -21,6 +21,7 @@ export const STATUS_BORDER: Record<BookingStatus, string> = {
   DECLINED:            "#ef4444",
   NO_RESPONSE_EXPIRED: "#9ca3af",
   CANCELED:            "#d1d5db",
+  EXPIRED:             "#a8a29e",
 };
 
 /** Darkened pairs — the only values allowed to colour status text. */
@@ -34,6 +35,7 @@ export const STATUS_TEXT: Record<BookingStatus, string> = {
   DECLINED:            "#b91c1c",
   NO_RESPONSE_EXPIRED: "#4b5563",
   CANCELED:            "#6b7280",
+  EXPIRED:             "#57534e",
 };
 
 export const STATUS_LABEL: Record<BookingStatus, string> = {
@@ -46,6 +48,7 @@ export const STATUS_LABEL: Record<BookingStatus, string> = {
   DECLINED:            "Declined",
   NO_RESPONSE_EXPIRED: "No Response",
   CANCELED:            "Canceled",
+  EXPIRED:             "Expired",
 };
 
 const BOOKING_STATUS_SET: ReadonlySet<string> = new Set(
@@ -121,6 +124,7 @@ export const STATUS_GROUPS: { label: string; statuses: BookingStatus[] }[] = [
       BookingStatus.DECLINED,
       BookingStatus.NO_RESPONSE_EXPIRED,
       BookingStatus.CANCELED,
+      BookingStatus.EXPIRED,
     ],
   },
 ];
@@ -130,6 +134,7 @@ export const CLOSING_STATUSES: BookingStatus[] = [
   BookingStatus.DECLINED,
   BookingStatus.NO_RESPONSE_EXPIRED,
   BookingStatus.CANCELED,
+  BookingStatus.EXPIRED,
 ];
 
 /**
@@ -173,6 +178,8 @@ export const STATUS_CONSEQUENCE: Partial<Record<BookingStatus, string>> = {
   DECLINED: "Closes the booking. This cannot be undone from here.",
   NO_RESPONSE_EXPIRED: "Closes the booking. This cannot be undone from here.",
   CANCELED: "Closes the booking. This cannot be undone from here.",
+  EXPIRED:
+    "Closes a booking whose date has passed without an outcome. Not counted against conversion. This cannot be undone from here.",
 };
 
 /** Event registration groups (Booking.bookingGroup) — staff-facing labels and tones. */

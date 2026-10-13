@@ -6,6 +6,7 @@ import { ChevronDown, ChevronUp } from "lucide-react";
 
 import {
   conversionRate,
+  expiredTotal,
   SELF_SERVE_KEY,
   type AgentStatsRow,
 } from "@/lib/bookings/agent-stats";
@@ -24,11 +25,15 @@ type SortKey =
   | "contactsLogged"
   | "overdueFollowUps";
 
-const COLUMNS: { key: SortKey; label: string; align?: "left" }[] = [
+/** What counts as expired — mirrors the rules in lib/bookings/agent-stats.ts. */
+const EXPIRED_DESCRIPTION =
+  "Never confirmed: closed as No response, cancelled automatically, or still open when the date passed. Date-passed bookings are left out of Conv %. Bookings staff declined or cancelled count as declined instead.";
+
+const COLUMNS: { key: SortKey; label: string; align?: "left"; hint?: string }[] = [
   { key: "name", label: "Agent", align: "left" },
   { key: "confirmedCount", label: "Confirmed" },
   { key: "openCount", label: "Open" },
-  { key: "lostCount", label: "Lost" },
+  { key: "lostCount", label: "Expired", hint: EXPIRED_DESCRIPTION },
   { key: "conv", label: "Conv %" },
   { key: "revenueCents", label: "Booked value" },
   { key: "outstandingCents", label: "Outstanding" },
@@ -49,6 +54,8 @@ function sortValue(row: AgentStatsRow, key: SortKey): number | string | null {
       return row.name;
     case "conv":
       return conversionRate(row);
+    case "lostCount":
+      return expiredTotal(row);
     case "avgTicket":
       return avgTicket(row);
     case "firstResponse":
@@ -143,7 +150,7 @@ export function AgentStatsTable({ rows }: { rows: AgentStatsRow[] }) {
               <dl className="grid grid-cols-3 gap-x-3 gap-y-3 text-[0.82rem] text-[#1a1614]">
                 <Stat label="Confirmed" value={row.confirmedCount} tone="#15803d" />
                 <Stat label="Open" value={row.openCount} />
-                <Stat label="Lost" value={row.lostCount} tone="#b91c1c" />
+                <Stat label="Expired" value={expiredTotal(row)} tone="#b91c1c" />
                 <Stat label="Booked value" value={formatEGP(row.revenueCents)} />
                 <Stat label="Outstanding" value={formatEGP(row.outstandingCents)} />
                 <Stat
@@ -182,6 +189,7 @@ export function AgentStatsTable({ rows }: { rows: AgentStatsRow[] }) {
                   dir={sortDir}
                   onClick={handleSort}
                   align={c.align ?? "right"}
+                  hint={c.hint}
                 />
               ))}
             </tr>
@@ -205,7 +213,7 @@ export function AgentStatsTable({ rows }: { rows: AgentStatsRow[] }) {
                   </td>
                   <td className="px-4 py-3 text-right tabular-nums">{row.openCount}</td>
                   <td className="px-4 py-3 text-right tabular-nums text-[#b91c1c]">
-                    {row.lostCount}
+                    {expiredTotal(row)}
                   </td>
                   <td className="px-4 py-3 text-right tabular-nums">
                     {percent(conversionRate(row))}
@@ -238,6 +246,10 @@ export function AgentStatsTable({ rows }: { rows: AgentStatsRow[] }) {
           </tbody>
         </table>
       </div>
+
+      <p className="mt-3 font-[family-name:var(--font-raleway)] text-[0.7rem] text-[#6b6460]">
+        <span className="font-[600] text-[#b91c1c]">Expired:</span> {EXPIRED_DESCRIPTION}
+      </p>
     </>
   );
 }
@@ -301,6 +313,7 @@ function Th({
   dir,
   onClick,
   align,
+  hint,
 }: {
   label: string;
   sortKey: SortKey;
@@ -308,6 +321,7 @@ function Th({
   dir: "asc" | "desc";
   onClick: (k: SortKey) => void;
   align: "left" | "right";
+  hint?: string;
 }) {
   const active = current === sortKey;
   return (
@@ -319,6 +333,7 @@ function Th({
       <button
         type="button"
         onClick={() => onClick(sortKey)}
+        title={hint}
         className={`inline-flex items-center gap-1 uppercase tracking-[inherit] font-[inherit] cursor-pointer ${
           active ? "text-[#1a1614]" : ""
         }`}

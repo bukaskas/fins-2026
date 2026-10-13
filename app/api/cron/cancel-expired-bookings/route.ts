@@ -1,10 +1,14 @@
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 
-import { cancelExpiredWaitingPayments } from "@/lib/actions/booking.actions";
+import {
+  cancelExpiredWaitingPayments,
+  expirePastOpenBookings,
+} from "@/lib/actions/booking.actions";
 import { sendReleasedHoldEmails } from "@/lib/bookings/guest-emails";
 
-// Cancels bookings whose 24h WAITING_PAYMENT window has elapsed.
+// Expires bookings still open after their visit date, then cancels bookings
+// whose 24h WAITING_PAYMENT window has elapsed.
 //
 // Wire any scheduler to call this on an interval (e.g. hourly):
 //   GET ${SERVER_URL}/api/cron/cancel-expired-bookings
@@ -29,12 +33,15 @@ export async function GET(req: Request) {
   }
 
   try {
+    // Past dates first: an unpaid hold whose day is already over expires
+    // quietly instead of cancelling and emailing a "released your spot" note.
+    const expired = await expirePastOpenBookings();
     const canceled = await cancelExpiredWaitingPayments();
-    if (canceled > 0) revalidatePath("/bookings", "layout");
+    if (canceled + expired > 0) revalidatePath("/bookings", "layout");
     // Covers rows expired here and rows expired earlier on a staff page load,
     // which never sends mail itself.
     const released = await sendReleasedHoldEmails();
-    return NextResponse.json({ ok: true, canceled, released });
+    return NextResponse.json({ ok: true, expired, canceled, released });
   } catch (error) {
     console.error("[cron] cancel-expired-bookings failed", error);
     return NextResponse.json(

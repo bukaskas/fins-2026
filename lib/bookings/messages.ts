@@ -172,7 +172,8 @@ export function recommendedBookingMessage(
     booking.bookingStatus === BookingStatus.ARRIVED ||
     booking.bookingStatus === BookingStatus.DECLINED ||
     booking.bookingStatus === BookingStatus.NO_RESPONSE_EXPIRED ||
-    booking.bookingStatus === BookingStatus.CANCELED
+    booking.bookingStatus === BookingStatus.CANCELED ||
+    booking.bookingStatus === BookingStatus.EXPIRED
   ) {
     return null;
   }

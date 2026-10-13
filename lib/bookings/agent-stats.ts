@@ -20,6 +20,8 @@ import {
  * - Conversion is won / (won + lost). Staff declines are a correct decision
  *   (a full date), so they are shown but left out. A cancellation after
  *   confirmation was still won.
+ * - An expired booking (its date passed while still open) has no known
+ *   outcome — the guest may well have come — so it is shown but left out too.
  */
 
 export const CONFIRMED_STATUSES: BookingStatus[] = [
@@ -96,6 +98,8 @@ export type AgentStatsRow = {
   lostCount: number;
   /** Turned down by staff; excluded from conversion. */
   declinedCount: number;
+  /** Date passed while still open, outcome unknown; excluded from conversion. */
+  expiredCount: number;
   /** Still in progress. */
   openCount: number;
   /** Booked value of priced confirmed bookings. */
@@ -117,6 +121,7 @@ export type AgentStatsTeam = {
   cancelledAfterConfirmCount: number;
   lostCount: number;
   declinedCount: number;
+  expiredCount: number;
   /** Open with no owner and no staff action yet. */
   openUntouched: number;
   openInProgress: number;
@@ -147,6 +152,15 @@ export function conversionRate(row: {
   const won = row.confirmedCount + row.cancelledAfterConfirmCount;
   const decided = won + row.lostCount;
   return decided >= MIN_DECIDED_FOR_CONVERSION ? won / decided : null;
+}
+
+/**
+ * What the agents page shows as Expired: leads that ran out (lostCount) plus
+ * bookings whose date passed while open (expiredCount). Only the first part
+ * counts against conversion.
+ */
+export function expiredTotal(row: { lostCount: number; expiredCount: number }): number {
+  return row.lostCount + row.expiredCount;
 }
 
 function median(values: number[]): number | null {
@@ -194,6 +208,7 @@ export function buildAgentStats(input: {
         cancelledAfterConfirmCount: 0,
         lostCount: 0,
         declinedCount: 0,
+        expiredCount: 0,
         openCount: 0,
         revenueCents: 0,
         outstandingCents: 0,
@@ -218,6 +233,7 @@ export function buildAgentStats(input: {
     cancelledAfterConfirmCount: 0,
     lostCount: 0,
     declinedCount: 0,
+    expiredCount: 0,
     openUntouched: 0,
     openInProgress: 0,
     conversionRate: null,
@@ -286,6 +302,12 @@ export function buildAgentStats(input: {
       } else {
         team.openUntouched += 1;
       }
+      continue;
+    }
+
+    if (b.bookingStatus === BookingStatus.EXPIRED) {
+      if (handlerId) rowFor(handlerId).expiredCount += 1;
+      team.expiredCount += 1;
       continue;
     }
 

@@ -139,6 +139,10 @@ enum BookingStatus {
   DECLINED
   NO_RESPONSE_EXPIRED
   CANCELED
+  /// The visit date passed while the booking was still open, so nobody knows
+  /// whether the guest came. Set by the hourly cron, never emailed, and kept
+  /// out of conversion rather than counted as lost.
+  EXPIRED
 }
 
 enum BookingContactChannel {

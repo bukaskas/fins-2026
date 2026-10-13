@@ -18,6 +18,7 @@ const STATUS_OPTIONS: { value: BookingStatus; label: string }[] = [
   { value: BookingStatus.DECLINED, label: "Declined" },
   { value: BookingStatus.NO_RESPONSE_EXPIRED, label: "No response" },
   { value: BookingStatus.CANCELED, label: "Canceled" },
+  { value: BookingStatus.EXPIRED, label: "Expired" },
 ];
 
 type Props = {

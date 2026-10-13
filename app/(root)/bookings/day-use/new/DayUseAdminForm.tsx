@@ -25,6 +25,7 @@ const STATUS_LABELS: Record<BookingStatus, string> = {
   DECLINED:            "Declined",
   NO_RESPONSE_EXPIRED: "No Response",
   CANCELED:            "Canceled",
+  EXPIRED:             "Expired",
 };
 
 const fieldBox =

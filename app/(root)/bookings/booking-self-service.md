@@ -250,7 +250,7 @@ failure is logged, never rolled back.
 ### 2.2 Cancel
 
 `TERMINAL_STATUSES` does not exist yet — define it next to `CAPACITY_STATUSES`
-(`booking.actions.ts:74`) as `[CANCELED, DECLINED, NO_RESPONSE_EXPIRED, ARRIVED]`.
+(`booking.actions.ts:74`) as `[CANCELED, DECLINED, NO_RESPONSE_EXPIRED, EXPIRED, ARRIVED]`.
 
 ```ts
 const { count } = await prisma.booking.updateMany({

@@ -140,7 +140,7 @@ async function BookingsAgentsPage({
 
   const { team, previous, perAgent, scope, trackingSince } = result.data;
   const activeCount = perAgent.filter(
-    (a) => a.agentId !== null && a.confirmedCount + a.openCount + a.lostCount + a.declinedCount > 0,
+    (a) => a.agentId !== null && a.confirmedCount + a.openCount + a.lostCount + a.declinedCount + a.expiredCount > 0,
   ).length;
   const untouchedHref = `/bookings?agent=unassigned&status=${ACTIVE_PENDING_STATUSES.join(",")}&range=all`;
 
@@ -197,7 +197,7 @@ async function BookingsAgentsPage({
           <Kpi
             label="Confirmed"
             value={team.confirmedCount.toLocaleString("en-US")}
-            sub={`${team.lostCount} lost · ${team.declinedCount} declined · ${team.cancelledAfterConfirmCount} cancelled later`}
+            sub={`${team.lostCount + team.expiredCount} expired · ${team.declinedCount} declined · ${team.cancelledAfterConfirmCount} cancelled later`}
             note={changeVsPrevious(team.confirmedCount, previous?.confirmedCount)}
             accent="#15803d"
           />
@@ -206,7 +206,7 @@ async function BookingsAgentsPage({
             value={
               team.conversionRate === null ? "n/a" : `${Math.round(team.conversionRate * 100)}%`
             }
-            sub="Won / (won + lost); declines excluded"
+            sub="Won / (won + expired); declines and date-passed excluded"
             note={conversionChange(team, previous)}
           />
           <Kpi
