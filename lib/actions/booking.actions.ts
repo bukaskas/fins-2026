@@ -31,6 +31,7 @@ import {
   KITE_COMMUNITY_PRICE_CENTS,
   priceFromUnitRates,
   ratesFromSnapshot,
+  sameGroupDiscount,
   snapshotFromRate,
   isSpectatorRate,
   spectatorRate,
@@ -276,7 +277,8 @@ export async function createBooking(
     if (dayUseBreakdown) {
       const quoteIsStale = quotedRates
         ? quotedRates.adultUnitCents !== dayUseBreakdown.adultUnitCents ||
-          quotedRates.kidsUnitCents !== dayUseBreakdown.kidsUnitCents
+          quotedRates.kidsUnitCents !== dayUseBreakdown.kidsUnitCents ||
+          !sameGroupDiscount(quotedRates.groupDiscount, dayUseBreakdown.groupDiscount)
         : validatedData.totalPriceCents != null &&
           validatedData.totalPriceCents !== dayUseBreakdown.totalCents;
       if (quoteIsStale) {
@@ -289,6 +291,7 @@ export async function createBooking(
             adultUnitCents: dayUseBreakdown.adultUnitCents,
             kidsUnitCents: dayUseBreakdown.kidsUnitCents,
             rateType: dayUseBreakdown.rateType,
+            groupDiscount: dayUseBreakdown.groupDiscount,
           },
         };
       }
@@ -1256,6 +1259,8 @@ const DAY_USE_PRICING_SELECT = {
   adultUnitPriceCents: true,
   kidsUnitPriceCents: true,
   dayUseRateType: true,
+  groupDiscountPerAdultCents: true,
+  groupDiscountMinAdults: true,
 } satisfies Prisma.BookingSelect;
 
 type DayUsePricingRow = Prisma.BookingGetPayload<{ select: typeof DAY_USE_PRICING_SELECT }>;
@@ -1266,8 +1271,10 @@ const UNSNAPSHOTTED_PARTY_EDIT_MESSAGE =
 /**
  * Price a staff edit to a Day Use booking.
  *
- * - Same date: the booking keeps the unit rates it was sold at, whatever the
- *   config says today. A legacy row without them can't have its party changed.
+ * - Same date: the booking keeps the unit rates and group discount terms it
+ *   was sold at, whatever the config says today, and the party is rechecked
+ *   against that threshold. A legacy row without rates can't have its party
+ *   changed.
  * - New date (or a booking becoming Day Use): the destination date's current
  *   rate, replacing the whole snapshot in the same write.
  *
@@ -1343,6 +1350,8 @@ export async function updateBooking(id: string, data: UpdateBookingData) {
         adultUnitPriceCents: null,
         kidsUnitPriceCents: null,
         dayUseRateType: null,
+        groupDiscountPerAdultCents: null,
+        groupDiscountMinAdults: null,
       };
     }
 
@@ -2507,6 +2516,7 @@ export async function createDayUseBookingAdmin(data: {
   await requireCapability("bookings:manage");
   try {
     const creatorId = await currentUserId();
+    const quote = calculateDayUsePrice(data.date, data.numberOfPeople, data.numberOfKids);
     const booking = await prisma.booking.create({
       data: {
         agentId: creatorId,
@@ -2517,9 +2527,11 @@ export async function createDayUseBookingAdmin(data: {
         service: "day-use",
         numberOfPeople: data.numberOfPeople,
         numberOfKids: data.numberOfKids,
-        // Freeze today's rate for the date so a later party edit reprices from
-        // it rather than being blocked as an unsnapshotted legacy row.
-        ...snapshotFromRate(calculateDayUsePrice(data.date, 1, 0)),
+        // Priced exactly as the guest form would (group discount included),
+        // and frozen so a later party edit reprices from these rates rather
+        // than being blocked as an unsnapshotted legacy row.
+        totalPriceCents: quote.totalCents,
+        ...snapshotFromRate(quote),
         bookingStatus: data.bookingStatus,
         amountPaidCents: data.amountPaidCents,
         ...(data.bookingStatus === BookingStatus.WAITING_PAYMENT

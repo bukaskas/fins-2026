@@ -273,6 +273,9 @@ export default async function BookingDeskPage({
                 {RATE_LABELS[soldAt.rateType]} rate ·{" "}
                 {formatEGPAmount(soldAt.adultUnitCents)} / adult ·{" "}
                 {formatEGPAmount(soldAt.kidsUnitCents)} / child EGP
+                {soldAt.groupDiscount &&
+                  ` · group discount ${formatEGPAmount(soldAt.groupDiscount.perAdultCents)} / adult from ${soldAt.groupDiscount.minAdults} adults` +
+                    (adults >= soldAt.groupDiscount.minAdults ? " (applied)" : "")}
               </p>
             )}
           </div>

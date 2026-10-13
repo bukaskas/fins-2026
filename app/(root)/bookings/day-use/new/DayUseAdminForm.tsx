@@ -7,6 +7,7 @@ import { CalendarIcon } from "lucide-react";
 import { BookingStatus } from "@prisma/client";
 import { toast } from "sonner";
 import { createDayUseBookingAdmin } from "@/lib/actions/booking.actions";
+import { RATE_LABELS, calculateDayUsePrice, formatEGP } from "@/lib/pricing";
 import { PhoneInput } from "@/app/(root)/kitesurfing/booking/phoneInput";
 import { Calendar } from "@/components/ui/calendar";
 import {
@@ -48,6 +49,16 @@ export default function DayUseAdminForm() {
   const [kidsStr, setKidsStr]     = useState("0");
   const [status, setStatus]       = useState<BookingStatus>(BookingStatus.PENDING);
   const [amountEgp, setAmountEgp] = useState("");
+
+  // Same calculation the guest form and the saved snapshot use, so staff
+  // quote exactly what the website would.
+  const quote = date
+    ? calculateDayUsePrice(
+        date,
+        Math.max(1, parseInt(adultsStr) || 1),
+        Math.max(0, parseInt(kidsStr) || 0),
+      )
+    : null;
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -207,6 +218,37 @@ export default function DayUseAdminForm() {
           />
         </div>
       </div>
+
+      {/* Price preview */}
+      {quote && (
+        <div
+          className="rounded-2xl border border-[#bae6fd]/60 bg-white px-4 py-3 text-[0.82rem] text-[#0c2340] space-y-1"
+          style={{ fontFamily: "var(--font-raleway)" }}
+        >
+          <div className="flex justify-between">
+            <span className="text-[#54657a]">{RATE_LABELS[quote.rateType]} rate</span>
+            <span className="tabular-nums">
+              {formatEGP(quote.adultUnitCents)} / adult · {formatEGP(quote.kidsUnitCents)} / child
+            </span>
+          </div>
+          {quote.groupDiscount && (
+            <div className="flex justify-between">
+              <span className="text-[#54657a]">
+                Group discount ({quote.groupDiscount.minAdults}+ adults)
+              </span>
+              <span className="tabular-nums">
+                {quote.groupDiscountCents > 0
+                  ? `−${formatEGP(quote.groupDiscountCents)}`
+                  : `${formatEGP(quote.groupDiscount.perAdultCents)} / adult, not reached`}
+              </span>
+            </div>
+          )}
+          <div className="flex justify-between font-[600] pt-1 border-t border-[#bae6fd]/60">
+            <span>Total</span>
+            <span className="tabular-nums">{formatEGP(quote.totalCents)}</span>
+          </div>
+        </div>
+      )}
 
       {/* Status */}
       <div className={fieldBox}>

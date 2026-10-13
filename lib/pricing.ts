@@ -45,6 +45,7 @@ export function spectatorRate(dateKey: DateKey): DayUseRate {
     adultUnitCents: SPECTATOR_UNIT_PRICE_CENTS,
     kidsUnitCents: SPECTATOR_UNIT_PRICE_CENTS,
     rateType: "regular",
+    groupDiscount: null,
   };
 }
 
@@ -54,6 +55,8 @@ export function spectatorSnapshot(): DayUseRateSnapshot {
     adultUnitPriceCents: SPECTATOR_UNIT_PRICE_CENTS,
     kidsUnitPriceCents: SPECTATOR_UNIT_PRICE_CENTS,
     dayUseRateType: SPECTATOR_RATE_TYPE,
+    groupDiscountPerAdultCents: null,
+    groupDiscountMinAdults: null,
   };
 }
 
@@ -69,11 +72,59 @@ function toWholeEgp(cents: number): number {
   return Math.round(cents / 100) * 100;
 }
 
+/**
+ * Group discount terms: once a party has `minAdults` or more adults, every
+ * adult pays `perAdultCents` less. Kids are never discounted.
+ */
+export interface GroupDiscount {
+  perAdultCents: number;
+  minAdults: number;
+}
+
 export interface DayUseRate {
   dateKey: DateKey;
   adultUnitCents: number;
   kidsUnitCents: number;
   rateType: RateType;
+  /** The terms on offer for this date, whether or not a given party qualifies. */
+  groupDiscount: GroupDiscount | null;
+}
+
+/** Everything that decides a party's price: a fresh quote or a booking's snapshot. */
+export type UnitRates = Pick<
+  DayUseRate,
+  "adultUnitCents" | "kidsUnitCents" | "rateType" | "groupDiscount"
+>;
+
+/** The group discount the config offers on a date of this rate type, if any. */
+export function groupDiscountFor(
+  rateType: RateType,
+  config: PricingConfig = pricingConfig,
+): GroupDiscount | null {
+  const discount = config.groupDiscount;
+  const perAdultCents = discount?.perAdultCents[rateType] ?? 0;
+  if (!discount || perAdultCents === 0) return null;
+  return { perAdultCents, minAdults: discount.minAdults };
+}
+
+/**
+ * The group discount across all rate types, for advertising it ("groups of
+ * 5+ save 100–200 EGP per adult"). Null when no rate type offers one.
+ */
+export function getGroupDiscountSummary(config: PricingConfig = pricingConfig): {
+  minAdults: number;
+  minPerAdultCents: number;
+  maxPerAdultCents: number;
+} | null {
+  const amounts = RATE_TYPES.map((t) => groupDiscountFor(t, config)?.perAdultCents ?? 0).filter(
+    (cents) => cents > 0,
+  );
+  if (!config.groupDiscount || amounts.length === 0) return null;
+  return {
+    minAdults: config.groupDiscount.minAdults,
+    minPerAdultCents: Math.min(...amounts),
+    maxPerAdultCents: Math.max(...amounts),
+  };
 }
 
 /** Whether a date falls on the configured weekend (Fri + Sat in Egypt). */
@@ -88,7 +139,8 @@ export function isWeekendDateKey(
  * The one Day Use price rule: an exact date override wins; otherwise a weekend
  * date takes the weekend adult price and label, any other date the weekday
  * price and label. Children pay `kidsRateMultiplier` of that same
- * date's adult price, rounded to whole EGP.
+ * date's adult price, rounded to whole EGP. The group discount on offer
+ * follows the date's rate type.
  */
 export function resolveDayUseRate(
   dateKey: DateKey,
@@ -98,38 +150,60 @@ export function resolveDayUseRate(
   const weekend = isWeekendDateKey(dateKey, config);
   const baseCents = weekend ? config.weekendAdultPriceCents : config.adultPriceCents;
   const adultUnitCents = override?.adultPriceCents ?? baseCents;
+  const rateType =
+    override?.rateType ?? (weekend ? config.weekendRateType : config.weekdayRateType);
   return {
     dateKey,
     adultUnitCents,
     kidsUnitCents: toWholeEgp(adultUnitCents * config.kidsRateMultiplier),
-    rateType: override?.rateType ?? (weekend ? config.weekendRateType : config.weekdayRateType),
+    rateType,
+    groupDiscount: groupDiscountFor(rateType, config),
   };
 }
 
 export interface PriceBreakdown {
   adultUnitCents: number;
   kidsUnitCents: number;
+  /** Adults at the full unit price, before any group discount. */
   adultTotalCents: number;
   kidsTotalCents: number;
+  /** The terms on offer, carried so a snapshot keeps them even when this
+   *  party doesn't qualify yet. */
+  groupDiscount: GroupDiscount | null;
+  /** Amount actually taken off this party: 0 unless it qualifies. */
+  groupDiscountCents: number;
   totalCents: number;
   rateType: RateType;
+}
+
+/** Whether a party of this many adults gets the group discount. */
+export function qualifiesForGroupDiscount(
+  discount: GroupDiscount | null | undefined,
+  adults: number,
+): discount is GroupDiscount {
+  return !!discount && adults >= discount.minAdults;
 }
 
 /** Party arithmetic on already-decided unit rates — a fresh quote or a
  *  booking's snapshot, never a second place prices are worked out. */
 export function priceFromUnitRates(
-  rates: Pick<DayUseRate, "adultUnitCents" | "kidsUnitCents" | "rateType">,
+  rates: UnitRates,
   adults: number,
   kids: number,
 ): PriceBreakdown {
   const adultTotalCents = rates.adultUnitCents * adults;
   const kidsTotalCents = rates.kidsUnitCents * kids;
+  const groupDiscountCents = qualifiesForGroupDiscount(rates.groupDiscount, adults)
+    ? rates.groupDiscount.perAdultCents * adults
+    : 0;
   return {
     adultUnitCents: rates.adultUnitCents,
     kidsUnitCents: rates.kidsUnitCents,
     adultTotalCents,
     kidsTotalCents,
-    totalCents: adultTotalCents + kidsTotalCents,
+    groupDiscount: rates.groupDiscount,
+    groupDiscountCents,
+    totalCents: adultTotalCents + kidsTotalCents - groupDiscountCents,
     rateType: rates.rateType,
   };
 }
@@ -152,30 +226,38 @@ export interface DayUseRateSnapshot {
   adultUnitPriceCents: number | null;
   kidsUnitPriceCents: number | null;
   dayUseRateType: string | null;
+  /** Group discount terms at booking time, null when none was on offer.
+   *  Stored even if the party didn't qualify, so a later party edit that
+   *  crosses the threshold gets the terms the guest was offered. */
+  groupDiscountPerAdultCents: number | null;
+  groupDiscountMinAdults: number | null;
 }
 
-export function snapshotFromRate(
-  rate: Pick<DayUseRate, "adultUnitCents" | "kidsUnitCents" | "rateType">,
-): DayUseRateSnapshot {
+export function snapshotFromRate(rate: UnitRates): DayUseRateSnapshot {
   return {
     adultUnitPriceCents: rate.adultUnitCents,
     kidsUnitPriceCents: rate.kidsUnitCents,
     dayUseRateType: rate.rateType,
+    groupDiscountPerAdultCents: rate.groupDiscount?.perAdultCents ?? null,
+    groupDiscountMinAdults: rate.groupDiscount?.minAdults ?? null,
   };
 }
 
 /** The unit rates a booking was sold at, or null for an unsnapshotted legacy row. */
-export function ratesFromSnapshot(
-  row: DayUseRateSnapshot,
-): Pick<DayUseRate, "adultUnitCents" | "kidsUnitCents" | "rateType"> | null {
+export function ratesFromSnapshot(row: DayUseRateSnapshot): UnitRates | null {
   if (row.adultUnitPriceCents === null || row.kidsUnitPriceCents === null) return null;
   const rateType = (RATE_TYPES as readonly string[]).includes(row.dayUseRateType ?? "")
     ? (row.dayUseRateType as RateType)
     : "regular";
+  const groupDiscount =
+    row.groupDiscountPerAdultCents && row.groupDiscountMinAdults
+      ? { perAdultCents: row.groupDiscountPerAdultCents, minAdults: row.groupDiscountMinAdults }
+      : null;
   return {
     adultUnitCents: row.adultUnitPriceCents,
     kidsUnitCents: row.kidsUnitPriceCents,
     rateType,
+    groupDiscount,
   };
 }
 
@@ -183,6 +265,19 @@ export function ratesFromSnapshot(
 export interface QuotedDayUseRates {
   adultUnitCents: number;
   kidsUnitCents: number;
+  /** Absent from a bundle that predates group discounts: read as none. */
+  groupDiscount?: GroupDiscount | null;
+}
+
+/** Whether two sets of group discount terms are the same offer. */
+export function sameGroupDiscount(
+  a: GroupDiscount | null | undefined,
+  b: GroupDiscount | null | undefined,
+): boolean {
+  return (
+    (a?.perAdultCents ?? 0) === (b?.perAdultCents ?? 0) &&
+    (a?.minAdults ?? 0) === (b?.minAdults ?? 0)
+  );
 }
 
 export function formatEGP(cents: number): string {
@@ -199,15 +294,11 @@ export function formatEGPAmount(cents: number): string {
  * the page never restates a number — a peak date shows the peak rate rather
  * than the regular one the guest would otherwise be quoted at checkout.
  */
-export function getDayUseRates(date: Date): {
-  adultUnitCents: number;
-  kidsUnitCents: number;
-  rateType: RateType;
-} {
-  const { adultUnitCents, kidsUnitCents, rateType } = resolveDayUseRate(
+export function getDayUseRates(date: Date): UnitRates {
+  const { adultUnitCents, kidsUnitCents, rateType, groupDiscount } = resolveDayUseRate(
     dateKeyFromUtcMidnight(date),
   );
-  return { adultUnitCents, kidsUnitCents, rateType };
+  return { adultUnitCents, kidsUnitCents, rateType, groupDiscount };
 }
 
 /** The standing weekday and weekend rates, before any date override. */

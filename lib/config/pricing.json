@@ -11,5 +11,9 @@
     "2026-05-28": { "adultPriceCents": 160000, "rateType": "peak" },
     "2026-05-29": { "adultPriceCents": 160000, "rateType": "peak" },
     "2026-05-30": { "adultPriceCents": 160000, "rateType": "peak" }
+  },
+  "groupDiscount": {
+    "minAdults": 5,
+    "perAdultCents": { "regular": 20000, "peak": 10000, "best-value": 15000 }
   }
 }

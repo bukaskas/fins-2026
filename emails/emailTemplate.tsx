@@ -410,6 +410,21 @@ const DayUseDetails = ({
                 </Column>
               </Row>
             )}
+            {priceBreakdown.groupDiscount && priceBreakdown.groupDiscountCents > 0 && (
+              <Row className="mb-1">
+                <Column className="text-[15px] text-[#22303F] align-top">
+                  Group discount
+                  <span className="text-[#5B6B7C]">
+                    {" "}
+                    ({adults} × {formatEGP(priceBreakdown.groupDiscount.perAdultCents)})
+                  </span>
+                </Column>
+                <Column className="text-[15px] text-[#22303F] text-right align-top whitespace-nowrap">
+                  {" "}
+                  −{formatEGP(priceBreakdown.groupDiscountCents)}
+                </Column>
+              </Row>
+            )}
             <Row>
               <Column
                 style={{ borderTop: "1px solid #D6E0EA" }}
@@ -836,6 +851,8 @@ export const bookingEmailPreviewBase = {
     kidsUnitCents: 80000,
     adultTotalCents: 320000,
     kidsTotalCents: 80000,
+    groupDiscount: { perAdultCents: 10000, minAdults: 5 },
+    groupDiscountCents: 0,
     totalCents: 400000,
     rateType: "peak",
   },
@@ -851,6 +868,8 @@ export const spectatorEmailPreviewBase = {
     kidsUnitCents: 150000,
     adultTotalCents: 300000,
     kidsTotalCents: 150000,
+    groupDiscount: null,
+    groupDiscountCents: 0,
     totalCents: 450000,
     rateType: "regular",
   },

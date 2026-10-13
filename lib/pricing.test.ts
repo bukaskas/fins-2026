@@ -1,10 +1,14 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   calculateDayUsePrice,
+  getGroupDiscountSummary,
   getUpcomingPeakDates,
   priceFromUnitRates,
+  ratesFromSnapshot,
   reconstructDayUseUnitRates,
   resolveDayUseRate,
+  snapshotFromRate,
+  spectatorRate,
 } from "@/lib/pricing";
 import { parsePricingConfig, type PricingConfig } from "@/lib/pricing-config";
 import {
@@ -57,6 +61,7 @@ describe("resolveDayUseRate", () => {
       adultUnitCents: 150000,
       kidsUnitCents: 75000,
       rateType: "regular",
+      groupDiscount: null,
     });
   });
 
@@ -90,7 +95,7 @@ describe("resolveDayUseRate", () => {
 describe("party pricing", () => {
   it("multiplies unit rates by the party", () => {
     const p = priceFromUnitRates(
-      { adultUnitCents: 170000, kidsUnitCents: 85000, rateType: "peak" },
+      { adultUnitCents: 170000, kidsUnitCents: 85000, rateType: "peak", groupDiscount: null },
       2,
       1,
     );
@@ -99,6 +104,8 @@ describe("party pricing", () => {
       kidsUnitCents: 85000,
       adultTotalCents: 340000,
       kidsTotalCents: 85000,
+      groupDiscount: null,
+      groupDiscountCents: 0,
       totalCents: 425000,
       rateType: "peak",
     });
@@ -275,6 +282,153 @@ describe("reconstructDayUseUnitRates", () => {
         adultUnitCents: quote.adultUnitCents,
         kidsUnitCents: quote.kidsUnitCents,
       });
+    }
+  });
+});
+
+describe("group discount", () => {
+  const withDiscount: PricingConfig = parsePricingConfig({
+    adultPriceCents: 110000,
+    weekendAdultPriceCents: 150000,
+    weekendDays: [5, 6],
+    weekdayRateType: "best-value",
+    weekendRateType: "regular",
+    kidsRateMultiplier: 0.5,
+    dateOverrides: {
+      "2026-10-22": { adultPriceCents: 160000, rateType: "peak" }, // Thu
+    },
+    groupDiscount: {
+      minAdults: 5,
+      perAdultCents: { regular: 20000, peak: 10000, "best-value": 15000 },
+    },
+  });
+
+  it("offers the discount for the date's rate type, overrides included", () => {
+    expect(resolveDayUseRate("2026-10-15", withDiscount).groupDiscount).toEqual({
+      perAdultCents: 15000,
+      minAdults: 5,
+    }); // Thu, best value
+    expect(resolveDayUseRate("2026-10-16", withDiscount).groupDiscount?.perAdultCents).toBe(
+      20000,
+    ); // Fri, regular
+    expect(resolveDayUseRate("2026-10-22", withDiscount).groupDiscount?.perAdultCents).toBe(
+      10000,
+    ); // peak override
+  });
+
+  it("takes the amount off every adult from minAdults, never off kids", () => {
+    const rate = resolveDayUseRate("2026-10-16", withDiscount); // 1,500 regular
+    const four = priceFromUnitRates(rate, 4, 2);
+    expect(four.groupDiscountCents).toBe(0);
+    expect(four.totalCents).toBe(4 * 150000 + 2 * 75000);
+
+    const five = priceFromUnitRates(rate, 5, 2);
+    expect(five.groupDiscountCents).toBe(5 * 20000);
+    expect(five.adultTotalCents).toBe(5 * 150000);
+    expect(five.totalCents).toBe(5 * 130000 + 2 * 75000);
+  });
+
+  it("never lets one more adult lower the total", () => {
+    for (const key of ["2026-10-15", "2026-10-16", "2026-10-22"]) {
+      const rate = resolveDayUseRate(key, withDiscount);
+      for (let adults = 1; adults < 12; adults++) {
+        expect(priceFromUnitRates(rate, adults + 1, 0).totalCents).toBeGreaterThanOrEqual(
+          priceFromUnitRates(rate, adults, 0).totalCents,
+        );
+      }
+    }
+  });
+
+  it("is off for a rate type set to 0, and everywhere when absent", () => {
+    const peakOff = parsePricingConfig({
+      ...withDiscount,
+      groupDiscount: { minAdults: 5, perAdultCents: { regular: 20000, peak: 0, "best-value": 0 } },
+    });
+    expect(resolveDayUseRate("2026-10-22", peakOff).groupDiscount).toBeNull();
+    expect(resolveDayUseRate("2026-10-15", config).groupDiscount).toBeNull();
+    expect(getGroupDiscountSummary(config)).toBeNull();
+  });
+
+  it("summarises the advertised range", () => {
+    expect(getGroupDiscountSummary(withDiscount)).toEqual({
+      minAdults: 5,
+      minPerAdultCents: 10000,
+      maxPerAdultCents: 20000,
+    });
+  });
+
+  it("is never offered on a spectator pass", () => {
+    expect(priceFromUnitRates(spectatorRate("2026-10-09"), 8, 0).groupDiscountCents).toBe(0);
+  });
+
+  it("party edits recheck the threshold against the terms the booking was sold at", () => {
+    // Booked as 6 adults on a regular day.
+    const snapshot = snapshotFromRate(
+      priceFromUnitRates(resolveDayUseRate("2026-10-16", withDiscount), 6, 0),
+    );
+    expect(snapshot.groupDiscountPerAdultCents).toBe(20000);
+    expect(snapshot.groupDiscountMinAdults).toBe(5);
+    const soldAt = ratesFromSnapshot(snapshot)!;
+    expect(priceFromUnitRates(soldAt, 3, 0).totalCents).toBe(3 * 150000); // dropped below
+    expect(priceFromUnitRates(soldAt, 6, 0).totalCents).toBe(6 * 130000); // back over
+  });
+
+  it("keeps the terms on a booking that didn't qualify when it was made", () => {
+    const snapshot = snapshotFromRate(
+      priceFromUnitRates(resolveDayUseRate("2026-10-16", withDiscount), 2, 0),
+    );
+    const soldAt = ratesFromSnapshot(snapshot)!;
+    expect(priceFromUnitRates(soldAt, 5, 0).groupDiscountCents).toBe(5 * 20000);
+  });
+
+  it("reads a pre-discount snapshot as no discount", () => {
+    const soldAt = ratesFromSnapshot({
+      adultUnitPriceCents: 150000,
+      kidsUnitPriceCents: 75000,
+      dayUseRateType: "regular",
+      groupDiscountPerAdultCents: null,
+      groupDiscountMinAdults: null,
+    })!;
+    expect(priceFromUnitRates(soldAt, 10, 0).totalCents).toBe(10 * 150000);
+  });
+
+  it("rejects a discount that would let a bigger group pay less", () => {
+    // 5 × (1,100 − 230) = 4,350 < 4 × 1,100 = 4,400.
+    expect(() =>
+      parsePricingConfig({
+        ...withDiscount,
+        groupDiscount: {
+          minAdults: 5,
+          perAdultCents: { regular: 20000, peak: 10000, "best-value": 23000 },
+        },
+      }),
+    ).toThrow(/best-value.*at most 220 EGP/s);
+  });
+
+  it("checks the discount against every price a rate type is sold at", () => {
+    // A cheap peak override caps the peak discount: 5 × 200 > 900.
+    expect(() =>
+      parsePricingConfig({
+        ...withDiscount,
+        dateOverrides: { "2026-10-22": { adultPriceCents: 90000, rateType: "peak" } },
+        groupDiscount: {
+          minAdults: 5,
+          perAdultCents: { regular: 20000, peak: 20000, "best-value": 15000 },
+        },
+      }),
+    ).toThrow(/peak/);
+  });
+
+  it("rejects part-EGP amounts, a missing rate type and a threshold below 2", () => {
+    const bad = [
+      { minAdults: 5, perAdultCents: { regular: 20050, peak: 0, "best-value": 0 } },
+      { minAdults: 5, perAdultCents: { regular: 20000, peak: 0 } },
+      { minAdults: 1, perAdultCents: { regular: 20000, peak: 0, "best-value": 0 } },
+    ];
+    for (const groupDiscount of bad) {
+      expect(() => parsePricingConfig({ ...withDiscount, groupDiscount })).toThrow(
+        /pricing\.json is invalid/,
+      );
     }
   });
 });

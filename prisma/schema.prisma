@@ -223,6 +223,14 @@ model Booking {
   /// "regular" | "peak" | "best-value" (lib/pricing-config.ts RATE_TYPES)
   dayUseRateType      String?
 
+  // Day Use group discount terms at booking time (lib/config/pricing.json
+  // groupDiscount): every adult pays `groupDiscountPerAdultCents` less once the
+  // party has `groupDiscountMinAdults` adults. Stored whether or not the party
+  // qualified, so party edits recheck the threshold against these, never today's
+  // config. Null when no discount was on offer; a date edit replaces them.
+  groupDiscountPerAdultCents Int?
+  groupDiscountMinAdults     Int?
+
   /// Event registration group, null for ordinary bookings. `groupDetail` is the
   /// Kai unit number or the kite community's local spot.
   bookingGroup BookingGroup?

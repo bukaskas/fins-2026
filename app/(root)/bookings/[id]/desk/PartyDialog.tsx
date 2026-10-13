@@ -10,7 +10,7 @@ import { updateBookingParty } from "@/lib/actions/booking.actions";
 import {
   computeBookingTotalCents,
   priceFromUnitRates,
-  type DayUseRate,
+  type UnitRates,
 } from "@/lib/pricing";
 import { FOCUS_RING, MUTED } from "@/lib/bookings/status";
 
@@ -85,7 +85,7 @@ export default function PartyDialog({
   kids: number;
   service: string;
   dateIso: string;
-  soldAt: Pick<DayUseRate, "adultUnitCents" | "kidsUnitCents" | "rateType"> | null;
+  soldAt: UnitRates | null;
 }) {
   const router = useRouter();
   const [open, setOpen] = React.useState(false);
@@ -103,12 +103,14 @@ export default function PartyDialog({
   const totalPeople = adultsValue + kidsValue;
   const isDayUse = service === "day-use";
   const needsReview = isDayUse && !soldAt;
+  const dayUsePreview = React.useMemo(
+    () => (isDayUse && soldAt ? priceFromUnitRates(soldAt, adultsValue, kidsValue) : null),
+    [isDayUse, soldAt, adultsValue, kidsValue],
+  );
   const previewCents = React.useMemo(() => {
-    if (isDayUse) {
-      return soldAt ? priceFromUnitRates(soldAt, adultsValue, kidsValue).totalCents : null;
-    }
+    if (isDayUse) return dayUsePreview?.totalCents ?? null;
     return computeBookingTotalCents(service, new Date(dateIso), adultsValue, kidsValue);
-  }, [isDayUse, soldAt, service, dateIso, adultsValue, kidsValue]);
+  }, [isDayUse, dayUsePreview, service, dateIso, adultsValue, kidsValue]);
   const dirty = adultsValue !== adults || kidsValue !== kids;
 
   const onSave = async () => {
@@ -208,6 +210,16 @@ export default function PartyDialog({
                   </span>
                 )}
               </div>
+              {dayUsePreview?.groupDiscount && (
+                <p
+                  className="mt-2 font-[family-name:var(--font-raleway)] text-[0.8rem] leading-relaxed"
+                  style={{ color: MUTED }}
+                >
+                  {dayUsePreview.groupDiscountCents > 0
+                    ? `Includes group discount of ${egp.format(dayUsePreview.groupDiscountCents / 100)} EGP (${adultsValue} × ${egp.format(dayUsePreview.groupDiscount.perAdultCents / 100)}).`
+                    : `Group discount of ${egp.format(dayUsePreview.groupDiscount.perAdultCents / 100)} EGP per adult applies from ${dayUsePreview.groupDiscount.minAdults} adults.`}
+                </p>
+              )}
               {needsReview && (
                 <p
                   className="mt-2 font-[family-name:var(--font-raleway)] text-[0.8rem] leading-relaxed"

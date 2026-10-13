@@ -113,6 +113,10 @@ surface.
    (`kidsRateMultiplier`), computed once in `lib/pricing.ts` — a surface that
    derives or restates a figure produced a 600 vs 750 EGP contradiction between
    the ad and the checkout.
+   The group discount (`groupDiscount` in the same file) follows the same rule:
+   the landing page, the step 2 breakdown, the "add 1 more adult" nudge and the
+   emails all read its threshold and amounts from there. It is shown in navy /
+   muted ink, never in a rate colour — green already means "Best value".
 4. **The photograph is not decoration on mobile.** This route is reached by QR
    and Instagram link, so the brand rail stays visible at every breakpoint as a
    banner rather than being hidden below `md`.

@@ -33,7 +33,9 @@ import { getClosedDates } from "@/lib/actions/closedDate.actions";
 import {
   RATE_LABELS,
   formatEGP,
+  formatEGPAmount,
   getDayUseRates,
+  getGroupDiscountSummary,
   getStandardDayUseRates,
   getUpcomingPeakDates,
 } from "@/lib/pricing";
@@ -153,7 +155,11 @@ async function DayUsePage() {
         />
       </div>
 
-      <WhatsIncluded rates={getStandardDayUseRates()} upcomingPeakDates={upcomingPeakDates} />
+      <WhatsIncluded
+        rates={getStandardDayUseRates()}
+        upcomingPeakDates={upcomingPeakDates}
+        groupDiscount={getGroupDiscountSummary()}
+      />
       <BottomCTA />
 
       <StickyReserveBar priceLabel={formatEGP(rates.adultUnitCents)} />
@@ -308,6 +314,12 @@ function TodayAtFins({
               {rates.rateType !== "regular" &&
                 ` · ${RATE_LABELS[rates.rateType].toLowerCase()} rate`}
             </p>
+            {rates.groupDiscount && (
+              <p className="mt-1 text-[0.875rem] font-[400]" style={{ color: MUTED }}>
+                Groups of {rates.groupDiscount.minAdults}+ adults save{" "}
+                {formatEGP(rates.groupDiscount.perAdultCents)} per adult today
+              </p>
+            )}
 
             {availabilityKnown && (
               <p className="mt-4 inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-[0.8125rem] font-[600]"
@@ -498,9 +510,11 @@ const INCLUSIONS = [
 function WhatsIncluded({
   rates,
   upcomingPeakDates,
+  groupDiscount,
 }: {
   rates: ReturnType<typeof getStandardDayUseRates>;
   upcomingPeakDates: Date[];
+  groupDiscount: ReturnType<typeof getGroupDiscountSummary>;
 }) {
   return (
     <div className="rounded-t-[2.5rem] md:rounded-t-[4rem]" style={{ background: NAVY }}>
@@ -593,6 +607,23 @@ function WhatsIncluded({
               </span>
             </div>
           </div>
+
+          {groupDiscount && (
+            <div className="w-full border-t border-white/15 pt-5 mb-6">
+              <p className="text-[0.7rem] tracking-[0.2em] uppercase font-[700] mb-1" style={{ color: ON_NAVY }}>
+                Groups
+              </p>
+              <p className="text-[0.9375rem] font-[400] leading-relaxed" style={{ color: ON_NAVY }}>
+                Groups of {groupDiscount.minAdults}+ adults save{" "}
+                <span className="text-white font-[600]">
+                  {groupDiscount.minPerAdultCents === groupDiscount.maxPerAdultCents
+                    ? formatEGP(groupDiscount.minPerAdultCents)
+                    : `${formatEGPAmount(groupDiscount.minPerAdultCents)}–${formatEGP(groupDiscount.maxPerAdultCents)}`}
+                </span>{" "}
+                per adult, depending on the date.
+              </p>
+            </div>
+          )}
 
           {upcomingPeakDates.length > 0 && (
             <p className="mb-6 text-[0.8125rem] font-[400] leading-relaxed" style={{ color: ON_NAVY }}>

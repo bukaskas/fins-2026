@@ -319,7 +319,28 @@ function PriceBreakdown({
             </span>
           </div>
         )}
+        {breakdown.groupDiscount && breakdown.groupDiscountCents > 0 && (
+          <div className="flex justify-between text-[0.875rem]">
+            <span style={{ color: MUTED }}>
+              Group discount · {adults} × {formatEGP(breakdown.groupDiscount.perAdultCents)}
+            </span>
+            <span className="tabular-nums font-[600]" style={{ color: NAVY }}>
+              −{formatEGP(breakdown.groupDiscountCents)}
+            </span>
+          </div>
+        )}
       </div>
+      {breakdown.groupDiscount &&
+        adults === breakdown.groupDiscount.minAdults - 1 && (
+          <p
+            className="mt-4 rounded-xl border bg-white px-3 py-2.5 text-[0.8125rem] leading-relaxed"
+            style={{ borderColor: HAIRLINE, color: NAVY }}
+          >
+            Add 1 more adult and every adult saves{" "}
+            {formatEGP(breakdown.groupDiscount.perAdultCents)}: groups of{" "}
+            {breakdown.groupDiscount.minAdults}+ adults get a group discount.
+          </p>
+        )}
       <div
         className="mt-4 pt-4 border-t flex items-baseline justify-between"
         style={{ borderColor: HAIRLINE }}
@@ -604,6 +625,7 @@ function DayUseBookingForm({
           {
             adultUnitCents: rate.adultUnitCents,
             kidsUnitCents: rate.kidsUnitCents,
+            groupDiscount: rate.groupDiscount,
           },
           { spectator },
         );
@@ -620,11 +642,13 @@ function DayUseBookingForm({
             value.numberOfKids ?? 0,
           ).totalCents;
           setServerRate(next);
+          const groupTerms = next.groupDiscount
+            ? `, with ${formatEGP(next.groupDiscount.perAdultCents)} off each adult for groups of ${next.groupDiscount.minAdults}+ adults`
+            : ", with no group discount";
           setSubmitError(
             `The price for ${format(localCalendarDateFromKey(next.dateKey), "EEEE d MMMM")} has changed since you picked it: ` +
-              `now ${formatEGP(next.adultUnitCents)} per adult and ${formatEGP(next.kidsUnitCents)} per child ` +
-              `(was ${formatEGP(rate.adultUnitCents)} and ${formatEGP(rate.kidsUnitCents)}). ` +
-              `Your new total is ${formatEGP(newTotal)}. Nothing has been booked — check the total below and press Request my day to continue at the new price.`,
+              `now ${formatEGP(next.adultUnitCents)} per adult and ${formatEGP(next.kidsUnitCents)} per child${groupTerms}. ` +
+              `Your new total is ${formatEGP(newTotal)} (was ${formatEGP(breakdown.totalCents)}). Nothing has been booked — check the total below and press Request my day to continue at the new price.`,
           );
           setIsSubmitting(false);
         } else {
@@ -1101,6 +1125,15 @@ function DayUseBookingForm({
                         >
                           <span className={eyebrow} style={{ color: MUTED }}>
                             Total
+                            {priceFromUnitRates(rateFor(date), adults, kids ?? 0)
+                              .groupDiscountCents > 0 && (
+                              <span
+                                className="block mt-1 normal-case tracking-normal font-[400]"
+                                style={{ color: MUTED }}
+                              >
+                                incl. group discount
+                              </span>
+                            )}
                           </span>
                           <span
                             className="font-[family-name:var(--font-raleway)] text-[2.5rem] font-[200] tracking-[-0.02em] tabular-nums leading-none"
