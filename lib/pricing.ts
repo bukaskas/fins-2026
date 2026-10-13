@@ -87,7 +87,7 @@ export function isWeekendDateKey(
 /**
  * The one Day Use price rule: an exact date override wins; otherwise a weekend
  * date takes the weekend adult price and label, any other date the weekday
- * price at the regular label. Children pay `kidsRateMultiplier` of that same
+ * price and label. Children pay `kidsRateMultiplier` of that same
  * date's adult price, rounded to whole EGP.
  */
 export function resolveDayUseRate(
@@ -102,7 +102,7 @@ export function resolveDayUseRate(
     dateKey,
     adultUnitCents,
     kidsUnitCents: toWholeEgp(adultUnitCents * config.kidsRateMultiplier),
-    rateType: override?.rateType ?? (weekend ? config.weekendRateType : "regular"),
+    rateType: override?.rateType ?? (weekend ? config.weekendRateType : config.weekdayRateType),
   };
 }
 

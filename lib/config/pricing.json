@@ -2,7 +2,8 @@
   "adultPriceCents": 110000,
   "weekendAdultPriceCents": 150000,
   "weekendDays": [5, 6],
-  "weekendRateType": "best-value",
+  "weekdayRateType": "best-value",
+  "weekendRateType": "regular",
   "kidsRateMultiplier": 0.5,
   "dateOverrides": {
     "2026-05-26": { "adultPriceCents": 160000, "rateType": "peak" },

@@ -22,6 +22,7 @@ const config: PricingConfig = parsePricingConfig({
   adultPriceCents: 150000,
   weekendAdultPriceCents: 150000,
   weekendDays: [5, 6],
+  weekdayRateType: "regular",
   weekendRateType: "regular",
   kidsRateMultiplier: 0.5,
   dateOverrides: {
@@ -38,11 +39,12 @@ describe("resolveDayUseRate", () => {
       ...config,
       adultPriceCents: 110000,
       weekendAdultPriceCents: 150000,
-      weekendRateType: "best-value",
+      weekdayRateType: "best-value",
+      weekendRateType: "regular",
     };
     expect(resolveDayUseRate("2026-10-15", split).adultUnitCents).toBe(110000); // Thu
-    expect(resolveDayUseRate("2026-10-15", split).rateType).toBe("regular");
-    expect(resolveDayUseRate("2026-10-16", split).rateType).toBe("best-value");
+    expect(resolveDayUseRate("2026-10-15", split).rateType).toBe("best-value");
+    expect(resolveDayUseRate("2026-10-16", split).rateType).toBe("regular");
     expect(resolveDayUseRate("2026-10-16", split).adultUnitCents).toBe(150000); // Fri
     expect(resolveDayUseRate("2026-10-17", split).adultUnitCents).toBe(150000); // Sat
     expect(resolveDayUseRate("2026-10-17", split).kidsUnitCents).toBe(75000);
@@ -115,6 +117,7 @@ describe("pricing config validation", () => {
     adultPriceCents: 150000,
     weekendAdultPriceCents: 150000,
     weekendDays: [5, 6],
+    weekdayRateType: "regular" as const,
     weekendRateType: "regular" as const,
     kidsRateMultiplier: 0.5,
   };
