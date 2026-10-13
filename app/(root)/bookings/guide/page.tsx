@@ -98,7 +98,7 @@ export default async function BookingGuidePage() {
 
             <div className="space-y-1">
               <p>
-                💰 <strong>1,500 LE / per person</strong>
+                💰 <strong>1,100 LE weekdays · 1,500 LE Fri &amp; Sat / per person</strong>
               </p>
               <p>
                 ⏰ <strong>{VISIT_HOURS}</strong>

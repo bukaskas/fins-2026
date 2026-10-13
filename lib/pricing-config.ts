@@ -15,7 +15,14 @@ const wholeEgpCents = z
 
 const pricingConfigSchema = z
   .object({
+    /** Weekday adult price. */
     adultPriceCents: wholeEgpCents,
+    /** Adult price on `weekendDays`. */
+    weekendAdultPriceCents: wholeEgpCents,
+    /** UTC day-of-week numbers (0 = Sunday … 6 = Saturday). Egypt: Fri + Sat. */
+    weekendDays: z.array(z.number().int().min(0).max(6)),
+    /** Rate label shown on weekend dates (label only — never changes the price). */
+    weekendRateType: z.enum(RATE_TYPES),
     kidsRateMultiplier: z.number().min(0).max(1),
     dateOverrides: z
       .record(

@@ -20,6 +20,9 @@ import {
 
 const config: PricingConfig = parsePricingConfig({
   adultPriceCents: 150000,
+  weekendAdultPriceCents: 150000,
+  weekendDays: [5, 6],
+  weekendRateType: "regular",
   kidsRateMultiplier: 0.5,
   dateOverrides: {
     "2026-10-11": { adultPriceCents: 170000, rateType: "peak" },
@@ -30,6 +33,22 @@ const config: PricingConfig = parsePricingConfig({
 });
 
 describe("resolveDayUseRate", () => {
+  it("charges the weekend price on Friday and Saturday", () => {
+    const split: PricingConfig = {
+      ...config,
+      adultPriceCents: 110000,
+      weekendAdultPriceCents: 150000,
+      weekendRateType: "best-value",
+    };
+    expect(resolveDayUseRate("2026-10-15", split).adultUnitCents).toBe(110000); // Thu
+    expect(resolveDayUseRate("2026-10-15", split).rateType).toBe("regular");
+    expect(resolveDayUseRate("2026-10-16", split).rateType).toBe("best-value");
+    expect(resolveDayUseRate("2026-10-16", split).adultUnitCents).toBe(150000); // Fri
+    expect(resolveDayUseRate("2026-10-17", split).adultUnitCents).toBe(150000); // Sat
+    expect(resolveDayUseRate("2026-10-17", split).kidsUnitCents).toBe(75000);
+    expect(resolveDayUseRate("2026-10-18", split).adultUnitCents).toBe(125000); // override wins
+  });
+
   it("falls back to the regular adult price on an unlisted date", () => {
     expect(resolveDayUseRate("2026-10-12", config)).toEqual({
       dateKey: "2026-10-12",
@@ -87,12 +106,18 @@ describe("party pricing", () => {
     const byDate = calculateDayUsePrice(utcMidnightFromKey("2026-10-12"), 2, 1);
     const byKey = calculateDayUsePrice("2026-10-12", 2, 1);
     expect(byDate).toEqual(byKey);
-    expect(byKey.totalCents).toBe(375000);
+    expect(byKey.totalCents).toBe(275000); // Mon: 2 × 1,100 + 550
   });
 });
 
 describe("pricing config validation", () => {
-  const base = { adultPriceCents: 150000, kidsRateMultiplier: 0.5 };
+  const base = {
+    adultPriceCents: 150000,
+    weekendAdultPriceCents: 150000,
+    weekendDays: [5, 6],
+    weekendRateType: "regular" as const,
+    kidsRateMultiplier: 0.5,
+  };
 
   it("rejects a date that does not exist", () => {
     expect(() =>

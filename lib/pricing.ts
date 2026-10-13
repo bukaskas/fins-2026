@@ -76,9 +76,18 @@ export interface DayUseRate {
   rateType: RateType;
 }
 
+/** Whether a date falls on the configured weekend (Fri + Sat in Egypt). */
+export function isWeekendDateKey(
+  dateKey: DateKey,
+  config: PricingConfig = pricingConfig,
+): boolean {
+  return config.weekendDays.includes(utcMidnightFromKey(dateKey).getUTCDay());
+}
+
 /**
- * The one Day Use price rule: an exact date override wins; any other date is
- * the regular adult price. Children pay `kidsRateMultiplier` of that same
+ * The one Day Use price rule: an exact date override wins; otherwise a weekend
+ * date takes the weekend adult price and label, any other date the weekday
+ * price at the regular label. Children pay `kidsRateMultiplier` of that same
  * date's adult price, rounded to whole EGP.
  */
 export function resolveDayUseRate(
@@ -86,12 +95,14 @@ export function resolveDayUseRate(
   config: PricingConfig = pricingConfig,
 ): DayUseRate {
   const override = config.dateOverrides[dateKey];
-  const adultUnitCents = override?.adultPriceCents ?? config.adultPriceCents;
+  const weekend = isWeekendDateKey(dateKey, config);
+  const baseCents = weekend ? config.weekendAdultPriceCents : config.adultPriceCents;
+  const adultUnitCents = override?.adultPriceCents ?? baseCents;
   return {
     dateKey,
     adultUnitCents,
     kidsUnitCents: toWholeEgp(adultUnitCents * config.kidsRateMultiplier),
-    rateType: override?.rateType ?? "regular",
+    rateType: override?.rateType ?? (weekend ? config.weekendRateType : "regular"),
   };
 }
 
@@ -197,6 +208,21 @@ export function getDayUseRates(date: Date): {
     dateKeyFromUtcMidnight(date),
   );
   return { adultUnitCents, kidsUnitCents, rateType };
+}
+
+/** The standing weekday and weekend rates, before any date override. */
+export function getStandardDayUseRates(config: PricingConfig = pricingConfig): {
+  weekday: { adultUnitCents: number; kidsUnitCents: number };
+  weekend: { adultUnitCents: number; kidsUnitCents: number };
+} {
+  const rate = (adultUnitCents: number) => ({
+    adultUnitCents,
+    kidsUnitCents: toWholeEgp(adultUnitCents * config.kidsRateMultiplier),
+  });
+  return {
+    weekday: rate(config.adultPriceCents),
+    weekend: rate(config.weekendAdultPriceCents),
+  };
 }
 
 /** Upcoming peak dates, so the page can name them instead of surprising the guest. */

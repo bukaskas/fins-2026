@@ -30,7 +30,13 @@ import { StaticImageData } from "next/image";
 import Reveal from "@/components/kitesurfing/Reveal";
 import StickyReserveBar from "./StickyReserveBar";
 import { getClosedDates } from "@/lib/actions/closedDate.actions";
-import { RATE_LABELS, formatEGP, getDayUseRates, getUpcomingPeakDates } from "@/lib/pricing";
+import {
+  RATE_LABELS,
+  formatEGP,
+  getDayUseRates,
+  getStandardDayUseRates,
+  getUpcomingPeakDates,
+} from "@/lib/pricing";
 import { dateKeyInCairo, utcMidnightFromKey } from "@/lib/date-keys";
 import { LOCATION_ADDRESS, WHATSAPP_PHONE, VISIT_HOURS } from "@/lib/constants";
 
@@ -84,7 +90,7 @@ async function DayUsePage() {
 
   return (
     <section className="font-[family-name:var(--font-raleway)]">
-      <HeroSection adultPriceLabel={formatEGP(rates.adultUnitCents)} />
+      <HeroSection adultPriceLabel={formatEGP(getStandardDayUseRates().weekday.adultUnitCents)} />
       {/* Sticky-bar sentinel. Needs a real height: IntersectionObserver never
           fires for a zero-area target, which leaves the bar permanently hidden. */}
       <div id="hero-end" aria-hidden="true" className="h-px" />
@@ -147,7 +153,7 @@ async function DayUsePage() {
         />
       </div>
 
-      <WhatsIncluded rates={rates} upcomingPeakDates={upcomingPeakDates} />
+      <WhatsIncluded rates={getStandardDayUseRates()} upcomingPeakDates={upcomingPeakDates} />
       <BottomCTA />
 
       <StickyReserveBar priceLabel={formatEGP(rates.adultUnitCents)} />
@@ -493,7 +499,7 @@ function WhatsIncluded({
   rates,
   upcomingPeakDates,
 }: {
-  rates: ReturnType<typeof getDayUseRates>;
+  rates: ReturnType<typeof getStandardDayUseRates>;
   upcomingPeakDates: Date[];
 }) {
   return (
@@ -550,13 +556,20 @@ function WhatsIncluded({
             Pricing
           </span>
 
-          <div className="mb-6">
-            <p className="text-[0.7rem] tracking-[0.2em] uppercase font-[700] mb-1" style={{ color: ON_NAVY }}>
-              Adults
-            </p>
-            <p className="text-white text-[clamp(2.5rem,5vw,4rem)] font-[200] leading-tight">
-              {formatEGP(rates.adultUnitCents)}
-            </p>
+          <div className="mb-6 grid w-full grid-cols-2 gap-6">
+            {([
+              ["Weekdays", rates.weekday.adultUnitCents],
+              ["Fri & Sat", rates.weekend.adultUnitCents],
+            ] as const).map(([label, cents]) => (
+              <div key={label}>
+                <p className="text-[0.7rem] tracking-[0.2em] uppercase font-[700] mb-1" style={{ color: ON_NAVY }}>
+                  Adults · {label}
+                </p>
+                <p className="text-white text-[clamp(1.75rem,3.5vw,2.75rem)] font-[200] leading-tight">
+                  {formatEGP(cents)}
+                </p>
+              </div>
+            ))}
           </div>
 
           <div className="w-full border-t border-white/15 pt-5 mb-6 flex flex-col gap-2">
@@ -568,7 +581,7 @@ function WhatsIncluded({
                 Ages 5 – 8
               </span>
               <span className="text-white font-[600] text-[1.125rem]">
-                {formatEGP(rates.kidsUnitCents)}
+                {formatEGP(rates.weekday.kidsUnitCents)} · {formatEGP(rates.weekend.kidsUnitCents)}
               </span>
             </div>
             <div className="flex justify-between items-baseline gap-4">
