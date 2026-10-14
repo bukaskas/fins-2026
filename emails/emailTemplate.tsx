@@ -25,7 +25,9 @@ const WHATSAPP_HREF = `https://wa.me/20${WHATSAPP_PHONE.substring(1)}`;
 /**
  * Where a booking is on its way to the beach:
  * - request: PENDING, waiting for a staff review. A receipt, not a promise.
- * - awaiting-payment: WAITING_PAYMENT, the 24h deposit window is running.
+ * - awaiting-payment: WAITING_PAYMENT. The guest generates their payment link
+ *   from the booking page, and has 24h from then (`deadline` is usually not
+ *   set yet). `fullyBooked`: the date filled up and the deadline was cut.
  * - confirmed: the deposit landed and the seat is held.
  * - cancelled: the window ran out unpaid and the system released the seat.
  */
@@ -65,6 +67,8 @@ export interface BookingEmailProps {
   deadlineShort?: string;
   /** Where a released guest can start over. Cancelled only. */
   rebookUrl?: string;
+  /** Awaiting-payment: the date is now fully booked, pay by `deadline`. */
+  fullyBooked?: boolean;
   /** Pharaoh Airstyle bean-bag spectator pass (day-use only): its own wording
    *  and event programme; the pass is paid in full online. */
   spectator?: boolean;
@@ -188,6 +192,17 @@ const spectatorContent: Required<ServiceCopy> = {
       `We didn’t receive your payment ${deadline ? `by ${deadline}` : "in time"}, so we released your spectator pass${date ? ` for ${date}` : ""}.`,
   },
 };
+
+/** The awaiting-payment email once the date has filled up. */
+const fullDateCopy = (thing: string): StageCopy => ({
+  heading: "Your date is now fully booked",
+  body: ({ date, deadline }) =>
+    `${date ?? "Your date"} is now fully booked and your booking isn’t paid yet. Pay ${deadline ? `by ${deadline}` : "now"} to keep ${thing}, or the reservation will be cancelled.`,
+});
+
+/** Arriving unpaid is not a plan: said wherever we ask for the payment. */
+const ARRIVE_UNPAID =
+  "If you arrive without paying, we may not be able to accept you or find you a space. Not sure? Message us on WhatsApp.";
 
 /** What a spectator is invited to. Times on the water shift with the wind. */
 const SPECTATOR_PROGRAMME: { time: string; what: string }[] = [
@@ -551,14 +566,16 @@ function whatHappensNext({
   if (spectator) {
     switch (stage) {
       case "request":
-        return `We check every request by hand and reply on WhatsApp during our opening hours, ${VISIT_HOURS}. Once we confirm, we'll email you a link to pay for your spectator pass in full. You'll have 24 hours to pay before it is released.`;
+        return `We check every request by hand and reply on WhatsApp during our opening hours, ${VISIT_HOURS}. Once we confirm, we'll email you to pay for your spectator pass in full online. You'll have 24 hours to pay once you generate your payment link.`;
       case "awaiting-payment": {
         const what =
           depositDueCents !== undefined
             ? `the ${formatEGP(depositDueCents)} for your pass`
             : "your spectator pass";
-        const by = deadline ? ` by ${deadline}` : " within 24 hours";
-        return `Pay ${what}${by} to confirm it. If it hasn't arrived by then, the pass is released for other guests. Trouble paying? Message us on WhatsApp.`;
+        if (!deadline) {
+          return `Open your booking and press Generate payment link to pay ${what}. Once your link is created you have 24 hours to pay; after that the pass is released for other guests. ${ARRIVE_UNPAID}`;
+        }
+        return `Pay ${what} by ${deadline} to confirm it. If it hasn't arrived by then, the pass is released for other guests. ${ARRIVE_UNPAID}`;
       }
       case "confirmed":
         return "You're on the list. Show your booking page at the gate on arrival. If anything changes, message us on WhatsApp and we'll sort it out.";
@@ -568,14 +585,16 @@ function whatHappensNext({
   }
   switch (stage) {
     case "request":
-      return `We check every request by hand and reply on WhatsApp during our opening hours, ${VISIT_HOURS}. If you booked late at night, expect to hear from us the next morning. Once we confirm, we'll email you a link to pay a 50% deposit. You'll have 24 hours to pay before the spot is released.`;
+      return `We check every request by hand and reply on WhatsApp during our opening hours, ${VISIT_HOURS}. If you booked late at night, expect to hear from us the next morning. Once we confirm, we'll email you to pay a 50% deposit online. You'll have 24 hours to pay once you generate your payment link.`;
     case "awaiting-payment": {
       const what =
         depositDueCents !== undefined
           ? `the ${formatEGP(depositDueCents)} deposit`
           : "your deposit";
-      const by = deadline ? ` by ${deadline}` : " within 24 hours";
-      return `Pay ${what}${by} to hold your spot. If it hasn't arrived by then, the spot is released for other guests. The rest is settled at reception when you arrive. Trouble paying? Message us on WhatsApp.`;
+      if (!deadline) {
+        return `Open your booking and press Generate payment link to pay ${what}. Once your link is created you have 24 hours to pay; after that the spot is released for other guests. The rest is settled at reception when you arrive. ${ARRIVE_UNPAID}`;
+      }
+      return `Pay ${what} by ${deadline} to hold your spot. If it hasn't arrived by then, the spot is released for other guests. The rest is settled at reception when you arrive. ${ARRIVE_UNPAID}`;
     }
     case "confirmed":
       return balanceDueCents !== undefined && balanceDueCents > 0
@@ -603,6 +622,7 @@ const BookingEmail = ({
   deadline,
   deadlineShort,
   rebookUrl,
+  fullyBooked = false,
   spectator: spectatorFlag = false,
 }: BookingEmailProps) => {
   const spectator = spectatorFlag && bookingType === "day-use";
@@ -617,7 +637,10 @@ const BookingEmail = ({
       `[emailTemplate] No copy for bookingType "${bookingType}" — sent the service-agnostic version.`,
     );
   }
-  const copy = mapped?.[stage] ?? fallbackContent[stage];
+  const copy =
+    stage === "awaiting-payment" && fullyBooked
+      ? fullDateCopy(spectator ? "your pass" : "your spot")
+      : (mapped?.[stage] ?? fallbackContent[stage]);
   const body =
     typeof copy.body === "function" ? copy.body({ date, deadline }) : copy.body;
   const brand =
@@ -642,6 +665,7 @@ const BookingEmail = ({
           `${depositDueCents !== undefined ? formatEGP(depositDueCents) : spectator ? "Payment" : "Deposit"} due${
             deadlineShort ? ` by ${deadlineShort}` : ""
           }`,
+          deadlineShort ? null : "24h to pay once you generate your link",
           isDayUse ? party : null,
         ]
       : stage === "cancelled"
@@ -768,7 +792,7 @@ const BookingEmail = ({
             {stage === "awaiting-payment" && bookingUrl && (
               <Section className="mt-6 mb-2">
                 <Button className={primaryButton} href={bookingUrl}>
-                  {spectator ? "Pay now" : "Pay deposit"}
+                  {deadline ? (spectator ? "Pay now" : "Pay deposit") : "Get your payment link"}
                 </Button>
               </Section>
             )}

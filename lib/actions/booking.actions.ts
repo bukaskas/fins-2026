@@ -46,15 +46,25 @@ import {
 } from "@/lib/date-keys";
 import { createPaymentOrder, getFlashOrder, verifyWebhookSignature } from "@/lib/flash";
 import { getAutoConfirmBookings } from "./settings.actions";
-import { BOOKINGS_PAGE_SIZE, DAILY_CAPACITY, PHARAOH_AIRSTYLE_DATE_KEY, WAITING_PAYMENT_WINDOW_MS } from "@/lib/constants";
+import { BOOKINGS_PAGE_SIZE, DAILY_CAPACITY, PHARAOH_AIRSTYLE_DATE_KEY } from "@/lib/constants";
 import {
   NEEDS_CONTACT_STATUSES,
   NEEDS_REVIEW_STATUSES,
   parseBookingStatusFilter,
 } from "@/lib/bookings/status";
 import { CAPACITY_STATUSES } from "@/lib/bookings/capacity";
-import { depositCents, depositDueCents } from "@/lib/bookings/payment-window";
-import { emailPriceBreakdown, sendPaymentRequestEmail } from "@/lib/bookings/guest-emails";
+import {
+  bookingDayEnd,
+  depositCents,
+  depositDueCents,
+  dueAtForLink,
+  dueAtOnFullDate,
+} from "@/lib/bookings/payment-window";
+import {
+  emailPriceBreakdown,
+  sendFullDatePaymentEmail,
+  sendPaymentRequestEmail,
+} from "@/lib/bookings/guest-emails";
 import {
   ACTIVE_PENDING_STATUSES,
   buildAgentStats,
@@ -96,9 +106,6 @@ function bookingIdFromAggregatorId(aggregatorOrderId: string): string | null {
   return match ? match[0] : null;
 }
 
-// A booking in WAITING_PAYMENT auto-cancels this long after it entered the
-// status (i.e. after `waitingPaymentAt`) if it hasn't been paid/confirmed.
-
 const BUSINESS_TIME_ZONE = "Africa/Cairo";
 
 // Booking dates and closed dates are stored as UTC midnights; all calendar-day
@@ -127,16 +134,17 @@ async function logBookingEvents(events: Prisma.BookingEventCreateManyInput[]) {
 }
 
 /**
- * Cancel WAITING_PAYMENT bookings matching `where` whose 24h window has
- * elapsed, recording each as a cron cancellation. Idempotent: the WHERE clause
- * only matches still-waiting, already-expired rows.
+ * Cancel WAITING_PAYMENT bookings matching `where` whose payment deadline has
+ * passed, recording each as a cron cancellation. A booking with no deadline
+ * (the guest never generated a link) is left for the past-date sweep.
+ * Idempotent: the WHERE clause only matches still-waiting, already-lapsed rows.
  */
 async function expireWaitingPayments(where: Prisma.BookingWhereInput = {}): Promise<number> {
   const expired = await prisma.booking.updateManyAndReturn({
     where: {
       ...where,
       bookingStatus: BookingStatus.WAITING_PAYMENT,
-      waitingPaymentAt: { not: null, lt: new Date(Date.now() - WAITING_PAYMENT_WINDOW_MS) },
+      paymentDueAt: { not: null, lt: new Date() },
     },
     data: { bookingStatus: BookingStatus.CANCELED },
     select: { id: true },
@@ -172,7 +180,7 @@ function cairoBusinessDayStart(now = new Date()): Date {
 }
 
 /** Apply the capacity side-effect after a booking has become confirmed. */
-async function autoCloseConfirmedBookingDate(date: Date) {
+async function isDateAtCapacity(date: Date): Promise<boolean> {
   const dayStart = utcDayStart(date);
   const dayEnd = new Date(dayStart.getTime() + 24 * 60 * 60 * 1000 - 1);
   const { _sum } = await prisma.booking.aggregate({
@@ -182,14 +190,72 @@ async function autoCloseConfirmedBookingDate(date: Date) {
     },
     _sum: { numberOfPeople: true, numberOfKids: true },
   });
-  const capacityPeople =
-    (_sum.numberOfPeople ?? 0) + (_sum.numberOfKids ?? 0);
-  if (capacityPeople >= DAILY_CAPACITY) {
-    await upsertClosedDate(
-      dayStart,
-      `Auto-closed: ${DAILY_CAPACITY}-person daily capacity reached`,
-    );
+  return (_sum.numberOfPeople ?? 0) + (_sum.numberOfKids ?? 0) >= DAILY_CAPACITY;
+}
+
+async function autoCloseConfirmedBookingDate(date: Date) {
+  if (!(await isDateAtCapacity(date))) return;
+  const dayStart = utcDayStart(date);
+  await upsertClosedDate(
+    dayStart,
+    `Auto-closed: ${DAILY_CAPACITY}-person daily capacity reached`,
+  );
+  // Everyone still holding an unpaid place on the now-full date: pay within
+  // 12h or the place goes. Paying on time still confirms, over capacity.
+  const waiting = await prisma.booking.findMany({
+    where: {
+      date: { gte: dayStart, lt: new Date(dayStart.getTime() + 24 * 60 * 60 * 1000) },
+      bookingStatus: BookingStatus.WAITING_PAYMENT,
+      dateFullNoticeAt: null,
+    },
+    select: { id: true },
+  });
+  for (const { id } of waiting) {
+    if (await cutDeadlineForFullDate(id)) await sendFullDatePaymentEmail(id);
   }
+}
+
+/**
+ * Pull this payment window's deadline in to the full-date limit, once per
+ * window. Returns whether this call applied it, so exactly one caller emails.
+ */
+async function cutDeadlineForFullDate(bookingId: string): Promise<boolean> {
+  const booking = await prisma.booking.findUnique({
+    where: { id: bookingId },
+    select: { date: true, bookingStatus: true, waitingPaymentAt: true, paymentDueAt: true, dateFullNoticeAt: true },
+  });
+  if (
+    !booking ||
+    booking.bookingStatus !== BookingStatus.WAITING_PAYMENT ||
+    booking.dateFullNoticeAt
+  ) {
+    return false;
+  }
+  const now = new Date();
+  const { count } = await prisma.booking.updateMany({
+    where: {
+      id: bookingId,
+      bookingStatus: BookingStatus.WAITING_PAYMENT,
+      waitingPaymentAt: booking.waitingPaymentAt,
+      paymentDueAt: booking.paymentDueAt,
+      dateFullNoticeAt: null,
+    },
+    data: {
+      paymentDueAt: dueAtOnFullDate(now, booking.date, booking.paymentDueAt),
+      dateFullNoticeAt: now,
+    },
+  });
+  return count === 1;
+}
+
+/**
+ * A booking has just entered WAITING_PAYMENT. No clock starts, but a date that
+ * is already full gets the full-date deadline straight away, before the
+ * payment-request email, so that one email carries it.
+ */
+async function openPaymentWindow(bookingId: string, date: Date) {
+  if (await isDateAtCapacity(date)) await cutDeadlineForFullDate(bookingId);
+  await sendPaymentRequestEmail(bookingId);
 }
 
 
@@ -345,7 +411,7 @@ export async function createBooking(
         bookingStatus: goToPayment
           ? BookingStatus.WAITING_PAYMENT
           : BookingStatus.PENDING,
-        // Start the 24h payment countdown when landing in WAITING_PAYMENT.
+        // Opens the payment window; the deadline waits for the guest's link.
         ...(goToPayment ? { waitingPaymentAt: new Date() } : {}),
         agentId: staffCreatorId,
       },
@@ -366,9 +432,9 @@ export async function createBooking(
     // Bookings that go straight to payment (existing customers, or any booking
     // while auto-confirm is on) skip the review, so they get the "pay your
     // deposit" email instead of the request receipt: the payment page they land
-    // on is gone once the tab is closed, and the hold still lapses in 24h.
+    // on is gone once the tab is closed.
     if (goToPayment) {
-      await sendPaymentRequestEmail(booking.id);
+      await openPaymentWindow(booking.id, booking.date);
     } else {
       await sendBookingEmail(
         validatedData.email,
@@ -1484,16 +1550,7 @@ export async function getBookingById(id: string) {
 }
 
 /**
- * Cancel any booking still in WAITING_PAYMENT whose 24h window has elapsed.
- *
- * Idempotent by construction: the WHERE clause only matches still-waiting,
- * already-expired rows, so re-running it (on read, or from the cron route) is a
- * no-op once they're canceled. Bookings without a `waitingPaymentAt` (legacy
- * rows) are skipped. Cancellation has no other side effects in this codebase, so
- * a single bulk update is sufficient.
- */
-/**
- * Cancels bookings whose 24h WAITING_PAYMENT window has elapsed.
+ * Cancels WAITING_PAYMENT bookings whose payment deadline has passed.
  *
  * Deliberately does NOT call revalidatePath: this runs from render paths
  * (e.g. the reception dashboard) where cache revalidation is unsupported and
@@ -1507,6 +1564,9 @@ export async function cancelExpiredWaitingPayments() {
  * Close bookings still open after their visit date (Cairo) as EXPIRED, each
  * recorded as a cron change. Nothing is emailed: the outcome is unknown, so
  * the guest is not told their spot was released for a day already gone.
+ * A booking that holds a Flash payment (a late or mismatched one parked in
+ * UNDER_REVIEW) is skipped: there is money to confirm or refund, so it waits
+ * for staff instead of closing quietly.
  * Idempotent; the first run also sweeps the season's backlog.
  */
 export async function expirePastOpenBookings(): Promise<number> {
@@ -1514,6 +1574,7 @@ export async function expirePastOpenBookings(): Promise<number> {
     where: {
       bookingStatus: { in: ACTIVE_PENDING_STATUSES },
       date: { lt: cairoBusinessDayStart() },
+      payments: { none: { flashTransactionId: { not: null } } },
     },
     select: { id: true, bookingStatus: true },
   });
@@ -1525,6 +1586,7 @@ export async function expirePastOpenBookings(): Promise<number> {
     where: {
       id: { in: stale.map((b) => b.id) },
       bookingStatus: { in: ACTIVE_PENDING_STATUSES },
+      payments: { none: { flashTransactionId: { not: null } } },
     },
     data: { bookingStatus: BookingStatus.EXPIRED },
     select: { id: true },
@@ -1565,10 +1627,12 @@ async function applyBookingStatusChange(
   try {
     const before = await prisma.booking.findUnique({
       where: { id },
-      select: { bookingStatus: true, agentId: true },
+      select: { bookingStatus: true, agentId: true, paymentLinkExpiresAt: true },
     });
     if (!before) return { success: false, message: "Booking not found." };
 
+    const now = new Date();
+    const opensPaymentWindow = status === BookingStatus.WAITING_PAYMENT;
     const claimsOwnership =
       !!actorId &&
       !before.agentId &&
@@ -1580,10 +1644,18 @@ async function applyBookingStatusChange(
       data: {
         bookingStatus: status,
         ...(claimsOwnership ? { agentId: actorId } : {}),
-        // Start (or restart) the 24h payment countdown on entry into
-        // WAITING_PAYMENT; the deadline is derived as waitingPaymentAt + 24h.
-        ...(status === BookingStatus.WAITING_PAYMENT
-          ? { waitingPaymentAt: new Date() }
+        // (Re)open the payment window. No clock yet: the deadline is set by
+        // the guest's first payment link. A link still live from an earlier
+        // window is voided on our side so the guest generates a fresh one.
+        ...(opensPaymentWindow
+          ? {
+              waitingPaymentAt: now,
+              paymentDueAt: null,
+              dateFullNoticeAt: null,
+              ...(before.paymentLinkExpiresAt && before.paymentLinkExpiresAt > now
+                ? { paymentLinkExpiresAt: now }
+                : {}),
+            }
           : {}),
       },
     });
@@ -1609,17 +1681,10 @@ async function applyBookingStatusChange(
       await autoCloseConfirmedBookingDate(booking.date);
     }
 
-    // Generate a Flash payment link when moving into WAITING_PAYMENT.
-    // Link creation is non-fatal: the status change still succeeds and the
-    // admin can retry from the booking page if it fails.
-    if (status === BookingStatus.WAITING_PAYMENT) {
-      const linkRes = await createBookingPaymentLink(id);
-      // Sent even when the link failed: the email points at the booking page,
-      // which issues a fresh link itself.
-      await sendPaymentRequestEmail(id);
-      if (!linkRes.success) {
-        return { success: true, warning: linkRes.message };
-      }
+    // The guest generates the Flash link from their booking page; the email
+    // sends them there.
+    if (opensPaymentWindow) {
+      await openPaymentWindow(id, booking.date);
     }
 
     return { success: true };
@@ -1632,8 +1697,12 @@ async function applyBookingStatusChange(
 /**
  * Create, reuse, or re-issue a Flash payment link for a booking's outstanding
  * balance. Safe to call repeatedly: a link that is still live is returned as-is,
- * and only an expired one is replaced (under a fresh order id — see
+ * and only an expired or voided one is replaced (under a fresh order id — see
  * {@link flashAggregatorId}).
+ *
+ * The first link of a payment window starts the guest's clock: it fixes
+ * `paymentDueAt` (24h, cut at the end of the booking day). Later links never
+ * move it — see lib/bookings/payment-window.ts.
  *
  * Intentionally public: guests trigger this from the unauthenticated booking
  * detail page (PayDepositOnline). Knowing the booking UUID is the capability.
@@ -1657,9 +1726,8 @@ export async function createBookingPaymentLink(bookingId: string) {
       };
     }
 
-    const deadline =
-      booking.waitingPaymentAt.getTime() + WAITING_PAYMENT_WINDOW_MS;
-    if (deadline <= now) {
+    const deadline = dueAtForLink(new Date(now), booking.date, booking.paymentDueAt).getTime();
+    if (deadline <= now || bookingDayEnd(booking.date).getTime() <= now) {
       return {
         success: false,
         message: "The booking's payment window has expired. Start a new payment window before issuing a link.",
@@ -1667,13 +1735,13 @@ export async function createBookingPaymentLink(bookingId: string) {
     }
 
     // Reuse a live link rather than creating a duplicate Flash order. An expired
-    // one falls through to be re-issued instead: since links started carrying a
-    // real `validity`, handing the stored link back forever would mean handing
-    // back a dead one forever.
+    // or voided one falls through to be re-issued instead. A link only belongs
+    // to this window once the window has a deadline: entering WAITING_PAYMENT
+    // voids any earlier link and clears the deadline.
     const linkIsLive =
+      booking.paymentDueAt !== null &&
       booking.paymentLinkExpiresAt !== null &&
-      booking.paymentLinkExpiresAt.getTime() > now &&
-      booking.paymentLinkExpiresAt.getTime() <= deadline;
+      booking.paymentLinkExpiresAt.getTime() > now;
     if (booking.flashOrderId && booking.paymentLink && linkIsLive) {
       return {
         success: true as const,
@@ -1706,15 +1774,11 @@ export async function createBookingPaymentLink(bookingId: string) {
       };
     }
 
-    // Expire the link with the booking's own 24h payment window, so a payment
-    // link can never outlive the hold it was issued for. Flash takes `validity`
-    // in seconds and applies its own default when it is omitted — which is how
+    // Expire the link with the booking's payment deadline, so a payment link
+    // can never outlive the hold it was issued for. Flash takes `validity` in
+    // seconds and applies its own default when it is omitted — which is how
     // links used to stay alive after the booking had already auto-cancelled.
-    //
-    // In the normal flow this is a full 24h: `applyBookingStatusChange` stamps
-    // `waitingPaymentAt` and creates the link in the same call. A link made by
-    // hand later gets only what is left of that window, so the two deadlines
-    // stay the same deadline.
+    // A re-issued link gets only what is left of the deadline.
     const validitySeconds = Math.floor((deadline - now) / 1000);
     if (validitySeconds < 1) {
       return {
@@ -1741,6 +1805,7 @@ export async function createBookingPaymentLink(bookingId: string) {
         id: bookingId,
         bookingStatus: BookingStatus.WAITING_PAYMENT,
         waitingPaymentAt: booking.waitingPaymentAt,
+        paymentDueAt: booking.paymentDueAt,
         paymentLinkAttempt: booking.paymentLinkAttempt,
         amountPaidCents: booking.amountPaidCents,
       },
@@ -1749,6 +1814,7 @@ export async function createBookingPaymentLink(bookingId: string) {
         paymentLink: result.paymentLink,
         paymentLinkExpiresAt: expiresAt,
         paymentLinkAttempt: attempt,
+        paymentDueAt: new Date(deadline),
       },
     });
     if (count === 0) {
@@ -2004,7 +2070,7 @@ async function applyFlashPayment(opts: {
         id: true,
         date: true,
         bookingStatus: true,
-        waitingPaymentAt: true,
+        paymentDueAt: true,
         totalPriceCents: true,
         amountPaidCents: true,
         flashOrderId: true,
@@ -2049,9 +2115,7 @@ async function applyFlashPayment(opts: {
       booking.id,
       booking.paymentLinkAttempt,
     );
-    const paymentDeadline = booking.waitingPaymentAt
-      ? booking.waitingPaymentAt.getTime() + WAITING_PAYMENT_WINDOW_MS
-      : null;
+    const paymentDeadline = booking.paymentDueAt?.getTime() ?? null;
     const now = Date.now();
     const mismatchReasons: string[] = [];
 
@@ -2549,7 +2613,7 @@ export async function createDayUseBookingAdmin(data: {
       },
     ]);
     if (booking.bookingStatus === BookingStatus.WAITING_PAYMENT) {
-      await sendPaymentRequestEmail(booking.id);
+      await openPaymentWindow(booking.id, booking.date);
     }
     revalidatePath("/bookings");
     revalidatePath("/bookings/day-use");
@@ -2694,6 +2758,9 @@ function contactReason(source: ReceptionBookingSource): string {
   if (source.bookingStatus === BookingStatus.REQUEST_SENT) {
     return "Guest information required";
   }
+  if (source.bookingStatus === BookingStatus.WAITING_PAYMENT && !source.paymentDueAt) {
+    return "Payment link not generated yet";
+  }
   if (!source.paymentLink) return "Payment link needs attention";
   return "Payment reminder";
 }
@@ -2810,9 +2877,7 @@ export async function getReceptionDashboard(): Promise<ReceptionDashboardData> {
     contactUpcoming: contactUpcoming.map((booking) => ({
       ...toReceptionBookingRow(booking),
       contactReason: contactReason(booking),
-      paymentExpiresAt: booking.waitingPaymentAt
-        ? new Date(booking.waitingPaymentAt.getTime() + WAITING_PAYMENT_WINDOW_MS)
-        : null,
+      paymentExpiresAt: booking.paymentDueAt,
     })),
     contactTotal,
     capacity,

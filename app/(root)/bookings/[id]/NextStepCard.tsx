@@ -1,5 +1,5 @@
 import { BookingStatus } from "@prisma/client";
-import { Instagram, Check, MessageCircle, BookmarkCheck } from "lucide-react";
+import { Instagram, Check, MessageCircle, BookmarkCheck, TriangleAlert } from "lucide-react";
 
 import { CopyButton } from "./CopyButton";
 import PayDepositOnline from "./PayDepositOnline";
@@ -7,9 +7,9 @@ import PaymentCountdown from "./PaymentCountdown";
 import {
   INSTAGRAM_DM_URL,
   INSTAGRAM_HANDLE,
-  WAITING_PAYMENT_WINDOW_MS,
   WHATSAPP_PHONE,
 } from "@/lib/constants";
+import { formatPaymentDeadline } from "@/lib/bookings/payment-window";
 import { whatsappHref } from "@/lib/bookings/messages";
 import { FOCUS_RING } from "@/lib/bookings/status";
 
@@ -45,7 +45,8 @@ export default function NextStepCard({
   bookingId,
   paymentLink = null,
   paymentLinkExpiresAt = null,
-  waitingPaymentAt = null,
+  paymentDueAt = null,
+  dateFull = false,
   spectator = false,
   paysInFull = false,
 }: {
@@ -55,7 +56,10 @@ export default function NextStepCard({
   bookingId: string;
   paymentLink?: string | null;
   paymentLinkExpiresAt?: Date | string | null;
-  waitingPaymentAt?: Date | string | null;
+  /** Null until the guest generates their first payment link. */
+  paymentDueAt?: Date | string | null;
+  /** The date filled up while this booking was unpaid. */
+  dateFull?: boolean;
   /** Pharaoh Airstyle bean-bag spectator pass: its own wording. */
   spectator?: boolean;
   /** Paid in full online rather than a 50% deposit. */
@@ -64,12 +68,8 @@ export default function NextStepCard({
   const variant = getVariant(status);
   if (!variant) return null;
 
-  // Deadline for the 24h payment window (ISO string for the client countdown).
-  const paymentDeadline = waitingPaymentAt
-    ? new Date(
-        new Date(waitingPaymentAt).getTime() + WAITING_PAYMENT_WINDOW_MS,
-      ).toISOString()
-    : null;
+  // ISO string for the client countdown; null until the guest's first link.
+  const paymentDeadline = paymentDueAt ? new Date(paymentDueAt).toISOString() : null;
 
   return (
     <section className="mt-8">
@@ -89,6 +89,7 @@ export default function NextStepCard({
                   : null
               }
               deadline={paymentDeadline}
+              dateFull={dateFull}
               paysInFull={paysInFull}
             />
           )}
@@ -263,9 +264,11 @@ function PaymentBody({
   paymentLink,
   paymentLinkExpiresAt,
   deadline,
+  dateFull,
   paysInFull,
 }: {
   paysInFull: boolean;
+  dateFull: boolean;
   totalCents: number;
   amountPaidCents: number;
   bookingId: string;
@@ -283,13 +286,37 @@ function PaymentBody({
       <Heading>{paysInFull ? "Pay now to confirm" : "Pay 50% to confirm"}</Heading>
       <Body>
         {paysInFull
-          ? "Your pass is held for 24 hours. Payment is non-refundable and the pass cannot be moved to another date."
-          : "Your booking is held for 24 hours. The deposit is non-refundable and cannot be moved to another date."}
+          ? "Payment is non-refundable and the pass cannot be moved to another date."
+          : "The deposit is non-refundable and cannot be moved to another date."}
       </Body>
 
-      {deadline && (
+      {dateFull && (
+        <div
+          role="alert"
+          className="mt-5 flex items-start gap-3 rounded-2xl bg-[#FBE3E1] px-4 py-3.5 ring-1 ring-[#F1C0BB]"
+        >
+          <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0 text-[#7E2A23]" strokeWidth={1.8} aria-hidden="true" />
+          <p className="font-[family-name:var(--font-raleway)] text-[0.88rem] font-[500] leading-[1.55] text-[#7E2A23]">
+            This date is now fully booked.{" "}
+            {deadline
+              ? `Pay by ${formatPaymentDeadline(new Date(deadline))} or your reservation will be cancelled.`
+              : "Pay now or your reservation will be cancelled."}
+          </p>
+        </div>
+      )}
+
+      {deadline ? (
         <div className="mt-5">
           <PaymentCountdown deadline={deadline} />
+        </div>
+      ) : (
+        <div className="mt-5 rounded-2xl bg-[#FFF4E0] px-4 py-3.5 ring-1 ring-[#F2D9A6]">
+          <p className="font-[family-name:var(--font-raleway)] text-[0.88rem] font-[400] leading-[1.55] text-[#7A5414]">
+            <span className="font-[600]">Heads up:</span> once you generate your
+            payment link, you have <span className="font-[600]">24 hours</span>{" "}
+            to complete payment. If it isn&rsquo;t paid by then, your booking is
+            released.
+          </p>
         </div>
       )}
 
@@ -334,11 +361,17 @@ function PaymentBody({
       <div className="mt-6">
         <PayDepositOnline
           bookingId={bookingId}
-          paymentLink={paymentLink}
+          // A link only belongs to this payment window once it has a deadline.
+          paymentLink={deadline ? paymentLink : null}
           paymentLinkExpiresAt={paymentLinkExpiresAt}
           paysInFull={paysInFull}
         />
       </div>
+
+      <p className="mt-4 font-[family-name:var(--font-raleway)] text-[0.85rem] font-[400] leading-[1.55] text-[#5b5650]">
+        If you arrive without paying, we may not be able to accept you or find
+        you a space. Not sure? Message us on WhatsApp.
+      </p>
 
       {/* The page is the receipt: the guest sees the booking flip to confirmed
           here, whichever way they paid — so tell them to keep the link. */}

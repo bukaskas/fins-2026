@@ -4,7 +4,8 @@ import { useEffect, useState } from "react";
 import { Clock3 } from "lucide-react";
 
 function deadlineLabel(expiresAt: Date | null, now: number) {
-  if (!expiresAt) return { label: "No payment deadline", urgent: false };
+  // The clock starts when the guest generates their payment link.
+  if (!expiresAt) return { label: "No link yet", urgent: false };
   const milliseconds = expiresAt.getTime() - now;
   if (milliseconds <= 0) return { label: "Payment expired", urgent: true };
 

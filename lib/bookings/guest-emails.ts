@@ -2,7 +2,7 @@ import { Booking, BookingEventSource, BookingGroup, BookingStatus } from "@prism
 
 import { prisma } from "@/db/prisma";
 import { sendBookingEmail } from "@/emails/index";
-import { depositDueCents, paymentDeadline } from "@/lib/bookings/payment-window";
+import { depositDueCents } from "@/lib/bookings/payment-window";
 import { dateKeyInCairo, utcMidnightFromKey } from "@/lib/date-keys";
 import {
   calculateDayUsePrice,
@@ -39,11 +39,40 @@ function sendsPaymentWindowEmails(booking: Booking): boolean {
   return !!booking.email && booking.service !== "corporate";
 }
 
+/** The awaiting-payment email for this booking as it stands now. */
+async function sendAwaitingPaymentEmail(booking: Booking, email: string) {
+  const isDayUse = booking.service === "day-use";
+  const total = booking.totalPriceCents;
+  const depositDue =
+    total !== null
+      ? depositDueCents(total, booking.amountPaidCents, isSpectatorRate(booking))
+      : undefined;
+  const arrival =
+    total !== null && depositDue !== undefined
+      ? Math.max(total - booking.amountPaidCents - depositDue, 0)
+      : undefined;
+
+  await sendBookingEmail(email, booking.name, booking.date, {
+    bookingType: booking.service,
+    numberOfPeople: isDayUse ? booking.numberOfPeople : undefined,
+    numberOfKids: isDayUse ? booking.numberOfKids : undefined,
+    priceBreakdown: emailPriceBreakdown(booking),
+    bookingId: booking.id,
+    spectator: booking.bookingGroup === BookingGroup.SPECTATOR,
+    stage: "awaiting-payment",
+    depositDueCents: depositDue,
+    balanceDueCents: arrival,
+    // Usually none yet: the clock starts at the guest's first payment link.
+    deadline: booking.paymentDueAt ?? undefined,
+    fullyBooked: !!booking.dateFullNoticeAt,
+  });
+}
+
 /**
  * "Pay your deposit to hold <date>": once per payment window. The window is
  * identified by its `waitingPaymentAt`, claimed atomically in the WHERE clause
  * so two concurrent callers can't both send; a restarted window has a new
- * timestamp and gets its own email with the new deadline.
+ * timestamp and gets its own email.
  *
  * Never throws: a mail outage must not fail the status change that started
  * the window.
@@ -78,29 +107,7 @@ export async function sendPaymentRequestEmail(bookingId: string) {
     if (count === 0) return;
     claimedWindow = window;
 
-    const isDayUse = booking.service === "day-use";
-    const total = booking.totalPriceCents;
-    const depositDue =
-      total !== null
-        ? depositDueCents(total, booking.amountPaidCents, isSpectatorRate(booking))
-        : undefined;
-    const arrival =
-      total !== null && depositDue !== undefined
-        ? Math.max(total - booking.amountPaidCents - depositDue, 0)
-        : undefined;
-
-    await sendBookingEmail(booking.email, booking.name, booking.date, {
-      bookingType: booking.service,
-      numberOfPeople: isDayUse ? booking.numberOfPeople : undefined,
-      numberOfKids: isDayUse ? booking.numberOfKids : undefined,
-      priceBreakdown: emailPriceBreakdown(booking),
-      bookingId: booking.id,
-      spectator: booking.bookingGroup === BookingGroup.SPECTATOR,
-      stage: "awaiting-payment",
-      depositDueCents: depositDue,
-      balanceDueCents: arrival,
-      deadline: paymentDeadline(window),
-    });
+    await sendAwaitingPaymentEmail(booking, booking.email);
   } catch (error) {
     // Nothing reached the guest, so give the window back for a retry.
     if (claimedWindow) {
@@ -112,6 +119,28 @@ export async function sendPaymentRequestEmail(bookingId: string) {
         .catch((e) => console.error("Payment request email release error:", e));
     }
     console.error("Payment request email error:", error);
+  }
+}
+
+/**
+ * "Your date is now fully booked — pay by <deadline>": sent by the caller that
+ * claimed this window's `dateFullNoticeAt`, so once per window. Never throws.
+ */
+export async function sendFullDatePaymentEmail(bookingId: string) {
+  try {
+    const booking = await prisma.booking.findUnique({ where: { id: bookingId } });
+    if (
+      !booking ||
+      !booking.email ||
+      !sendsPaymentWindowEmails(booking) ||
+      booking.bookingStatus !== BookingStatus.WAITING_PAYMENT ||
+      !booking.dateFullNoticeAt
+    ) {
+      return;
+    }
+    await sendAwaitingPaymentEmail(booking, booking.email);
+  } catch (error) {
+    console.error("Full date payment email error:", error);
   }
 }
 
@@ -178,9 +207,7 @@ export async function sendReleasedHoldEmails(): Promise<number> {
         bookingId: booking.id,
         spectator: booking.bookingGroup === BookingGroup.SPECTATOR,
         stage: "cancelled",
-        deadline: booking.waitingPaymentAt
-          ? paymentDeadline(booking.waitingPaymentAt)
-          : undefined,
+        deadline: booking.paymentDueAt ?? undefined,
       });
       sent += 1;
     } catch (error) {

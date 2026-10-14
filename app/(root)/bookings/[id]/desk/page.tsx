@@ -212,8 +212,8 @@ export default async function BookingDeskPage({
             </p>
             <p className="mt-1 font-[family-name:var(--font-raleway)] text-[0.82rem] text-[#7E2A23]/85">
               {booking.bookingStatus === BookingStatus.CANCELED &&
-              booking.waitingPaymentAt
-                ? "The 24-hour payment window lapsed and the booking was closed automatically. Change the status to re-open it."
+              booking.paymentDueAt
+                ? "The payment deadline passed and the booking was closed automatically. Change the status to re-open it."
                 : "Change the status above to re-open it."}
             </p>
           </div>
@@ -237,7 +237,7 @@ export default async function BookingDeskPage({
           paymentLinkExpiresAt={
             booking.paymentLinkExpiresAt?.toISOString() ?? null
           }
-          waitingPaymentAt={booking.waitingPaymentAt?.toISOString() ?? null}
+          paymentDueAt={booking.paymentDueAt?.toISOString() ?? null}
           payments={booking.payments.map((p) => ({
             id: p.id,
             amountCents: p.amountCents,

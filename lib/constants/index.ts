@@ -27,9 +27,11 @@ export const VISIT_HOURS = "9:00 AM – 11:00 PM";
 export const PHARAOH_EVENT_HOURS = "9:30 AM – 7:00 PM";
 // Same today, kept apart so the restaurant can change without the beach club.
 export const RESTAURANT_HOURS = "9:00 AM – 11:00 PM";
-// How long a WAITING_PAYMENT booking is held before the cron sweep cancels
-// it. The countdown, the server action and the guest card all read this.
+// How long a guest has to pay once they generate their payment link. The clock
+// starts at the link, not at WAITING_PAYMENT (see lib/bookings/payment-window.ts).
 export const WAITING_PAYMENT_WINDOW_MS = 24 * 60 * 60 * 1000;
+// Once the date is fully booked, unpaid guests get this long (or less) to pay.
+export const FULL_DATE_PAYMENT_WINDOW_MS = 12 * 60 * 60 * 1000;
 
 export const VISIT_WORKING_HOURS = '9:30 am - 12 pm';
 

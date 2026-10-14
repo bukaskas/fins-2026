@@ -192,9 +192,21 @@ model Booking {
   // sends `<id>-N`. The webhook strips that suffix to find its way back here.
   paymentLinkAttempt   Int       @default(1)
 
-  // 24h payment window: set when entering WAITING_PAYMENT; the booking
-  // auto-cancels 24h after this timestamp if still unpaid.
+  // When the booking (last) entered WAITING_PAYMENT. Identifies the payment
+  // window; it no longer starts a clock (see paymentDueAt).
   waitingPaymentAt DateTime?
+
+  // When an unpaid WAITING_PAYMENT booking is cancelled. Null until the guest
+  // generates their first payment link (+24h) or the date fills up (+12h);
+  // within one window it only moves earlier, and never past the booking day.
+  // A booking with no deadline expires once its date has passed.
+  // Rules: lib/bookings/payment-window.ts.
+  paymentDueAt DateTime?
+
+  // When this payment window's deadline was cut because the date became fully
+  // booked. Claimed before the "date is full, pay now" email so it goes once
+  // per window, and drives the warning on the guest's booking page.
+  dateFullNoticeAt DateTime?
 
   // Claimed (set non-null) before the payment-confirmed guest email is sent, so
   // the two payment paths can't both send one. Reception recording a second
@@ -236,7 +248,7 @@ model Booking {
   bookingGroup BookingGroup?
   groupDetail  String?
 
-  @@index([bookingStatus, waitingPaymentAt])
+  @@index([bookingStatus, paymentDueAt])
   @@index([bookingGroup])
   // /bookings filters and sorts by date on every load; the composite covers
   // the same query narrowed to one status.

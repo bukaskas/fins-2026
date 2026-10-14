@@ -13,7 +13,6 @@ import {
 } from "@/lib/actions/booking.actions";
 import PayDepositDialog from "@/components/bookings/PayDepositDialog";
 import { FOCUS_RING, MUTED } from "@/lib/bookings/status";
-import { WAITING_PAYMENT_WINDOW_MS } from "@/lib/constants";
 import PaymentCountdown from "../PaymentCountdown";
 
 /**
@@ -55,7 +54,7 @@ export default function PaymentPanel({
   amountPaidCents,
   paymentLink,
   paymentLinkExpiresAt,
-  waitingPaymentAt,
+  paymentDueAt,
   payments,
 }: {
   bookingId: string;
@@ -64,7 +63,8 @@ export default function PaymentPanel({
   amountPaidCents: number;
   paymentLink: string | null;
   paymentLinkExpiresAt: string | null;
-  waitingPaymentAt: string | null;
+  /** Null until a payment link is generated (by the guest or here). */
+  paymentDueAt: string | null;
   payments: PaymentRow[];
 }) {
   const router = useRouter();
@@ -87,10 +87,8 @@ export default function PaymentPanel({
     paymentLinkExpiresAt !== null &&
     new Date(paymentLinkExpiresAt).getTime() <= mountedAt;
 
-  const deadline =
-    bookingStatus === BookingStatus.WAITING_PAYMENT && waitingPaymentAt
-      ? new Date(new Date(waitingPaymentAt).getTime() + WAITING_PAYMENT_WINDOW_MS).toISOString()
-      : null;
+  const waiting = bookingStatus === BookingStatus.WAITING_PAYMENT;
+  const deadline = waiting ? paymentDueAt : null;
 
   const generate = () => {
     startCreate(async () => {
@@ -199,10 +197,17 @@ export default function PaymentPanel({
         )}
       </div>
 
-      {deadline && (
+      {deadline ? (
         <div className="mt-3">
           <PaymentCountdown deadline={deadline} />
         </div>
+      ) : (
+        waiting && (
+          <p className="mt-3 font-[family-name:var(--font-raleway)] text-[0.82rem]" style={{ color: MUTED }}>
+            No deadline yet. The guest&rsquo;s 24 hours start when a payment link
+            is generated; unpaid, the booking expires after its date.
+          </p>
+        )
       )}
 
       {/* ledger — what has actually been taken, and by what method */}
@@ -323,6 +328,11 @@ export default function PaymentPanel({
                 ? "Replace expired link"
                 : "Create payment link"}
           </button>
+        )}
+        {waiting && !deadline && (
+          <p className="self-center font-[family-name:var(--font-raleway)] text-[0.75rem]" style={{ color: MUTED }}>
+            Creating a link starts the guest&rsquo;s 24 hours.
+          </p>
         )}
       </div>
 

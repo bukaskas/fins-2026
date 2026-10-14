@@ -1,5 +1,13 @@
-import { WAITING_PAYMENT_WINDOW_MS } from "@/lib/constants";
-import { BUSINESS_TIME_ZONE } from "@/lib/date-keys";
+import {
+  FULL_DATE_PAYMENT_WINDOW_MS,
+  WAITING_PAYMENT_WINDOW_MS,
+} from "@/lib/constants";
+import {
+  BUSINESS_TIME_ZONE,
+  addDaysToKey,
+  cairoDayStart,
+  dateKeyFromUtcMidnight,
+} from "@/lib/date-keys";
 
 /**
  * The online payment is a 50% deposit; the rest is settled at reception. A
@@ -18,9 +26,56 @@ export function depositDueCents(
   return Math.max(depositCents(totalPriceCents, paysInFull) - amountPaidCents, 0);
 }
 
-/** When an unpaid WAITING_PAYMENT booking is released. */
-export function paymentDeadline(waitingPaymentAt: Date): Date {
-  return new Date(waitingPaymentAt.getTime() + WAITING_PAYMENT_WINDOW_MS);
+/*
+ * The payment deadline (`Booking.paymentDueAt`). Entering WAITING_PAYMENT
+ * starts no clock: the guest's own "Generate payment link" does, and a booking
+ * nobody generates a link for simply expires once its date has passed. Once
+ * set, a deadline only ever moves earlier inside one payment window, so
+ * re-pressing the button, re-issuing a voided link or a later rule can never
+ * hand out extra time. It never runs past the booking day: paying on the
+ * morning of arrival is fine, paying after the day is over is not.
+ */
+
+/** The instant the booking's day is over in Cairo (next day's midnight). */
+export function bookingDayEnd(bookingDate: Date): Date {
+  return cairoDayStart(addDaysToKey(dateKeyFromUtcMidnight(bookingDate), 1));
+}
+
+function earliest(...dates: (Date | null | undefined)[]): Date {
+  const times = dates.filter((d): d is Date => !!d).map((d) => d.getTime());
+  return new Date(Math.min(...times));
+}
+
+/**
+ * The deadline once a link exists: an existing one stands, otherwise 24h from
+ * the guest's first link, cut at the end of the booking day.
+ */
+export function dueAtForLink(
+  now: Date,
+  bookingDate: Date,
+  currentDueAt: Date | null,
+): Date {
+  if (currentDueAt) return currentDueAt;
+  return earliest(
+    new Date(now.getTime() + WAITING_PAYMENT_WINDOW_MS),
+    bookingDayEnd(bookingDate),
+  );
+}
+
+/**
+ * The deadline once the date is fully booked: at most 12h from now, never
+ * later than the one the guest already has, never past the booking day.
+ */
+export function dueAtOnFullDate(
+  now: Date,
+  bookingDate: Date,
+  currentDueAt: Date | null,
+): Date {
+  return earliest(
+    currentDueAt,
+    new Date(now.getTime() + FULL_DATE_PAYMENT_WINDOW_MS),
+    bookingDayEnd(bookingDate),
+  );
 }
 
 function cairoParts(instant: Date, style: "long" | "short") {

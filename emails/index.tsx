@@ -63,6 +63,8 @@ interface BookingEmailOptions {
   depositDueCents?: number;
   /** When the payment window closes. Awaiting-payment and cancelled. */
   deadline?: Date;
+  /** Awaiting-payment: the date filled up, so this is the "pay now" notice. */
+  fullyBooked?: boolean;
   /** Pharaoh Airstyle bean-bag spectator pass: its own wording at every stage. */
   spectator?: boolean;
 }
@@ -93,6 +95,7 @@ export async function sendBookingEmail(
     balanceDueCents,
     depositDueCents,
     deadline,
+    fullyBooked = false,
     spectator = false,
   } = options;
 
@@ -146,7 +149,11 @@ export async function sendBookingEmail(
 
   // Never the signup email's subject: identical subjects get threaded together
   // by Gmail and the confirmation disappears under the welcome mail.
-  const subject = spectator
+  const fullDateSubject =
+    stage === "awaiting-payment" && fullyBooked
+      ? `${formattedDate} is now fully booked — pay${deadline ? ` by ${formatPaymentDeadlineShort(deadline)}` : " now"} to keep your ${spectator ? "pass" : "spot"}`
+      : undefined;
+  const subject = fullDateSubject ?? (spectator
     ? {
         request: `Spectator pass request received — ${formattedDate}`,
         "awaiting-payment": `Pay to confirm your spectator pass — ${formattedDate}`,
@@ -157,7 +164,7 @@ export async function sendBookingEmail(
       ? `Pay your deposit to hold ${formattedDate}`
       : stage === "cancelled"
         ? `${bookingType === "day-use" ? "Your spot" : "Your booking"} for ${formattedDate} was released`
-        : `${stage === "confirmed" ? prefix.confirmed : prefix.request} — ${formattedDate}`;
+        : `${stage === "confirmed" ? prefix.confirmed : prefix.request} — ${formattedDate}`);
 
   await resend.emails.send({
     from: EMAIL_FROM,
@@ -179,6 +186,7 @@ export async function sendBookingEmail(
         depositDueCents={depositDueCents}
         deadline={deadline ? formatPaymentDeadline(deadline) : undefined}
         deadlineShort={deadline ? formatPaymentDeadlineShort(deadline) : undefined}
+        fullyBooked={fullyBooked}
         rebookUrl={stage === "cancelled" && !spectator ? rebookUrlFor(bookingType, date) : undefined}
         spectator={spectator}
       />

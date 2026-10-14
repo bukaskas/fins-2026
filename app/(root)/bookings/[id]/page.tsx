@@ -274,7 +274,8 @@ export default async function BookingDetailPage({
           bookingId={booking.id}
           paymentLink={booking.paymentLink}
           paymentLinkExpiresAt={booking.paymentLinkExpiresAt}
-          waitingPaymentAt={booking.waitingPaymentAt}
+          paymentDueAt={booking.paymentDueAt}
+          dateFull={!!booking.dateFullNoticeAt}
           spectator={booking.bookingGroup === "SPECTATOR"}
           paysInFull={isSpectatorRate(booking)}
         />
