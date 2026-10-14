@@ -8,6 +8,7 @@ import {
   BookingStatus,
 } from "@prisma/client";
 import {
+  ChevronDown,
   Clock,
   Copy,
   ExternalLink,
@@ -49,9 +50,6 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
-  DropdownMenuSub,
-  DropdownMenuSubContent,
-  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useAgents } from "@/components/bookings/AgentsProvider";
@@ -78,6 +76,12 @@ function BookingComponent({ booking }: { booking: BookingRow }) {
   const [agent, setAgent] = useState<UserStub | null>(booking.agent);
   const [isAssigning, setIsAssigning] = useState(false);
   const [payDepositOpen, setPayDepositOpen] = useState(false);
+  // Sections expand inline: on phones a side submenu has no room and opens off-screen.
+  const [menuSection, setMenuSection] = useState<"messages" | "agent" | null>(
+    null
+  );
+  const toggleMenuSection = (section: "messages" | "agent") =>
+    setMenuSection((current) => (current === section ? null : section));
   const [, startContactTransition] = useTransition();
 
   useEffect(() => {
@@ -363,7 +367,11 @@ function BookingComponent({ booking }: { booking: BookingRow }) {
                   </span>
                 </a>
 
-                <DropdownMenu>
+                <DropdownMenu
+                  onOpenChange={(open) => {
+                    if (!open) setMenuSection(null);
+                  }}
+                >
                   <DropdownMenuTrigger asChild>
                     <button
                       type="button"
@@ -378,7 +386,8 @@ function BookingComponent({ booking }: { booking: BookingRow }) {
                   </DropdownMenuTrigger>
                   <DropdownMenuContent
                     align="end"
-                    className="w-64 rounded-xl border-[#ece8e3] bg-white p-1.5 shadow-[0_8px_24px_-12px_rgba(26,22,20,0.35)] [&_[data-slot=dropdown-menu-item]]:min-h-10 [&_[data-slot=dropdown-menu-item]]:rounded-md [&_[data-slot=dropdown-menu-item]]:font-[family-name:var(--font-raleway)] [&_[data-slot=dropdown-menu-item]]:text-[#1a1614] [&_[data-slot=dropdown-menu-item]]:focus:bg-[#f5f2ef]"
+                    collisionPadding={8}
+                    className="max-h-[var(--radix-dropdown-menu-content-available-height)] w-64 overflow-y-auto rounded-xl border-[#ece8e3] bg-white p-1.5 shadow-[0_8px_24px_-12px_rgba(26,22,20,0.35)] [&_[data-slot=dropdown-menu-item]]:min-h-10 [&_[data-slot=dropdown-menu-item]]:rounded-md [&_[data-slot=dropdown-menu-item]]:font-[family-name:var(--font-raleway)] [&_[data-slot=dropdown-menu-item]]:text-[#1a1614] [&_[data-slot=dropdown-menu-item]]:focus:bg-[#f5f2ef]"
                   >
                     <DropdownMenuItem asChild>
                       <a
@@ -416,15 +425,25 @@ function BookingComponent({ booking }: { booking: BookingRow }) {
                     </DropdownMenuItem>
 
                     <DropdownMenuSeparator />
-                    <DropdownMenuSub>
-                      <DropdownMenuSubTrigger>
-                        <MessageCircle
-                          className="size-4 text-[#15803d]"
-                          aria-hidden="true"
-                        />
-                        Other messages
-                      </DropdownMenuSubTrigger>
-                      <DropdownMenuSubContent className="max-h-72 w-64 overflow-y-auto rounded-xl border-[#ece8e3] bg-white p-1.5 shadow-[0_8px_24px_-12px_rgba(26,22,20,0.35)]">
+                    <DropdownMenuItem
+                      aria-expanded={menuSection === "messages"}
+                      onSelect={(event) => {
+                        event.preventDefault();
+                        toggleMenuSection("messages");
+                      }}
+                    >
+                      <MessageCircle
+                        className="size-4 text-[#15803d]"
+                        aria-hidden="true"
+                      />
+                      Other messages
+                      <ChevronDown
+                        className={`ml-auto size-4 text-[#6b6460] transition-transform ${menuSection === "messages" ? "rotate-180" : ""}`}
+                        aria-hidden="true"
+                      />
+                    </DropdownMenuItem>
+                    {menuSection === "messages" && (
+                      <div className="ml-3 border-l border-[#ece8e3] pl-1.5">
                         {alternateMessages.map((message) => (
                           <DropdownMenuItem key={message.id} asChild>
                             <a
@@ -443,8 +462,8 @@ function BookingComponent({ booking }: { booking: BookingRow }) {
                             </a>
                           </DropdownMenuItem>
                         ))}
-                      </DropdownMenuSubContent>
-                    </DropdownMenuSub>
+                      </div>
+                    )}
 
                     <DropdownMenuSeparator />
                     <DropdownMenuItem
@@ -465,13 +484,26 @@ function BookingComponent({ booking }: { booking: BookingRow }) {
                     </DropdownMenuItem>
 
                     <DropdownMenuSeparator />
-                    <DropdownMenuSub>
-                      <DropdownMenuSubTrigger disabled={isAssigning}>
+                    <DropdownMenuItem
+                      disabled={isAssigning}
+                      aria-expanded={menuSection === "agent"}
+                      onSelect={(event) => {
+                        event.preventDefault();
+                        toggleMenuSection("agent");
+                      }}
+                    >
+                      <span className="truncate">
                         {agent
                           ? `Agent: ${agent.name ?? agent.email.split("@")[0]}`
                           : "Assign agent"}
-                      </DropdownMenuSubTrigger>
-                      <DropdownMenuSubContent className="max-h-60 w-52 overflow-y-auto rounded-xl border-[#ece8e3] bg-white p-1.5 shadow-[0_8px_24px_-12px_rgba(26,22,20,0.35)]">
+                      </span>
+                      <ChevronDown
+                        className={`ml-auto size-4 shrink-0 text-[#6b6460] transition-transform ${menuSection === "agent" ? "rotate-180" : ""}`}
+                        aria-hidden="true"
+                      />
+                    </DropdownMenuItem>
+                    {menuSection === "agent" && (
+                      <div className="ml-3 border-l border-[#ece8e3] pl-1.5">
                         {agent && (
                           <>
                             <DropdownMenuItem
@@ -502,8 +534,8 @@ function BookingComponent({ booking }: { booking: BookingRow }) {
                             </span>
                           </DropdownMenuItem>
                         ))}
-                      </DropdownMenuSubContent>
-                    </DropdownMenuSub>
+                      </div>
+                    )}
                   </DropdownMenuContent>
                 </DropdownMenu>
               </div>
