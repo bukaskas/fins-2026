@@ -11,8 +11,8 @@ import {
   ChevronDown,
   Clock,
   Copy,
-  ExternalLink,
   Instagram,
+  LayoutDashboard,
   MessageCircle,
   MoreHorizontal,
   Pencil,
@@ -411,12 +411,12 @@ function BookingComponent({ booking }: { booking: BookingRow }) {
                       </Link>
                     </DropdownMenuItem>
                     <DropdownMenuItem asChild>
-                      <Link href={`/bookings/${booking.id}`}>
-                        <ExternalLink
+                      <Link href={`/bookings/${booking.id}/desk`}>
+                        <LayoutDashboard
                           className="size-4 text-[#0369a1]"
                           aria-hidden="true"
                         />
-                        Open guest page
+                        Open booking desk
                       </Link>
                     </DropdownMenuItem>
                     <DropdownMenuItem onSelect={() => void copyBookingLink()}>
