@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 const OTHER_VIEWS = [
-  { label: "Bookings calendar", href: "/bookings/dashboard", icon: Gauge },
+  { label: "Schedule", href: "/bookings/schedule", icon: CalendarDays },
   { label: "Agents", href: "/bookings/agents", icon: Users },
   { label: "Kitesurfing", href: "/bookings/kitesurfing", icon: Waves },
   { label: "Lessons", href: "/lessons", icon: GraduationCap },
@@ -40,9 +40,9 @@ export function BookingsNavigation() {
         variant="outline"
         className="min-h-11 rounded-full border-[#ece8e3] bg-transparent px-4 font-[family-name:var(--font-raleway)] text-xs font-[600] text-[#5a5450] shadow-none hover:border-[#d6d0c8] hover:bg-white hover:text-[#1a1614] focus-visible:ring-[#1a1614]"
       >
-        <Link href="/bookings/schedule">
-          <CalendarDays className="size-4" aria-hidden="true" />
-          Schedule
+        <Link href="/bookings/dashboard">
+          <Gauge className="size-4" aria-hidden="true" />
+          Calendar
         </Link>
       </Button>
 
