@@ -176,15 +176,6 @@ function ReviewRow({
   generatedAt: Date;
 }) {
   const actions = [
-    ...(booking.bookingStatus === BookingStatus.PENDING
-      ? [
-          {
-            label: "Request guest info",
-            status: BookingStatus.REQUEST_SENT,
-            variant: "outline" as const,
-          },
-        ]
-      : []),
     {
       label: "Approve & create payment link",
       status: BookingStatus.WAITING_PAYMENT,
@@ -213,6 +204,15 @@ function ReviewRow({
           {serviceLabel(booking.service)} · {booking.numberOfPeople + booking.numberOfKids} guests
         </p>
       </div>
+      {/* Messaging or calling a new booking moves it to Contacted. */}
+      {booking.bookingStatus === BookingStatus.PENDING && (
+        <ContactActions
+          bookingId={booking.id}
+          guestName={booking.name}
+          phone={booking.phone}
+          email={booking.email}
+        />
+      )}
       <BookingQuickActions bookingId={booking.id} actions={actions} />
     </div>
   );
@@ -394,7 +394,7 @@ export default async function ReceptionPage() {
                   </span>
                 </div>
                 <p className="mt-1 text-xs text-[#5B6B7C]">
-                  Upcoming only · oldest request first
+                  Upcoming only · flagged and overdue first
                 </p>
               </div>
               <div className="divide-y divide-[#8898aa]/25 px-4">
@@ -413,7 +413,14 @@ export default async function ReceptionPage() {
                             />
                           )}
                         </div>
-                        <p className="mt-1 text-sm font-medium text-[#22303F]">
+                        <p
+                          className={`mt-1 text-sm font-medium ${
+                            booking.followUp.stage === "flagged" ||
+                            booking.followUp.stage === "due"
+                              ? "text-red-700"
+                              : "text-[#22303F]"
+                          }`}
+                        >
                           {booking.contactReason}
                         </p>
                         <p className="mt-1 break-words text-xs text-[#5B6B7C]">

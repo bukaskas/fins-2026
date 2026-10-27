@@ -73,7 +73,7 @@ export function ContactActions({
           toast.error(result.message);
           return;
         }
-        if (announce) toast.success("Contact recorded");
+        if (announce) toast.success("Reply recorded");
         router.refresh();
       } catch {
         toast.error("Could not record the contact attempt.");
@@ -210,7 +210,7 @@ export function ContactActions({
         className="col-span-2 h-10 sm:h-9"
       >
         {isPending ? <Loader2 className="animate-spin" /> : <Check />}
-        Mark contacted
+        Guest replied
       </Button>
     </div>
   );

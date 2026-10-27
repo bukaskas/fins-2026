@@ -50,7 +50,7 @@ const STATUS_FILTERS: {
     value: "pending",
     statuses: [
       BookingStatus.PENDING,
-      BookingStatus.REQUEST_SENT,
+      BookingStatus.CONTACTED,
       BookingStatus.UNDER_REVIEW,
     ],
   },

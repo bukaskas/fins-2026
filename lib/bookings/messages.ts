@@ -120,7 +120,7 @@ export function buildBookingMessages(b: MessageBookingInput): BookingMessage[] {
       when: "A first-time booking still needs to be vetted.",
       suggested:
         !b.instagram &&
-        (status === BookingStatus.PENDING || status === BookingStatus.REQUEST_SENT),
+        (status === BookingStatus.PENDING || status === BookingStatus.CONTACTED),
       body:
         `Hello,\n` +
         `Thank you for booking with Fins Kitesurfing & Beach Club! We're excited to have you with us.\n` +

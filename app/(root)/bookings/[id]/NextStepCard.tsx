@@ -20,7 +20,7 @@ const WHATSAPP_URL = whatsappHref(WHATSAPP_PHONE);
 const WHATSAPP_DISPLAY = `+20${WHATSAPP_PHONE.slice(1)}`;
 
 const SCREENSHOT_STATUSES: BookingStatus[] = [
-  BookingStatus.REQUEST_SENT,
+  BookingStatus.CONTACTED,
   BookingStatus.UNDER_REVIEW,
 ];
 

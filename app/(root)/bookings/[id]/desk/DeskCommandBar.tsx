@@ -7,7 +7,7 @@ import {
   BookingContactOutcome,
   BookingStatus,
 } from "@prisma/client";
-import { Loader2, MessageCircle, Phone, UserCheck } from "lucide-react";
+import { Loader2, MessageCircle, Phone, Reply, UserCheck } from "lucide-react";
 import { toast } from "sonner";
 
 import {
@@ -32,12 +32,15 @@ export default function DeskCommandBar({
   guestName,
   phone,
   primaryMessage,
+  canMarkReplied,
 }: {
   bookingId: string;
   bookingStatus: BookingStatus;
   guestName: string;
   phone: string;
   primaryMessage: string;
+  /** The booking is still being chased, so a reply stops its follow-up clock. */
+  canMarkReplied: boolean;
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -52,6 +55,22 @@ export default function DeskCommandBar({
         BookingContactOutcome.ATTEMPTED,
       );
       if (res.success) router.refresh();
+    });
+  };
+
+  const markReplied = () => {
+    startTransition(async () => {
+      const res = await logBookingContact(
+        bookingId,
+        BookingContactChannel.OTHER,
+        BookingContactOutcome.REACHED,
+      );
+      if (res.success) {
+        toast.success("Reply recorded");
+        router.refresh();
+      } else {
+        toast.error(res.message);
+      }
     });
   };
 
@@ -97,6 +116,24 @@ export default function DeskCommandBar({
             Message
           </span>
         </a>
+
+        {canMarkReplied && (
+          <button
+            type="button"
+            onClick={markReplied}
+            disabled={isPending}
+            className={`inline-flex min-h-12 shrink-0 items-center justify-center gap-2 rounded-full border border-[#bfddc8] bg-[#e2f0e6] px-4 text-[#15803d] transition-colors hover:bg-[#d6e9dc] disabled:opacity-60 ${FOCUS_RING}`}
+          >
+            {isPending ? (
+              <Loader2 className="size-4 animate-spin" strokeWidth={2} aria-hidden="true" />
+            ) : (
+              <Reply className="size-5" strokeWidth={1.7} aria-hidden="true" />
+            )}
+            <span className="font-[family-name:var(--font-raleway)] text-[0.75rem] font-[600] uppercase tracking-[0.16em]">
+              Replied
+            </span>
+          </button>
+        )}
 
         {canCheckIn && (
           <button

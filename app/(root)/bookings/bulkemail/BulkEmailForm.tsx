@@ -10,7 +10,7 @@ import { getBookingsByDate, sendBulkEmails } from "@/lib/actions/booking.actions
 
 const STATUS_OPTIONS: { value: BookingStatus; label: string }[] = [
   { value: BookingStatus.PENDING, label: "Pending" },
-  { value: BookingStatus.REQUEST_SENT, label: "Request sent" },
+  { value: BookingStatus.CONTACTED, label: "Contacted" },
   { value: BookingStatus.UNDER_REVIEW, label: "Under review" },
   { value: BookingStatus.WAITING_PAYMENT, label: "Waiting payment" },
   { value: BookingStatus.CONFIRMED, label: "Confirmed" },

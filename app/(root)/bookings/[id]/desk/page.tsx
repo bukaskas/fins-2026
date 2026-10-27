@@ -23,7 +23,8 @@ import PartyDialog from "./PartyDialog";
 import { RATE_LABELS, formatEGPAmount, ratesFromSnapshot } from "@/lib/pricing";
 import StatusDialog from "@/components/bookings/BookingStatusDialog";
 import { GroupBadge } from "@/components/bookings/GroupBadge";
-import ContactLog from "./ContactLog";
+import BookingHistory from "./BookingHistory";
+import { followUp } from "@/lib/bookings/follow-up";
 
 /*
   DIRECTION — booking desk view
@@ -89,6 +90,11 @@ export default async function BookingDeskPage({
     paymentLink: booking.paymentLink,
     instagram: booking.instagram,
   });
+
+  const followUpState = followUp(booking, booking.contacts, new Date());
+  const chased =
+    booking.bookingStatus === BookingStatus.PENDING ||
+    booking.bookingStatus === BookingStatus.CONTACTED;
 
   const partyLabel = `${adults + kids} ${adults + kids === 1 ? "person" : "people"}`;
   const isClosed =
@@ -327,15 +333,31 @@ export default async function BookingDeskPage({
           </div>
         </section>
 
-        <ContactLog
+        <BookingHistory
           contacts={booking.contacts.map((c) => ({
             id: c.id,
             channel: c.channel,
             outcome: c.outcome,
-            createdAt: c.createdAt.toISOString(),
+            createdAt: c.createdAt,
             actor: c.actor?.name ?? c.actor?.email ?? null,
           }))}
-          createdAt={booking.createdAt.toISOString()}
+          events={booking.events.map((e) => ({
+            id: e.id,
+            source: e.source,
+            fromStatus: e.fromStatus,
+            toStatus: e.toStatus,
+            createdAt: e.createdAt,
+            actor: e.actor?.name ?? e.actor?.email ?? null,
+          }))}
+          payments={booking.payments.map((p) => ({
+            id: p.id,
+            amountCents: p.amountCents,
+            method: p.method,
+            online: !!p.flashTransactionId,
+            createdAt: p.createdAt,
+          }))}
+          createdAt={booking.createdAt}
+          followUp={followUpState}
         />
       </main>
 
@@ -345,6 +367,7 @@ export default async function BookingDeskPage({
         guestName={booking.name}
         phone={booking.phone}
         primaryMessage={messages[0]?.body ?? ""}
+        canMarkReplied={chased}
       />
     </div>
   );

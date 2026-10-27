@@ -271,7 +271,7 @@ Refunds stay a desk action.
 
 The payoff, and the only stage with real ordering constraints.
 
-Allowed while `PENDING` / `REQUEST_SENT` / `UNDER_REVIEW` / `WAITING_PAYMENT`, and only before
+Allowed while `PENDING` / `CONTACTED` / `UNDER_REVIEW` / `WAITING_PAYMENT`, and only before
 the booking date. Refuse once `CONFIRMED` or `ARRIVED` — money has settled and that is a desk
 conversation.
 

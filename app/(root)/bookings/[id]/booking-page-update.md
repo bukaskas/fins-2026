@@ -215,7 +215,7 @@ the messages read the same values.
 | Id | Reception uses it when | Contains |
 |---|---|---|
 | `request-received` | PENDING | Thanks, request logged for {date}, we reply shortly, booking link |
-| `instagram-check` | REQUEST_SENT / UNDER_REVIEW | Asks for the social handle, screenshot fine if private, explains why |
+| `instagram-check` | CONTACTED / UNDER_REVIEW | Asks for the social handle, screenshot fine if private, explains why |
 | `payment-instructions` | WAITING_PAYMENT | Amount due, payment link **or** bank details, deadline as a real date/time |
 | `confirmed-day-use` | CONFIRMED · day-use | Date, party, total, hours, includes, rules, maps link, balance on arrival |
 | `confirmed-kitesurfing` | CONFIRMED · kitesurfing | Date, exact time confirmed a day before, what to bring, maps link |

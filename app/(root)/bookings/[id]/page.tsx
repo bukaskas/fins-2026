@@ -38,7 +38,7 @@ const STATUS_TONE: Record<
   { label: string; bg: string; ring: string; text: string; dot: string }
 > = {
   PENDING:             { label: "Pending",         bg: "#FFF4E0", ring: "#F2D9A6", text: "#7A5414", dot: "#E8A23E" },
-  REQUEST_SENT:        { label: "Request sent",    bg: "#E4F1FA", ring: "#BCD8EA", text: "#1E4F72", dot: "#5BA6D6" },
+  CONTACTED:           { label: "Contacted",       bg: "#E4F1FA", ring: "#BCD8EA", text: "#1E4F72", dot: "#5BA6D6" },
   UNDER_REVIEW:        { label: "Under review",    bg: "#FCE6D5", ring: "#F1C9AA", text: "#7A3E18", dot: "#E68A4D" },
   WAITING_PAYMENT:     { label: "Waiting payment", bg: "#EDE6F8", ring: "#D4C5EE", text: "#4B348A", dot: "#9C82DC" },
   CONFIRMED:           { label: "Confirmed",       bg: "#E2F0E6", ring: "#BFDDC8", text: "#1F5B36", dot: "#62B07F" },

@@ -131,7 +131,10 @@ enum BookingGroup {
 
 enum BookingStatus {
   PENDING
-  REQUEST_SENT
+  /// Staff have messaged or called the guest and are waiting on a reply. Set
+  /// automatically by the first contact logged on a PENDING booking (was
+  /// REQUEST_SENT); follow-up timing lives in lib/bookings/follow-up.ts.
+  CONTACTED
   UNDER_REVIEW
   WAITING_PAYMENT
   CONFIRMED

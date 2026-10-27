@@ -29,7 +29,7 @@ The operating reality this system is built around, which a generic booking SaaS 
 - **WhatsApp is the primary guest channel.** Staff send the private booking link over WhatsApp, and that page is the guest's real confirmation. The Resend email is secondary.
 - The desk's most frequent job on a single booking is **composing the next message to that guest** — a deposit request, a payment chase, arrival details, a confirmation.
 - One physical location. Currency is EGP. Working hours and daily capacity are business facts held in `lib/constants` (`DAILY_CAPACITY = 80` auto-closes a date for new bookings).
-- A booking moves through nine statuses (`PENDING`, `REQUEST_SENT`, `UNDER_REVIEW`, `WAITING_PAYMENT`, `CONFIRMED`, `ARRIVED`, `DECLINED`, `NO_RESPONSE_EXPIRED`, `CANCELED`). Several carry real machinery: `WAITING_PAYMENT` starts an irreversible 24-hour auto-cancel clock swept by a cron route and mints a payment link; `CONFIRMED` can close the whole date at capacity.
+- A booking moves through nine statuses (`PENDING`, `CONTACTED`, `UNDER_REVIEW`, `WAITING_PAYMENT`, `CONFIRMED`, `ARRIVED`, `DECLINED`, `NO_RESPONSE_EXPIRED`, `CANCELED`). Several carry real machinery: `WAITING_PAYMENT` starts an irreversible 24-hour auto-cancel clock swept by a cron route and mints a payment link; `CONFIRMED` can close the whole date at capacity.
 - Services sold: kitesurfing courses (beginner, intro, refresher, Pharaoh Airstyle), day use, restaurant, corporate bookings.
 
 ## Capabilities and Constraints

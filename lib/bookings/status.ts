@@ -13,7 +13,7 @@ import { BookingGroup, BookingStatus } from "@prisma/client";
 /** Saturated — dots, left strips, tinted backgrounds. Never label text. */
 export const STATUS_BORDER: Record<BookingStatus, string> = {
   PENDING:             "#f59e0b",
-  REQUEST_SENT:        "#38bdf8",
+  CONTACTED:           "#38bdf8",
   UNDER_REVIEW:        "#fb923c",
   WAITING_PAYMENT:     "#a78bfa",
   CONFIRMED:           "#22c55e",
@@ -27,7 +27,7 @@ export const STATUS_BORDER: Record<BookingStatus, string> = {
 /** Darkened pairs — the only values allowed to colour status text. */
 export const STATUS_TEXT: Record<BookingStatus, string> = {
   PENDING:             "#b45309",
-  REQUEST_SENT:        "#0369a1",
+  CONTACTED:           "#0369a1",
   UNDER_REVIEW:        "#c2410c",
   WAITING_PAYMENT:     "#6d28d9",
   CONFIRMED:           "#15803d",
@@ -40,7 +40,7 @@ export const STATUS_TEXT: Record<BookingStatus, string> = {
 
 export const STATUS_LABEL: Record<BookingStatus, string> = {
   PENDING:             "Pending",
-  REQUEST_SENT:        "Request Sent",
+  CONTACTED:           "Contacted",
   UNDER_REVIEW:        "Under Review",
   WAITING_PAYMENT:     "Waiting Payment",
   CONFIRMED:           "Confirmed",
@@ -109,7 +109,7 @@ export const STATUS_GROUPS: { label: string; statuses: BookingStatus[] }[] = [
     label: "In progress",
     statuses: [
       BookingStatus.PENDING,
-      BookingStatus.REQUEST_SENT,
+      BookingStatus.CONTACTED,
       BookingStatus.UNDER_REVIEW,
       BookingStatus.WAITING_PAYMENT,
     ],
@@ -146,7 +146,7 @@ export const NEEDS_REVIEW_STATUSES: BookingStatus[] = [
   BookingStatus.UNDER_REVIEW,
 ];
 export const NEEDS_CONTACT_STATUSES: BookingStatus[] = [
-  BookingStatus.REQUEST_SENT,
+  BookingStatus.CONTACTED,
   BookingStatus.WAITING_PAYMENT,
 ];
 

@@ -59,7 +59,14 @@ import {
   depositDueCents,
   dueAtForLink,
   dueAtOnFullDate,
+  formatPaymentDeadlineShort,
 } from "@/lib/bookings/payment-window";
+import {
+  followUp,
+  REPEAT_WINDOW_MS,
+  type FollowUp,
+  type FollowUpStage,
+} from "@/lib/bookings/follow-up";
 import {
   emailPriceBreakdown,
   sendFullDatePaymentEmail,
@@ -1081,9 +1088,8 @@ export async function getAgentStats(
             contacts: { some: {} },
           },
           select: {
+            bookingStatus: true,
             contacts: {
-              orderBy: { createdAt: "desc" },
-              take: 1,
               select: { actorId: true, outcome: true, createdAt: true, nextContactAt: true },
             },
           },
@@ -1098,7 +1104,6 @@ export async function getAgentStats(
     for (const c of contactCounts) {
       if (c.actorId) contactsByActor.set(c.actorId, c._count._all);
     }
-    const openContacts = openBookings.flatMap((b) => b.contacts);
 
     // Everyone who works the desk, plus anyone else the figures mention.
     const mentioned = new Set<string>(contactsByActor.keys());
@@ -1107,7 +1112,9 @@ export async function getAgentStats(
       for (const e of b.events) if (e.actorId) mentioned.add(e.actorId);
       for (const c of b.contacts) if (c.actorId) mentioned.add(c.actorId);
     }
-    for (const c of openContacts) if (c.actorId) mentioned.add(c.actorId);
+    for (const b of openBookings) {
+      for (const c of b.contacts) if (c.actorId) mentioned.add(c.actorId);
+    }
     const users = await prisma.user.findMany({
       where: {
         OR: [
@@ -1123,7 +1130,7 @@ export async function getAgentStats(
       bookings,
       users,
       contactsByActor,
-      openContacts,
+      openBookings,
       trackingSince,
       now,
     });
@@ -1132,7 +1139,7 @@ export async function getAgentStats(
           bookings: previousBookings,
           users,
           contactsByActor: new Map(),
-          openContacts: [],
+          openBookings: [],
           trackingSince,
           now,
         }).team
@@ -2669,7 +2676,7 @@ export async function createCorporateBooking(data: CorporateBookingData) {
 
 const RECEPTION_ACTIVE_STATUSES: BookingStatus[] = [
   BookingStatus.PENDING,
-  BookingStatus.REQUEST_SENT,
+  BookingStatus.CONTACTED,
   BookingStatus.UNDER_REVIEW,
   BookingStatus.WAITING_PAYMENT,
   BookingStatus.CONFIRMED,
@@ -2681,9 +2688,9 @@ const RECEPTION_CONTACT_STATUSES = NEEDS_CONTACT_STATUSES;
 
 const receptionBookingInclude = {
   agent: { select: { id: true, name: true, email: true } },
+  // The whole log, newest first: follow-up timing counts every attempt.
   contacts: {
     orderBy: { createdAt: "desc" as const },
-    take: 1,
     include: { actor: { select: { name: true, email: true } } },
   },
 } as const;
@@ -2702,6 +2709,7 @@ export type ReceptionBookingRow = BookingWithAgent & {
     nextContactAt: Date | null;
     actorName: string | null;
   } | null;
+  followUp: FollowUp;
 };
 
 export type ReceptionDashboardData = {
@@ -2729,6 +2737,7 @@ export type ReceptionDashboardData = {
 
 function toReceptionBookingRow(
   source: ReceptionBookingSource,
+  now: Date,
 ): ReceptionBookingRow {
   const { contacts, ...booking } = source;
   const dueCents =
@@ -2751,12 +2760,45 @@ function toReceptionBookingRow(
           actorName: latest.actor?.name ?? latest.actor?.email ?? null,
         }
       : null,
+    followUp: followUp(booking, contacts, now),
   };
 }
 
-function contactReason(source: ReceptionBookingSource): string {
-  if (source.bookingStatus === BookingStatus.REQUEST_SENT) {
-    return "Guest information required";
+const RECEPTION_CONTACT_LIMIT = 30;
+
+const FOLLOW_UP_RANK: Record<FollowUpStage, number> = {
+  flagged: 0,
+  due: 1,
+  replied: 2,
+  not_contacted: 3,
+  waiting: 4,
+  none: 5,
+};
+
+/** Contact queue order: most urgent stage first, then earliest due, then oldest. */
+function byContactUrgency(a: ReceptionBookingRow, b: ReceptionBookingRow): number {
+  const at = (row: ReceptionBookingRow) =>
+    (row.followUp.dueAt ?? row.createdAt).getTime();
+  return (
+    FOLLOW_UP_RANK[a.followUp.stage] - FOLLOW_UP_RANK[b.followUp.stage] ||
+    at(a) - at(b)
+  );
+}
+
+function contactReason(source: ReceptionBookingSource, f: FollowUp): string {
+  if (source.bookingStatus === BookingStatus.CONTACTED) {
+    switch (f.stage) {
+      case "flagged":
+        return `No reply after ${f.attempts} attempts — decide the next step`;
+      case "due":
+        return "Follow-up due now";
+      case "replied":
+        return "Guest replied — your move";
+      case "waiting":
+        return `Waiting on the guest · follow up ${formatPaymentDeadlineShort(f.dueAt!)}`;
+      default:
+        return "Not contacted yet";
+    }
   }
   if (source.bookingStatus === BookingStatus.WAITING_PAYMENT && !source.paymentDueAt) {
     return "Payment link not generated yet";
@@ -2813,9 +2855,8 @@ export async function getReceptionDashboard(): Promise<ReceptionDashboardData> {
     prisma.booking.count({ where: reviewWhere }),
     prisma.booking.findMany({
       where: contactWhere,
-      orderBy: { createdAt: "asc" },
+      // Sorted by follow-up urgency below, which needs every row's log.
       include: receptionBookingInclude,
-      take: 30,
     }),
     prisma.booking.count({ where: contactWhere }),
     prisma.booking.findMany({
@@ -2854,10 +2895,12 @@ export async function getReceptionDashboard(): Promise<ReceptionDashboardData> {
     };
   });
 
-  const todayRows = todayBookings.map(toReceptionBookingRow);
+  const generatedAt = new Date();
+  const toRow = (b: ReceptionBookingSource) => toReceptionBookingRow(b, generatedAt);
+  const todayRows = todayBookings.map(toRow);
   return {
     businessDate: todayStart.toISOString().split("T")[0],
-    generatedAt: new Date(),
+    generatedAt,
     summary: {
       todayBookings: todayRows.length,
       todayGuests: todayRows.reduce(
@@ -2872,18 +2915,29 @@ export async function getReceptionDashboard(): Promise<ReceptionDashboardData> {
       ).length,
     },
     todayBookings: todayRows,
-    reviewToday: reviewToday.map(toReceptionBookingRow),
+    reviewToday: reviewToday.map(toRow),
     reviewTotal,
-    contactUpcoming: contactUpcoming.map((booking) => ({
-      ...toReceptionBookingRow(booking),
-      contactReason: contactReason(booking),
-      paymentExpiresAt: booking.paymentDueAt,
-    })),
+    contactUpcoming: contactUpcoming
+      .map((booking) => {
+        const row = toReceptionBookingRow(booking, generatedAt);
+        return {
+          ...row,
+          contactReason: contactReason(booking, row.followUp),
+          paymentExpiresAt: booking.paymentDueAt,
+        };
+      })
+      .sort(byContactUrgency)
+      .slice(0, RECEPTION_CONTACT_LIMIT),
     contactTotal,
     capacity,
   };
 }
 
+/**
+ * Record that staff messaged, called or heard back from a guest. Every
+ * follow-up timer is derived from this log (lib/bookings/follow-up.ts); the
+ * first contact on a PENDING booking also moves it to CONTACTED.
+ */
 export async function logBookingContact(
   bookingId: string,
   channel: BookingContactChannel,
@@ -2901,10 +2955,45 @@ export async function logBookingContact(
   }
 
   try {
+    // A repeat tap (or the WhatsApp button pressed twice) is the same contact:
+    // return the one already logged instead of inflating the attempt count
+    // that drives follow-up flagging.
+    const repeat = await prisma.bookingContact.findFirst({
+      where: {
+        bookingId,
+        actorId: actorId ?? null,
+        channel,
+        outcome,
+        createdAt: { gte: new Date(Date.now() - REPEAT_WINDOW_MS) },
+      },
+      orderBy: { createdAt: "desc" },
+      select: { id: true, createdAt: true },
+    });
+    if (repeat) return { success: true as const, contact: repeat };
+
     const contact = await prisma.bookingContact.create({
       data: { bookingId, actorId: actorId ?? null, channel, outcome },
       select: { id: true, createdAt: true },
     });
+
+    // The first contact moves a new booking to CONTACTED. Guarded on PENDING
+    // so a contact on any later status never moves it backwards.
+    const { count } = await prisma.booking.updateMany({
+      where: { id: bookingId, bookingStatus: BookingStatus.PENDING },
+      data: { bookingStatus: BookingStatus.CONTACTED },
+    });
+    if (count > 0) {
+      await logBookingEvents([
+        {
+          bookingId,
+          source: BookingEventSource.STAFF,
+          actorId: actorId ?? null,
+          fromStatus: BookingStatus.PENDING,
+          toStatus: BookingStatus.CONTACTED,
+        },
+      ]);
+      revalidatePath("/bookings", "layout");
+    }
     revalidatePath("/reception");
     return { success: true as const, contact };
   } catch (error) {
@@ -2917,9 +3006,10 @@ export async function logBookingContact(
 }
 
 /**
- * Booking read for the staff desk view: the record plus the two histories the
- * desk needs to answer "what has already happened" — the payment ledger and
- * the contact log. Capability-gated, unlike the public getBookingById.
+ * Booking read for the staff desk view: the record plus the three histories
+ * the desk needs to answer "what has already happened" — status changes, the
+ * payment ledger and the contact log. Capability-gated, unlike the public
+ * getBookingById.
  */
 export async function getBookingForDesk(id: string) {
   if (!(await hasCapability("bookings:manage"))) return null;
@@ -2933,10 +3023,15 @@ export async function getBookingForDesk(id: string) {
       include: {
         agent: { select: { id: true, name: true, email: true } },
         payments: { orderBy: { createdAt: "desc" } },
+        // Whole logs: the history lists them all, and follow-up counts every
+        // attempt.
         contacts: {
           orderBy: { createdAt: "desc" },
-          take: 20,
           include: { actor: { select: { id: true, name: true, email: true } } },
+        },
+        events: {
+          orderBy: { createdAt: "desc" },
+          include: { actor: { select: { name: true, email: true } } },
         },
       },
     });

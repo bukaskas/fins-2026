@@ -1,9 +1,10 @@
 import {
-  BookingContactOutcome,
   BookingEventSource,
   BookingStatus,
   Role,
 } from "@prisma/client";
+
+import { followUp, type FollowUpContact } from "@/lib/bookings/follow-up";
 
 /**
  * The arithmetic behind /bookings/agents, kept free of database and session
@@ -32,7 +33,7 @@ export const CONFIRMED_STATUSES: BookingStatus[] = [
 // dashboard calendar.
 export const ACTIVE_PENDING_STATUSES: BookingStatus[] = [
   BookingStatus.PENDING,
-  BookingStatus.REQUEST_SENT,
+  BookingStatus.CONTACTED,
   BookingStatus.UNDER_REVIEW,
   BookingStatus.WAITING_PAYMENT,
 ];
@@ -47,9 +48,6 @@ const ALWAYS_LISTED_ROLES: Role[] = [Role.STAFF, Role.RECEPTION];
 
 /** Below this many decided bookings a conversion rate is noise, not a signal. */
 export const MIN_DECIDED_FOR_CONVERSION = 5;
-
-/** A contact that did not reach the guest is overdue for a retry after this. */
-const FOLLOW_UP_AFTER_MS = 24 * 60 * 60 * 1000;
 
 export const SELF_SERVE_KEY = "self-serve";
 
@@ -77,12 +75,10 @@ export type AgentStatsUser = {
   role: Role;
 };
 
-/** The latest contact on a booking that is still open. */
-export type AgentStatsOpenContact = {
-  actorId: string | null;
-  outcome: BookingContactOutcome;
-  createdAt: Date;
-  nextContactAt: Date | null;
+/** A booking that is still open, with its whole contact log. */
+export type AgentStatsOpenBooking = {
+  bookingStatus: BookingStatus;
+  contacts: (FollowUpContact & { actorId: string | null })[];
 };
 
 export type AgentStatsRow = {
@@ -170,24 +166,17 @@ function median(values: number[]): number | null {
   return sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
 }
 
-function isOverdue(contact: AgentStatsOpenContact, now: Date): boolean {
-  if (contact.nextContactAt) return contact.nextContactAt < now;
-  return (
-    contact.outcome !== BookingContactOutcome.REACHED &&
-    now.getTime() - contact.createdAt.getTime() > FOLLOW_UP_AFTER_MS
-  );
-}
-
 export function buildAgentStats(input: {
   bookings: AgentStatsBooking[];
   users: AgentStatsUser[];
   /** Contacts logged in the range, per actor. */
   contactsByActor: Map<string, number>;
-  openContacts: AgentStatsOpenContact[];
+  /** Open bookings with contacts; overdue follow-ups are charged to whoever made the last contact. */
+  openBookings: AgentStatsOpenBooking[];
   trackingSince: Date | null;
   now: Date;
 }): { team: AgentStatsTeam; perAgent: AgentStatsRow[] } {
-  const { bookings, users, contactsByActor, openContacts, trackingSince, now } = input;
+  const { bookings, users, contactsByActor, openBookings, trackingSince, now } = input;
 
   const usersById = new Map(users.map((u) => [u.id, u]));
   const rows = new Map<string, AgentStatsRow>();
@@ -340,10 +329,12 @@ export function buildAgentStats(input: {
   for (const [actorId, count] of contactsByActor) {
     rowFor(actorId).contactsLogged = count;
   }
-  for (const contact of openContacts) {
-    if (contact.actorId && isOverdue(contact, now)) {
-      rowFor(contact.actorId).overdueFollowUps += 1;
-    }
+  for (const booking of openBookings) {
+    const { stage } = followUp(booking, booking.contacts, now);
+    if (stage !== "due" && stage !== "flagged") continue;
+    const lastActor = [...booking.contacts]
+      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())[0]?.actorId;
+    if (lastActor) rowFor(lastActor).overdueFollowUps += 1;
   }
   for (const [actorId, times] of responseTimes) {
     rowFor(actorId).medianFirstResponseMs = median(times);

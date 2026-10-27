@@ -18,7 +18,7 @@ import {
 
 const STATUS_LABELS: Record<BookingStatus, string> = {
   PENDING:             "Pending",
-  REQUEST_SENT:        "Request Sent",
+  CONTACTED:           "Contacted",
   UNDER_REVIEW:        "Under Review",
   WAITING_PAYMENT:     "Waiting Payment",
   CONFIRMED:           "Confirmed",

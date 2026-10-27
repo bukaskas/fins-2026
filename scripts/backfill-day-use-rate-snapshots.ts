@@ -15,7 +15,7 @@ import { dateKeyFromUtcMidnight, dateKeyInCairo, utcMidnightFromKey } from "@/li
  */
 const ACTIVE_STATUSES: BookingStatus[] = [
   BookingStatus.PENDING,
-  BookingStatus.REQUEST_SENT,
+  BookingStatus.CONTACTED,
   BookingStatus.UNDER_REVIEW,
   BookingStatus.WAITING_PAYMENT,
   BookingStatus.CONFIRMED,

@@ -45,7 +45,7 @@ export function DateHeaderActions({
   const triggerRef = React.useRef<HTMLButtonElement>(null);
   const { copied, copy } = useCopySummary(summaryText);
   const noPending = pendingCount === 0;
-  // Counts PENDING only, not the wider Pending tab (which adds Request Sent and
+  // Counts PENDING only, not the wider Pending tab (which adds Contacted and
   // Under Review), so the label says "new requests" to match what gets canceled.
   const cancelLabel = noPending
     ? "No new requests"
