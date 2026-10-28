@@ -1,15 +1,21 @@
 import { buildMetadata } from "@/lib/metadata";
+import Image from "next/image";
 import Link from "next/link";
+import { Caveat, Caveat_Brush } from "next/font/google";
 import menu from "@/lib/config/menu.json";
 import { RESTAURANT_HOURS } from "@/lib/constants";
 
 export const metadata = buildMetadata({
   title: "Food Menu",
   description:
-    "The full Fins restaurant menu — breakfast, pizzas, burgers, pokes, mains, drinks and desserts, with prices.",
+    "The full Fins restaurant menu — breakfast, tacos, pizzas, burgers, mains, drinks and desserts, with prices.",
   image: "/images/hero_images/restaurant_desktop3.webp",
   path: "/restaurant/menu",
 });
+
+// Handwritten faces from the printed menu: Brush for chapter titles, Caveat for dish names and prices.
+const caveat = Caveat({ subsets: ["latin"], weight: ["500", "700"] });
+const caveatBrush = Caveat_Brush({ subsets: ["latin"], weight: "400" });
 
 type AddOn = { name: string; priceCents: number };
 
@@ -17,13 +23,15 @@ type MenuItem = {
   name: string;
   priceCents: number;
   description?: string;
+  /** Dish photo; items with one render as a tile, the rest as list rows. */
+  image?: string;
   /** Flavours / variants that all share the item's price. */
   options?: string[];
   /** Paid extras that only apply to this item. */
   addOns?: AddOn[];
 };
 
-type MenuGroup = { name: string | null; items: MenuItem[] };
+type MenuGroup = { name: string | null; image?: string; items: MenuItem[] };
 
 type MenuCategory = { id: string; name: string; groups: MenuGroup[] };
 
@@ -34,85 +42,104 @@ const formatPrice = (cents: number) => (cents / 100).toLocaleString("en-US");
 
 function MenuPage() {
   return (
-    <main className="neu-cream bg-neu-base">
-      {/* ── Intro ───────────────────────────────────────────── */}
-      <section className="max-w-7xl mx-auto px-6 md:px-14 lg:px-20 pt-28 md:pt-36 pb-10 md:pb-14">
-        <div className="flex items-center gap-3 mb-6">
-          <span
-            aria-hidden="true"
-            className="h-px w-7 flex-shrink-0 bg-neu-primary"
-          />
-          <span className="text-[0.75rem] tracking-[0.3em] uppercase font-[family-name:var(--font-raleway)] font-[600] text-neu-primary-ink">
-            Fins Restaurant · Sokhna · Red Sea
-          </span>
+    <div className="menu-board bg-(--menu-paper) text-(--menu-ink)">
+      {/* ── Hero ────────────────────────────────────────────── */}
+      <section className="relative h-[52vh] min-h-[380px] overflow-hidden">
+        <Image
+          src="/images/restaurant/menu/beach-banner.webp"
+          alt=""
+          fill
+          priority
+          sizes="100vw"
+          className="object-cover object-[50%_80%]"
+        />
+        <div className="relative z-10 flex h-full flex-col items-center justify-center px-6 pb-[10vh] text-center">
+          <p className="text-[0.7rem] tracking-[0.5em] uppercase text-(--menu-eyebrow)">
+            — Fins · Sokhna · Red Sea —
+          </p>
+          <h1
+            className={`${caveatBrush.className} text-[clamp(3.5rem,10vw,7rem)] leading-none text-(--menu-brown)`}
+          >
+            Food menu
+          </h1>
         </div>
-        <h1 className="font-[family-name:var(--font-raleway)] text-[clamp(2.2rem,5vw,4rem)] font-[800] tracking-[-0.02em] leading-[1] text-neu-fg">
-          Food menu
-        </h1>
-        <p className="mt-5 max-w-xl text-[1rem] leading-relaxed font-[family-name:var(--font-raleway)] font-[400] text-neu-muted">
-          Everything we serve, from breakfast on the beach to dessert. Prices
-          are in {menu.currency}. {menu.note}.
-        </p>
-
-        {/* Category jump links */}
-        <nav aria-label="Menu sections" className="mt-10">
-          <ul className="flex flex-wrap gap-3">
-            {categories.map(({ id, name }) => (
-              <li key={id}>
-                <a
-                  href={`#${id}`}
-                  className="neu-raised-sm neu-btn inline-flex min-h-11 items-center rounded-full px-5 text-[0.8rem] tracking-[0.08em] font-[family-name:var(--font-raleway)] font-[600] text-neu-fg"
-                >
-                  {name}
-                </a>
-              </li>
-            ))}
-          </ul>
-        </nav>
       </section>
 
-      {/* ── Categories ──────────────────────────────────────── */}
-      <div className="max-w-7xl mx-auto px-6 md:px-14 lg:px-20 pb-20 md:pb-28 grid lg:grid-cols-2 gap-8 md:gap-10 items-start">
-        {categories.map((category) => (
-          <section
-            key={category.id}
-            id={category.id}
-            aria-labelledby={`${category.id}-heading`}
-            className="neu-raised scroll-mt-32 rounded-3xl p-6 md:p-8"
-          >
-            <h2
-              id={`${category.id}-heading`}
-              className="font-[family-name:var(--font-raleway)] text-[1.5rem] font-[800] tracking-[-0.01em] text-neu-fg"
-            >
-              {category.name}
-            </h2>
+      {/* ── Sticky chapter bar (scrolls sideways on phones) ─── */}
+      <nav
+        aria-label="Menu sections"
+        className="sticky top-24 md:top-[118px] z-30 border-y border-(--menu-line) bg-(--menu-paper)/90 backdrop-blur"
+      >
+        <ul className="mx-auto flex max-w-7xl gap-1 overflow-x-auto px-4 py-2 [scrollbar-width:none]">
+          {categories.map(({ id, name }) => (
+            <li key={id} className="flex-shrink-0">
+              <a
+                href={`#${id}`}
+                className={`${caveat.className} inline-flex min-h-11 items-center rounded-full px-4 text-[1.35rem] font-[700] text-(--menu-navy) hover:bg-white/70`}
+              >
+                {name}
+              </a>
+            </li>
+          ))}
+        </ul>
+      </nav>
 
-            {category.groups.map((group, i) => (
-              <div key={group.name ?? i} className="mt-6">
-                {group.name && (
-                  <h3 className="mb-1 text-[0.75rem] tracking-[0.24em] uppercase font-[family-name:var(--font-raleway)] font-[600] text-neu-primary-ink">
-                    {group.name}
-                  </h3>
-                )}
-                <ul>
-                  {group.items.map((item) => (
-                    <MenuRow key={item.name} item={item} />
+      {/* ── Categories ──────────────────────────────────────── */}
+      <div className="mx-auto max-w-7xl px-4 pb-20 md:px-10">
+        <p className="pt-10 text-center text-[0.75rem] font-[800] uppercase tracking-[0.08em] text-(--menu-navy)">
+          Prices in {menu.currency} · {menu.note}
+        </p>
+
+        {categories.map((category) => {
+          const tiles = category.groups.flatMap((g) => g.items).filter((i) => i.image);
+          const lists = category.groups
+            .map((g) => ({ ...g, items: g.items.filter((i) => !i.image) }))
+            .filter((g) => g.items.length);
+          return (
+            <section
+              key={category.id}
+              id={category.id}
+              aria-labelledby={`${category.id}-heading`}
+              className="scroll-mt-44 md:scroll-mt-52 pt-14"
+            >
+              <header className="mb-8 flex items-center gap-4">
+                <h2
+                  id={`${category.id}-heading`}
+                  className={`${caveatBrush.className} text-[3rem] leading-none text-(--menu-brown)`}
+                >
+                  {category.name}
+                </h2>
+                <span className="h-px flex-1 bg-(--menu-line)" />
+              </header>
+
+              {tiles.length > 0 && (
+                <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                  {tiles.map((item) => (
+                    <DishTile key={item.name} item={item} />
                   ))}
                 </ul>
-              </div>
-            ))}
-          </section>
-        ))}
+              )}
+
+              {lists.length > 0 && (
+                <div className="mt-4 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                  {lists.map((group) => (
+                    <ListCard key={group.name ?? category.id} group={group} fallbackTitle={category.name} />
+                  ))}
+                </div>
+              )}
+            </section>
+          );
+        })}
       </div>
 
       {/* ── Reserve CTA ─────────────────────────────────────── */}
-      <section className="max-w-7xl mx-auto px-6 md:px-14 lg:px-20 pb-20 md:pb-28">
-        <div className="neu-inset rounded-3xl p-8 md:p-12 flex flex-col md:flex-row md:items-center md:justify-between gap-8">
+      <section className="mx-auto max-w-7xl px-4 pb-20 md:px-10 md:pb-28">
+        <div className="flex flex-col gap-8 rounded-3xl bg-(--menu-cream) p-8 md:flex-row md:items-center md:justify-between md:p-12">
           <div>
-            <h2 className="font-[family-name:var(--font-raleway)] text-[1.5rem] font-[800] tracking-[-0.01em] text-neu-fg">
+            <h2 className={`${caveatBrush.className} text-[2.6rem] leading-none text-(--menu-brown)`}>
               Your table awaits
             </h2>
-            <p className="mt-2 text-[0.95rem] font-[family-name:var(--font-raleway)] font-[400] text-neu-muted">
+            <p className="mt-3 text-[0.95rem] text-(--menu-muted)">
               Open daily · {RESTAURANT_HOURS} · {menu.note}.
             </p>
           </div>
@@ -121,52 +148,93 @@ function MenuPage() {
               href="https://wa.me/201222144388?text=Hello%2C%0AI%20would%20like%20to%20reserve%20a%20table"
               target="_blank"
               rel="noopener noreferrer"
-              className="neu-btn inline-flex min-h-12 items-center rounded-2xl bg-neu-primary px-7 text-[0.95rem] font-[family-name:var(--font-raleway)] font-[600] text-neu-fg shadow-neu-sm"
+              className="inline-flex min-h-12 items-center rounded-2xl bg-(--menu-navy) px-7 text-[0.95rem] font-[600] text-white"
             >
               Reserve via WhatsApp
             </Link>
             <Link
               href="/restaurant"
-              className="neu-raised-sm neu-btn inline-flex min-h-12 items-center rounded-2xl px-7 text-[0.95rem] font-[family-name:var(--font-raleway)] font-[600] text-neu-fg"
+              className="inline-flex min-h-12 items-center rounded-2xl border border-(--menu-navy) px-7 text-[0.95rem] font-[600] text-(--menu-navy)"
             >
               About the restaurant
             </Link>
           </div>
         </div>
       </section>
-    </main>
+    </div>
   );
 }
 
 export default MenuPage;
 
-/* Rows stay flat with a hairline separator — MASTER.md: no depth on repeated dense elements. */
-function MenuRow({ item }: { item: MenuItem }) {
+function DishTile({ item }: { item: MenuItem }) {
   return (
-    <li className="border-b border-[rgba(180,164,138,0.3)] py-3.5 last:border-b-0 font-[family-name:var(--font-raleway)]">
-      <div className="flex items-baseline justify-between gap-6">
-        <span className="text-[1rem] font-[600] text-neu-fg">{item.name}</span>
-        <span className="flex-shrink-0 text-[1rem] font-[600] tabular-nums text-neu-fg">
+    <li className="flex flex-col rounded-3xl bg-(--menu-cream) p-4">
+      <div className="relative aspect-square sm:aspect-[4/5] overflow-hidden rounded-2xl">
+        <Image
+          src={item.image!}
+          alt={item.name}
+          fill
+          sizes="(min-width: 1024px) 30vw, (min-width: 640px) 45vw, 92vw"
+          className="object-cover"
+        />
+      </div>
+      <div className="mt-4 flex items-end justify-between gap-3 px-1">
+        <h3 className={`${caveat.className} text-[1.9rem] font-[700] leading-[0.95] text-(--menu-navy)`}>
+          {item.name}
+        </h3>
+        <span className={`${caveat.className} flex-shrink-0 text-[1.7rem] font-[500] tabular-nums text-(--menu-navy)`}>
           {formatPrice(item.priceCents)}
         </span>
       </div>
-      {item.description && (
-        <p className="mt-1 max-w-[34rem] pr-12 text-[0.85rem] leading-relaxed font-[400] text-neu-muted">
-          {item.description}
+      {(item.description || item.options) && (
+        <p className="mt-1 px-1 pb-1 text-[0.85rem] leading-relaxed text-(--menu-muted)">
+          {item.description ?? item.options!.join(" · ")}
         </p>
       )}
-      {item.options && (
-        <p className="mt-1 pr-12 text-[0.85rem] leading-relaxed font-[400] text-neu-muted">
-          {item.options.join(" · ")}
-        </p>
-      )}
-      {item.addOns && (
-        <p className="mt-1.5 pr-12 text-[0.8rem] font-[600] text-neu-primary-ink">
-          {item.addOns
-            .map((a) => `Add ${a.name.toLowerCase()} +${formatPrice(a.priceCents)}`)
-            .join(" · ")}
-        </p>
-      )}
+      {item.addOns && <AddOnLine addOns={item.addOns} />}
     </li>
+  );
+}
+
+/* Photo-less groups (coffee, soft drinks, add-ons) collapse into one card of flat rows. */
+function ListCard({ group, fallbackTitle }: { group: MenuGroup; fallbackTitle: string }) {
+  const isAddOns = /add/i.test(group.name ?? "");
+  return (
+    <div className="rounded-3xl bg-(--menu-cream) p-6">
+      <div className="flex items-start justify-between gap-4">
+        <h3 className={`${caveat.className} text-[2rem] font-[700] leading-none text-(--menu-navy)`}>
+          {group.name ?? fallbackTitle}
+        </h3>
+        {group.image && (
+          <Image src={group.image} alt="" width={120} height={160} className="-mt-2 h-20 w-auto" />
+        )}
+      </div>
+      <ul className="mt-3">
+        {group.items.map((item) => (
+          <li key={item.name} className="flex items-baseline justify-between gap-4 py-1.5">
+            <span>
+              <span className="font-[700]">{item.name}</span>
+              {item.options && (
+                <span className="block text-[0.8rem] text-(--menu-muted)">{item.options.join(" · ")}</span>
+              )}
+              {item.addOns && <AddOnLine addOns={item.addOns} />}
+            </span>
+            <span className="font-[700] tabular-nums text-(--menu-navy)">
+              {isAddOns ? "+" : ""}
+              {formatPrice(item.priceCents)}
+            </span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+function AddOnLine({ addOns }: { addOns: AddOn[] }) {
+  return (
+    <span className="mt-1 block px-1 text-[0.8rem] font-[600] text-(--menu-brown)">
+      {addOns.map((a) => `Add ${a.name.toLowerCase()} +${formatPrice(a.priceCents)}`).join(" · ")}
+    </span>
   );
 }

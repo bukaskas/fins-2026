@@ -339,26 +339,17 @@
   box-shadow: var(--shadow-neu-inset);
 }
 
-/* Warm cream variant of the neumorphic tokens, scoped to /restaurant/menu.
-   Same structure as the base set; only the clay and its shadow pair change.
-   The base is near-white, so depth comes almost entirely from the dark shadow. */
-.neu-cream {
-  --color-neu-base: #fdfcf8;
-  --color-neu-inset: #f3f1e6;
-  --color-neu-fg: #1c1917;
-  --color-neu-muted: #5c5348;
-  --shadow-neu:
-    -6px -6px 14px rgba(255, 255, 255, 1),
-    6px 6px 14px rgba(188, 178, 150, 0.45);
-  --shadow-neu-sm:
-    -3px -3px 7px rgba(255, 255, 255, 1),
-    3px 3px 7px rgba(188, 178, 150, 0.45);
-  --shadow-neu-inset:
-    inset -4px -4px 8px rgba(255, 255, 255, 1),
-    inset 4px 4px 8px rgba(188, 178, 150, 0.45);
-  --shadow-neu-inset-sm:
-    inset -2px -2px 4px rgba(255, 255, 255, 1),
-    inset 2px 2px 4px rgba(188, 178, 150, 0.45);
+/* /restaurant/menu palette, taken from the printed menu (docs/fins_food_menu.pdf).
+   Not neumorphic — see .claude/design-system/pages/restaurant-menu.md. */
+.menu-board {
+  --menu-paper: #f5ede0;
+  --menu-cream: #efe6d6;
+  --menu-navy: #1b3a5c;
+  --menu-brown: #8a4a1f;
+  --menu-ink: #2a2420;
+  --menu-muted: #5c5348;
+  --menu-eyebrow: #85603f;
+  --menu-line: rgba(138, 74, 31, 0.25);
 }
 
 /* Before this rule the codebase had no focus styling at all: a stylesheet walk
