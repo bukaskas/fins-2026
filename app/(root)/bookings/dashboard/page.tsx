@@ -39,21 +39,18 @@ async function BookingsDashboardPage({
   const sp = await searchParams;
   const filter = parseCalendarFilter(sp.status);
 
-  // getBookingCountsByDate covers 3 months back to 3 months ahead; the
-  // calendar can't page outside that, and ?month= is clamped to it.
+  // Counts and closed dates are loaded for the month on screen (plus one
+  // either side for spill-over days), so the calendar can page anywhere.
   const now = new Date();
   const thisMonth = format(now, "yyyy-MM");
-  const firstMonth = format(addMonths(now, -3), "yyyy-MM");
-  const lastMonth = format(addMonths(now, 3), "yyyy-MM");
-  const requested = /^\d{4}-\d{2}$/.test(sp.month ?? "") ? sp.month! : thisMonth;
-  const month =
-    requested < firstMonth ? firstMonth : requested > lastMonth ? lastMonth : requested;
+  const month = /^\d{4}-(0[1-9]|1[0-2])$/.test(sp.month ?? "") ? sp.month! : thisMonth;
+  const monthStart = new Date(`${month}-01T00:00:00`);
 
   const [result, closedResult] = await Promise.all([
-    getBookingCountsByDate(),
+    getBookingCountsByDate(month),
     getClosedDates(
-      startOfMonth(addMonths(now, -3)),
-      endOfMonth(addMonths(now, 3)),
+      startOfMonth(addMonths(monthStart, -1)),
+      endOfMonth(addMonths(monthStart, 1)),
     ),
   ]);
 
@@ -234,8 +231,6 @@ async function BookingsDashboardPage({
               closedDates={closedDateStrings}
               filter={filter}
               month={month}
-              firstMonth={firstMonth}
-              lastMonth={lastMonth}
             />
           </div>
           <p className="border-t border-paper-line px-4 py-3 text-[0.875rem] text-ink-muted sm:px-8 font-[family-name:var(--font-raleway)]">

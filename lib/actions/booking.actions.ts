@@ -813,12 +813,18 @@ export async function getDayUseMonthlyReport(opts: {
   }
 }
 
-export async function getBookingCountsByDate(statuses?: BookingStatus[]) {
+/**
+ * Per-day booking totals around `month` ("yyyy-MM"): that month plus the one
+ * either side, so the calendar's spill-over days from neighbouring months
+ * still show their numbers.
+ */
+export async function getBookingCountsByDate(month: string, statuses?: BookingStatus[]) {
   await requireCapability("bookings:manage");
   try {
-    const today = new Date();
-    const start = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth() - 3, 1));
-    const end = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth() + 4, 0, 23, 59, 59, 999));
+    const [y, m] = month.split("-").map(Number);
+    if (!y || !m) throw new Error(`Invalid month "${month}"`);
+    const start = new Date(Date.UTC(y, m - 2, 1));
+    const end = new Date(Date.UTC(y, m + 1, 0, 23, 59, 59, 999));
 
     const bookings = await prisma.booking.findMany({
       where: {

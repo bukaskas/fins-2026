@@ -23,17 +23,12 @@ export function BookingCalendar({
   closedDates = [],
   filter,
   month,
-  firstMonth,
-  lastMonth,
 }: {
   counts: DayCount[];
   closedDates?: string[]; // YYYY-MM-DD strings
   filter: CalendarFilter;
   /** Visible month as "yyyy-MM". The URL owns it so the page stats follow it. */
   month: string;
-  /** Range the counts cover, as "yyyy-MM"; navigation stops at these. */
-  firstMonth: string;
-  lastMonth: string;
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -105,8 +100,6 @@ export function BookingCalendar({
       className="[--cell-size:--spacing(11)] sm:[--cell-size:--spacing(14)] w-full p-0 sm:p-3"
       month={monthFromKey(month)}
       onMonthChange={changeMonth}
-      startMonth={monthFromKey(firstMonth)}
-      endMonth={monthFromKey(lastMonth)}
       onDayClick={(day) => router.push(`/bookings/date/${format(day, "yyyy-MM-dd")}`)}
       components={{ DayButton: CustomDayButton }}
     />
