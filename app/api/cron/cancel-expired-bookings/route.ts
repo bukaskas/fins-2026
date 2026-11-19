@@ -1,10 +1,7 @@
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 
-import {
-  cancelExpiredWaitingPayments,
-  expirePastOpenBookings,
-} from "@/lib/actions/booking.actions";
+import { cancelLapsedHolds, expirePastDates } from "@/lib/bookings/lifecycle";
 import { sendReleasedHoldEmails } from "@/lib/bookings/guest-emails";
 
 // Expires bookings still open after their visit date, then cancels bookings
@@ -35,8 +32,8 @@ export async function GET(req: Request) {
   try {
     // Past dates first: an unpaid hold whose day is already over expires
     // quietly instead of cancelling and emailing a "released your spot" note.
-    const expired = await expirePastOpenBookings();
-    const canceled = await cancelExpiredWaitingPayments();
+    const expired = await expirePastDates();
+    const canceled = await cancelLapsedHolds();
     if (canceled + expired > 0) revalidatePath("/bookings", "layout");
     // Covers rows expired here and rows expired earlier on a staff page load,
     // which never sends mail itself.

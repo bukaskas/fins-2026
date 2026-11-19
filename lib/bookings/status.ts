@@ -171,7 +171,7 @@ export const CONFIRMATION_STATUSES: BookingStatus[] = [
 /** What a status change actually triggers, shown before the user commits. */
 export const STATUS_CONSEQUENCE: Partial<Record<BookingStatus, string>> = {
   WAITING_PAYMENT:
-    "Mints a payment link and starts a 24-hour clock. The booking auto-cancels if it is not paid in time.",
+    "Emails the guest to pay their deposit. Their 24-hour deadline starts when they create the payment link (12 hours if the date is full), and the booking auto-cancels if it is not paid in time. Not possible once the booking date has passed.",
   CONFIRMED:
     "Confirms the guest. At daily capacity this also closes the date for new bookings.",
   ARRIVED: "Marks the guest as checked in on the beach.",

@@ -8,6 +8,7 @@ import { AlertTriangle, Check, Loader2 } from "lucide-react";
 import { BookingStatus } from "@prisma/client";
 
 import { updateBookingStatus } from "@/lib/actions/booking.actions";
+import { allowedTargets } from "@/lib/bookings/lifecycle/transitions";
 import {
   CONFIRMATION_STATUSES,
   FOCUS_RING,
@@ -22,6 +23,8 @@ import {
 /**
  * Shared staff status picker. Consequential transitions never happen from a
  * menu click: staff see the consequence and confirm before the server action.
+ * Only the current status and the moves the lifecycle allows from it are
+ * offered; picking WAITING_PAYMENT again reopens the payment window.
  */
 export default function BookingStatusDialog({
   bookingId,
@@ -38,16 +41,25 @@ export default function BookingStatusDialog({
   const [open, setOpen] = React.useState(false);
   const [selected, setSelected] = React.useState<BookingStatus>(status);
   const [confirming, setConfirming] = React.useState(false);
+  const [reopening, setReopening] = React.useState(false);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
 
   React.useEffect(() => {
     if (open) {
       setSelected(status);
       setConfirming(false);
+      setReopening(false);
     }
   }, [open, status]);
 
-  const dirty = selected !== status;
+  const targets = allowedTargets(status);
+  const groups = STATUS_GROUPS.map((group) => ({
+    ...group,
+    statuses: group.statuses.filter((s) => s === status || targets.includes(s)),
+  })).filter((group) => group.statuses.length > 0);
+  const canReopen = targets.includes(status);
+
+  const dirty = selected !== status || reopening;
   const needsConfirm = CONFIRMATION_STATUSES.includes(selected);
   const consequence = STATUS_CONSEQUENCE[selected];
 
@@ -67,7 +79,9 @@ export default function BookingStatusDialog({
       }
 
       onChanged?.(selected);
-      toast.success(`Status set to ${STATUS_LABEL[selected]}`);
+      toast.success(
+        reopening ? "Payment window reopened" : `Status set to ${STATUS_LABEL[selected]}`,
+      );
       if ("warning" in result && result.warning) {
         toast.warning(String(result.warning));
       }
@@ -108,12 +122,13 @@ export default function BookingStatusDialog({
               className="mt-1 font-[family-name:var(--font-raleway)] text-[0.8rem]"
               style={{ color: MUTED }}
             >
-              Select a state. Timers, promises, and closures require confirmation.
+              Only moves allowed from {STATUS_LABEL[status]} are listed. Timers, promises, and
+              closures require confirmation.
             </DialogPrimitive.Description>
           </div>
 
           <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
-            {STATUS_GROUPS.map((group) => (
+            {groups.map((group) => (
               <div key={group.label} className="mb-4 last:mb-0">
                 <div
                   className="mb-2 font-[family-name:var(--font-raleway)] text-[0.75rem] font-[600] uppercase tracking-[0.14em]"
@@ -124,6 +139,7 @@ export default function BookingStatusDialog({
                 <div role="radiogroup" aria-label={group.label} className="space-y-1.5">
                   {group.statuses.map((candidate) => {
                     const active = selected === candidate;
+                    const current = candidate === status;
                     return (
                       <button
                         key={candidate}
@@ -134,6 +150,9 @@ export default function BookingStatusDialog({
                         onClick={() => {
                           setSelected(candidate);
                           setConfirming(false);
+                          // Picking the current status again only means something
+                          // where it is a real move: reopening the payment window.
+                          setReopening(current && canReopen && !reopening);
                         }}
                         className={`flex min-h-11 w-full items-center gap-3 rounded-xl border px-3 text-left transition-colors disabled:opacity-50 ${FOCUS_RING} ${
                           active
@@ -149,7 +168,14 @@ export default function BookingStatusDialog({
                           className="flex-1 font-[family-name:var(--font-raleway)] text-[0.88rem] font-[500]"
                           style={{ color: active ? STATUS_TEXT[candidate] : "#1a1614" }}
                         >
-                          {STATUS_LABEL[candidate]}
+                          {current && reopening
+                            ? "Reopen payment window"
+                            : STATUS_LABEL[candidate]}
+                          {current && !reopening && (
+                            <span style={{ color: MUTED }}>
+                              {canReopen ? " · current, tap to reopen" : " · current"}
+                            </span>
+                          )}
                         </span>
                         {active && (
                           <Check className="size-4 shrink-0 text-[#1a1614]" strokeWidth={2} aria-hidden="true" />
@@ -199,7 +225,11 @@ export default function BookingStatusDialog({
                 {isSubmitting && (
                   <Loader2 className="size-4 animate-spin" strokeWidth={2} aria-hidden="true" />
                 )}
-                {confirming ? `Confirm ${STATUS_LABEL[selected]}` : "Save status"}
+                {confirming
+                  ? reopening
+                    ? "Confirm reopen"
+                    : `Confirm ${STATUS_LABEL[selected]}`
+                  : "Save status"}
               </button>
             </div>
           </div>

@@ -105,7 +105,12 @@ export default function PayDepositDialog({
         reference: reference.trim() || null,
       });
       if (res.success) {
-        toast.success("Payment recorded — booking confirmed");
+        toast.success(
+          "confirmed" in res && res.confirmed
+            ? "Payment recorded — booking confirmed"
+            : "Payment recorded",
+        );
+        if ("warning" in res && res.warning) toast.warning(String(res.warning));
         setOpen(false);
         onPaid?.(res.amountPaidCents ?? amountPaidCents + amountCents);
         router.refresh();

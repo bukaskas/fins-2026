@@ -24,7 +24,6 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { currentUserId, hasCapability, requireCapability } from "@/lib/auth-guard";
 import { roleHasCapability } from "@/lib/permissions";
-import { upsertClosedDate } from "@/lib/closed-dates";
 import {
   calculateDayUsePrice,
   computeBookingTotalCents,
@@ -46,7 +45,7 @@ import {
 } from "@/lib/date-keys";
 import { createPaymentOrder, getFlashOrder, verifyWebhookSignature } from "@/lib/flash";
 import { getAutoConfirmBookings } from "./settings.actions";
-import { BOOKINGS_PAGE_SIZE, DAILY_CAPACITY, PHARAOH_AIRSTYLE_DATE_KEY } from "@/lib/constants";
+import { BOOKINGS_PAGE_SIZE, PHARAOH_AIRSTYLE_DATE_KEY } from "@/lib/constants";
 import {
   NEEDS_CONTACT_STATUSES,
   NEEDS_REVIEW_STATUSES,
@@ -58,7 +57,6 @@ import {
   depositCents,
   depositDueCents,
   dueAtForLink,
-  dueAtOnFullDate,
   formatPaymentDeadlineShort,
 } from "@/lib/bookings/payment-window";
 import {
@@ -68,10 +66,15 @@ import {
   type FollowUpStage,
 } from "@/lib/bookings/follow-up";
 import {
-  emailPriceBreakdown,
-  sendFullDatePaymentEmail,
-  sendPaymentRequestEmail,
-} from "@/lib/bookings/guest-emails";
+  admit,
+  type MoveResult,
+  cancelLapsedHolds,
+  cancelPending,
+  markContacted,
+  moveTo,
+  transaction as lifecycleTransaction,
+} from "@/lib/bookings/lifecycle";
+import { logBookingEvents } from "@/lib/bookings/lifecycle/effects";
 import {
   ACTIVE_PENDING_STATUSES,
   buildAgentStats,
@@ -127,47 +130,6 @@ function addUtcDays(d: Date, days: number): Date {
 }
 
 /**
- * Append to the booking history (see `BookingEvent`). Never throws: the history
- * only feeds reporting, so a failed insert must not undo or fail the change it
- * describes. Call it after the write has committed, not inside a transaction.
- */
-async function logBookingEvents(events: Prisma.BookingEventCreateManyInput[]) {
-  if (events.length === 0) return;
-  try {
-    await prisma.bookingEvent.createMany({ data: events });
-  } catch (error) {
-    console.error("Booking event log error:", error);
-  }
-}
-
-/**
- * Cancel WAITING_PAYMENT bookings matching `where` whose payment deadline has
- * passed, recording each as a cron cancellation. A booking with no deadline
- * (the guest never generated a link) is left for the past-date sweep.
- * Idempotent: the WHERE clause only matches still-waiting, already-lapsed rows.
- */
-async function expireWaitingPayments(where: Prisma.BookingWhereInput = {}): Promise<number> {
-  const expired = await prisma.booking.updateManyAndReturn({
-    where: {
-      ...where,
-      bookingStatus: BookingStatus.WAITING_PAYMENT,
-      paymentDueAt: { not: null, lt: new Date() },
-    },
-    data: { bookingStatus: BookingStatus.CANCELED },
-    select: { id: true },
-  });
-  await logBookingEvents(
-    expired.map((b) => ({
-      bookingId: b.id,
-      source: BookingEventSource.CRON,
-      fromStatus: BookingStatus.WAITING_PAYMENT,
-      toStatus: BookingStatus.CANCELED,
-    })),
-  );
-  return expired.length;
-}
-
-/**
  * Booking dates are stored as UTC midnights, but "today" belongs to the venue's
  * Cairo calendar. Convert Cairo's current date key into that storage format.
  */
@@ -185,87 +147,6 @@ function cairoBusinessDayStart(now = new Date()): Date {
     Number(values.day),
   ));
 }
-
-/** Apply the capacity side-effect after a booking has become confirmed. */
-async function isDateAtCapacity(date: Date): Promise<boolean> {
-  const dayStart = utcDayStart(date);
-  const dayEnd = new Date(dayStart.getTime() + 24 * 60 * 60 * 1000 - 1);
-  const { _sum } = await prisma.booking.aggregate({
-    where: {
-      date: { gte: dayStart, lte: dayEnd },
-      bookingStatus: { in: CAPACITY_STATUSES },
-    },
-    _sum: { numberOfPeople: true, numberOfKids: true },
-  });
-  return (_sum.numberOfPeople ?? 0) + (_sum.numberOfKids ?? 0) >= DAILY_CAPACITY;
-}
-
-async function autoCloseConfirmedBookingDate(date: Date) {
-  if (!(await isDateAtCapacity(date))) return;
-  const dayStart = utcDayStart(date);
-  await upsertClosedDate(
-    dayStart,
-    `Auto-closed: ${DAILY_CAPACITY}-person daily capacity reached`,
-  );
-  // Everyone still holding an unpaid place on the now-full date: pay within
-  // 12h or the place goes. Paying on time still confirms, over capacity.
-  const waiting = await prisma.booking.findMany({
-    where: {
-      date: { gte: dayStart, lt: new Date(dayStart.getTime() + 24 * 60 * 60 * 1000) },
-      bookingStatus: BookingStatus.WAITING_PAYMENT,
-      dateFullNoticeAt: null,
-    },
-    select: { id: true },
-  });
-  for (const { id } of waiting) {
-    if (await cutDeadlineForFullDate(id)) await sendFullDatePaymentEmail(id);
-  }
-}
-
-/**
- * Pull this payment window's deadline in to the full-date limit, once per
- * window. Returns whether this call applied it, so exactly one caller emails.
- */
-async function cutDeadlineForFullDate(bookingId: string): Promise<boolean> {
-  const booking = await prisma.booking.findUnique({
-    where: { id: bookingId },
-    select: { date: true, bookingStatus: true, waitingPaymentAt: true, paymentDueAt: true, dateFullNoticeAt: true },
-  });
-  if (
-    !booking ||
-    booking.bookingStatus !== BookingStatus.WAITING_PAYMENT ||
-    booking.dateFullNoticeAt
-  ) {
-    return false;
-  }
-  const now = new Date();
-  const { count } = await prisma.booking.updateMany({
-    where: {
-      id: bookingId,
-      bookingStatus: BookingStatus.WAITING_PAYMENT,
-      waitingPaymentAt: booking.waitingPaymentAt,
-      paymentDueAt: booking.paymentDueAt,
-      dateFullNoticeAt: null,
-    },
-    data: {
-      paymentDueAt: dueAtOnFullDate(now, booking.date, booking.paymentDueAt),
-      dateFullNoticeAt: now,
-    },
-  });
-  return count === 1;
-}
-
-/**
- * A booking has just entered WAITING_PAYMENT. No clock starts, but a date that
- * is already full gets the full-date deadline straight away, before the
- * payment-request email, so that one email carries it.
- */
-async function openPaymentWindow(bookingId: string, date: Date) {
-  if (await isDateAtCapacity(date)) await cutDeadlineForFullDate(bookingId);
-  await sendPaymentRequestEmail(bookingId);
-}
-
-
 
 
 
@@ -399,8 +280,10 @@ export async function createBooking(
     // A spectator request is always reviewed first, whoever sends it.
     const goToPayment = !isSpectator && (isExisting || autoConfirm);
 
-    const booking = await prisma.booking.create({
-      data: {
+    // A WAITING_PAYMENT start opens the payment window; the deadline waits for
+    // the guest's link, and the lifecycle sends the "pay your deposit" email.
+    const admitted = await admit(
+      {
         name: validatedData.name,
         date: validatedData.date,
         email: validatedData.email,
@@ -415,23 +298,16 @@ export async function createBooking(
             : snapshotFromRate(dayUseBreakdown)
           : {}),
         instagram: validatedData.instagram?.trim() || null,
-        bookingStatus: goToPayment
-          ? BookingStatus.WAITING_PAYMENT
-          : BookingStatus.PENDING,
-        // Opens the payment window; the deadline waits for the guest's link.
-        ...(goToPayment ? { waitingPaymentAt: new Date() } : {}),
         agentId: staffCreatorId,
       },
-    });
-    await logBookingEvents([
+      goToPayment ? BookingStatus.WAITING_PAYMENT : BookingStatus.PENDING,
       {
-        bookingId: booking.id,
         source: staffCreatorId ? BookingEventSource.STAFF : BookingEventSource.GUEST,
         actorId: staffCreatorId,
-        toStatus: booking.bookingStatus,
-        toAgentId: staffCreatorId,
       },
-    ]);
+    );
+    if (!admitted.success) return { success: false, message: admitted.message };
+    const { booking } = admitted;
 
     const isDayUse = validatedData.service === "day-use";
     const isPharaoh = validatedData.service === "pharaoh-airstyle";
@@ -440,9 +316,7 @@ export async function createBooking(
     // while auto-confirm is on) skip the review, so they get the "pay your
     // deposit" email instead of the request receipt: the payment page they land
     // on is gone once the tab is closed.
-    if (goToPayment) {
-      await openPaymentWindow(booking.id, booking.date);
-    } else {
+    if (!goToPayment) {
       await sendBookingEmail(
         validatedData.email,
         validatedData.name,
@@ -516,8 +390,11 @@ export async function createKaiCommunityBooking(data: KaiCommunityBookingData) {
       return { success: false, message: "Registration for this day is closed." };
     }
 
-    const booking = await prisma.booking.create({
-      data: {
+    // Confirmed on insert, so the date's capacity is checked like any other
+    // confirmation. The email below already says "confirmed", so it claims
+    // the once-only confirmation email up front.
+    const admitted = await admit(
+      {
         name: v.name,
         date,
         email: v.email,
@@ -526,7 +403,6 @@ export async function createKaiCommunityBooking(data: KaiCommunityBookingData) {
         numberOfPeople: v.numberOfPeople,
         numberOfKids: v.numberOfKids,
         totalPriceCents: 0,
-        bookingStatus: BookingStatus.CONFIRMED,
         bookingGroup: BookingGroup.KAI_OWNER,
         groupDetail: v.unitNumber,
         contacts: {
@@ -537,14 +413,11 @@ export async function createKaiCommunityBooking(data: KaiCommunityBookingData) {
           },
         },
       },
-    });
-    await logBookingEvents([
-      {
-        bookingId: booking.id,
-        source: BookingEventSource.GUEST,
-        toStatus: booking.bookingStatus,
-      },
-    ]);
+      BookingStatus.CONFIRMED,
+      { source: BookingEventSource.GUEST, confirmationEmailClaimed: true },
+    );
+    if (!admitted.success) return { success: false, message: admitted.message };
+    const { booking } = admitted;
 
     await sendBookingEmail(v.email, v.name, date, {
       bookingType: "day-use",
@@ -584,8 +457,11 @@ export async function createKiteCommunityBooking(data: KiteCommunityBookingData)
     }
     const totalCents = v.numberOfPeople * KITE_COMMUNITY_PRICE_CENTS;
 
-    const booking = await prisma.booking.create({
-      data: {
+    // As for Kai: confirmed on insert, capacity checked, and the creation email
+    // claims the confirmation, so paying the 800 EGP at the gate later doesn't
+    // send a second "you're confirmed".
+    const admitted = await admit(
+      {
         name: v.name,
         date,
         email: v.email,
@@ -594,7 +470,6 @@ export async function createKiteCommunityBooking(data: KiteCommunityBookingData)
         numberOfPeople: v.numberOfPeople,
         numberOfKids: 0,
         totalPriceCents: totalCents,
-        bookingStatus: BookingStatus.CONFIRMED,
         bookingGroup: BookingGroup.KITE_COMMUNITY,
         groupDetail: v.localSpot,
         contacts: {
@@ -605,14 +480,11 @@ export async function createKiteCommunityBooking(data: KiteCommunityBookingData)
           },
         },
       },
-    });
-    await logBookingEvents([
-      {
-        bookingId: booking.id,
-        source: BookingEventSource.GUEST,
-        toStatus: booking.bookingStatus,
-      },
-    ]);
+      BookingStatus.CONFIRMED,
+      { source: BookingEventSource.GUEST, confirmationEmailClaimed: true },
+    );
+    if (!admitted.success) return { success: false, message: admitted.message };
+    const { booking } = admitted;
 
     await sendBookingEmail(v.email, v.name, date, {
       bookingType: "day-use",
@@ -1228,22 +1100,7 @@ export async function sendFullyBookedEmails(date: string) {
     }
 
     if (sentIds.length > 0) {
-      const canceled = await prisma.booking.updateManyAndReturn({
-        where: { id: { in: sentIds }, bookingStatus: BookingStatus.PENDING },
-        data: { bookingStatus: BookingStatus.CANCELED },
-        select: { id: true },
-      });
-      const actorId = await currentUserId();
-      await logBookingEvents(
-        canceled.map((b) => ({
-          bookingId: b.id,
-          source: BookingEventSource.STAFF,
-          actorId,
-          fromStatus: BookingStatus.PENDING,
-          toStatus: BookingStatus.CANCELED,
-        })),
-      );
-      canceledCount = canceled.length;
+      canceledCount = await cancelPending(sentIds, await currentUserId());
       revalidatePath('/bookings', 'layout');
     }
 
@@ -1544,7 +1401,7 @@ export async function getBookingById(id: string) {
     // (idempotent single-row update), instead of sweeping the whole table on
     // every anonymous page view. The table-wide sweep runs from the cron route
     // and staff reads.
-    await expireWaitingPayments({ id });
+    await cancelLapsedHolds({ id });
     const booking = await prisma.booking.findUnique({
       where: { id },
       include: { agent: { select: { id: true, name: true, email: true } } },
@@ -1556,145 +1413,19 @@ export async function getBookingById(id: string) {
   }
 }
 
-/**
- * Cancels WAITING_PAYMENT bookings whose payment deadline has passed.
- *
- * Deliberately does NOT call revalidatePath: this runs from render paths
- * (e.g. the reception dashboard) where cache revalidation is unsupported and
- * throws. Callers that run outside render — the cron route — revalidate.
- */
-export async function cancelExpiredWaitingPayments() {
-  return expireWaitingPayments();
-}
-
-/**
- * Close bookings still open after their visit date (Cairo) as EXPIRED, each
- * recorded as a cron change. Nothing is emailed: the outcome is unknown, so
- * the guest is not told their spot was released for a day already gone.
- * A booking that holds a Flash payment (a late or mismatched one parked in
- * UNDER_REVIEW) is skipped: there is money to confirm or refund, so it waits
- * for staff instead of closing quietly.
- * Idempotent; the first run also sweeps the season's backlog.
- */
-export async function expirePastOpenBookings(): Promise<number> {
-  const stale = await prisma.booking.findMany({
-    where: {
-      bookingStatus: { in: ACTIVE_PENDING_STATUSES },
-      date: { lt: cairoBusinessDayStart() },
-      payments: { none: { flashTransactionId: { not: null } } },
-    },
-    select: { id: true, bookingStatus: true },
-  });
-  if (stale.length === 0) return 0;
-
-  // Re-check the status in the write so a booking confirmed since the read
-  // is left alone.
-  const expired = await prisma.booking.updateManyAndReturn({
-    where: {
-      id: { in: stale.map((b) => b.id) },
-      bookingStatus: { in: ACTIVE_PENDING_STATUSES },
-      payments: { none: { flashTransactionId: { not: null } } },
-    },
-    data: { bookingStatus: BookingStatus.EXPIRED },
-    select: { id: true },
-  });
-  const fromStatus = new Map(stale.map((b) => [b.id, b.bookingStatus]));
-  await logBookingEvents(
-    expired.map((b) => ({
-      bookingId: b.id,
-      source: BookingEventSource.CRON,
-      fromStatus: fromStatus.get(b.id),
-      toStatus: BookingStatus.EXPIRED,
-    })),
-  );
-  return expired.length;
-}
-
 export async function updateBookingStatus(id: string, status: BookingStatus) {
   const session = await getServerSession(authOptions);
   const user = session?.user as { id?: string; role?: Role } | undefined;
   if (!roleHasCapability(user?.role, "bookings:manage")) {
     return { success: false, message: "Not authorized." };
   }
-  return applyBookingStatusChange(id, status, user?.id);
-}
-
-/**
- * Internal status-change core (not an action endpoint).
- *
- * Ownership (`agentId`) is set once: a booking with no owner goes to the staff
- * member who first confirms it. Later status changes — a second confirmation,
- * reception marking ARRIVED — never move it; only assignBookingAgent does.
- */
-async function applyBookingStatusChange(
-  id: string,
-  status: BookingStatus,
-  actorId?: string,
-) {
   try {
-    const before = await prisma.booking.findUnique({
-      where: { id },
-      select: { bookingStatus: true, agentId: true, paymentLinkExpiresAt: true },
-    });
-    if (!before) return { success: false, message: "Booking not found." };
-
-    const now = new Date();
-    const opensPaymentWindow = status === BookingStatus.WAITING_PAYMENT;
-    const claimsOwnership =
-      !!actorId &&
-      !before.agentId &&
-      CONFIRMED_STATUSES.includes(status) &&
-      !CONFIRMED_STATUSES.includes(before.bookingStatus);
-
-    const booking = await prisma.booking.update({
-      where: { id },
-      data: {
-        bookingStatus: status,
-        ...(claimsOwnership ? { agentId: actorId } : {}),
-        // (Re)open the payment window. No clock yet: the deadline is set by
-        // the guest's first payment link. A link still live from an earlier
-        // window is voided on our side so the guest generates a fresh one.
-        ...(opensPaymentWindow
-          ? {
-              waitingPaymentAt: now,
-              paymentDueAt: null,
-              dateFullNoticeAt: null,
-              ...(before.paymentLinkExpiresAt && before.paymentLinkExpiresAt > now
-                ? { paymentLinkExpiresAt: now }
-                : {}),
-            }
-          : {}),
-      },
-    });
-    // payBookingDeposit re-applies CONFIRMED on every payment; only a real
-    // change is history.
-    if (before.bookingStatus !== status) {
-      await logBookingEvents([
-        {
-          bookingId: id,
-          source: BookingEventSource.STAFF,
-          actorId: actorId ?? null,
-          fromStatus: before.bookingStatus,
-          toStatus: status,
-          ...(claimsOwnership ? { toAgentId: actorId } : {}),
-        },
-      ]);
-    }
-    revalidatePath('/bookings', 'layout');
-    revalidatePath('/reception');
-
-    // Auto-close the date if confirmed people reach the 80-person limit
-    if (status === BookingStatus.CONFIRMED) {
-      await autoCloseConfirmedBookingDate(booking.date);
-    }
-
-    // The guest generates the Flash link from their booking page; the email
-    // sends them there.
-    if (opensPaymentWindow) {
-      await openPaymentWindow(id, booking.date);
-    }
-
-    return { success: true };
+    // The lifecycle refuses moves the transitions table doesn't allow, and
+    // opening a payment window once the booking day is over.
+    const result = await moveTo(id, status, user?.id);
+    return result.success
+      ? { success: true as const }
+      : { success: false as const, message: result.message };
   } catch (error) {
     console.error('Status update error:', error);
     return { success: false, message: `Failed to update status. Error: ${error instanceof Error ? error.message : String(error)}` };
@@ -1930,99 +1661,16 @@ export async function recordFlashPayment(
 }
 
 /**
- * Send the guest their payment confirmation, at most once per booking.
- *
- * Both payment paths land here and neither is safe on its own: a Flash webhook
- * can be redelivered, and `payBookingDeposit` re-runs the CONFIRMED
- * side-effects every time reception records a payment - so the guest who pays
- * the balance on arrival would otherwise get a second "confirmed" email.
- * `confirmationEmailSentAt` is claimed inside the WHERE clause, which makes the
- * check and the claim one atomic statement rather than a read-then-write two
- * concurrent callers could both pass.
- *
- * Never throws: a mail outage must not fail a payment that is already recorded.
- */
-async function sendBookingConfirmedEmailOnce(bookingId: string) {
-  let claimed = false;
-  try {
-    const { count } = await prisma.booking.updateMany({
-      where: { id: bookingId, confirmationEmailSentAt: null },
-      data: { confirmationEmailSentAt: new Date() },
-    });
-    if (count === 0) return;
-    claimed = true;
-
-    const booking = await prisma.booking.findUnique({ where: { id: bookingId } });
-
-    // Reception can enter a booking with a phone number and no email, and the
-    // Pharaoh template is a one-off event mail with no confirmed variant -
-    // re-sending it here would just duplicate the mail the guest already has.
-    if (!booking?.email || booking.service === "pharaoh-airstyle") {
-      await releaseConfirmationEmailClaim(bookingId);
-      return;
-    }
-
-    const isDayUse = booking.service === "day-use";
-    const totalCents = booking.totalPriceCents;
-    const balanceDueCents =
-      totalCents !== null
-        ? Math.max(totalCents - booking.amountPaidCents, 0)
-        : undefined;
-    const priceBreakdown = emailPriceBreakdown(booking);
-
-    await sendBookingEmail(booking.email, booking.name, booking.date, {
-      bookingType: booking.service,
-      numberOfPeople: isDayUse ? booking.numberOfPeople : undefined,
-      numberOfKids: isDayUse ? booking.numberOfKids : undefined,
-      priceBreakdown,
-      bookingId: booking.id,
-      spectator: booking.bookingGroup === BookingGroup.SPECTATOR,
-      stage: "confirmed",
-      amountPaidCents: booking.amountPaidCents,
-      balanceDueCents,
-    });
-  } catch (error) {
-    // The claim means "the guest has this email". Nothing was sent, so give it
-    // back and let the next payment - or a manual resend - try again.
-    if (claimed) await releaseConfirmationEmailClaim(bookingId);
-    console.error("Confirmation email error:", error);
-  }
-}
-
-async function releaseConfirmationEmailClaim(bookingId: string) {
-  try {
-    await prisma.booking.updateMany({
-      where: { id: bookingId },
-      data: { confirmationEmailSentAt: null },
-    });
-  } catch (error) {
-    console.error("Confirmation email claim release error:", error);
-  }
-}
-
-// Serializable settlement prevents a concurrent status, amount, or link
-// change from slipping between validation and the payment/status writes.
-async function withBookingSettlementRetry<T>(
-  fn: () => Promise<T>,
-  attempts = 3,
-): Promise<T> {
-  for (let attempt = 1; ; attempt++) {
-    try {
-      return await fn();
-    } catch (error) {
-      const code = (error as { code?: string })?.code;
-      if (code === "P2034" && attempt < attempts) continue;
-      throw error;
-    }
-  }
-}
-
-/**
  * Settle a successful Flash payment. The booking eligibility, expected
  * deposit, current aggregator order, and provider order are all checked in the
  * same serializable transaction that records the money. Money reported by a
  * valid signed event is retained even when those checks fail, but the booking
  * is placed in UNDER_REVIEW instead of being confirmed.
+ *
+ * The status move goes through the lifecycle, so its follow-on work (history,
+ * owner assignment, the capacity check, the once-only confirmation email) runs
+ * only after the transaction commits, and only for the attempt that committed.
+ * None of it can make Flash retry a payment that is already recorded.
  */
 async function applyFlashPayment(opts: {
   bookingId: string;
@@ -2039,7 +1687,17 @@ async function applyFlashPayment(opts: {
     providerOrderId,
   } = opts;
 
-  const runSettlement = () => prisma.$transaction(async (tx) => {
+  // Inside a serializable settlement a refused or beaten move means the
+  // booking changed under us: abort so nothing is recorded, and let Flash
+  // redeliver into a fresh decision. A missing booking is reported, not thrown.
+  const mustMove = (move: MoveResult) => {
+    if (!move.success && move.reason !== "not_found") {
+      throw new Error(`Flash settlement could not move booking ${bookingId}: ${move.reason}`);
+    }
+    return move;
+  };
+
+  const runSettlement = () => lifecycleTransaction(async (lifecycle, tx) => {
     const sameKey = await tx.bookingPayment.findUnique({
       where: { flashTransactionId: idempotencyKey },
       select: {
@@ -2049,11 +1707,8 @@ async function applyFlashPayment(opts: {
     });
     if (sameKey) {
       if (sameKey.bookingId !== bookingId) {
-        const { count } = await tx.booking.updateMany({
-          where: { id: bookingId },
-          data: { bookingStatus: BookingStatus.UNDER_REVIEW },
-        });
-        if (count === 0) {
+        const move = mustMove(await lifecycle.flagForReview(bookingId));
+        if (!move.success) {
           return { missing: true as const, confirmed: false as const };
         }
         return {
@@ -2097,10 +1752,7 @@ async function applyFlashPayment(opts: {
       select: { id: true },
     });
     if (existingFlash) {
-      await tx.booking.update({
-        where: { id: bookingId },
-        data: { bookingStatus: BookingStatus.UNDER_REVIEW },
-      });
+      mustMove(await lifecycle.flagForReview(bookingId));
       return {
         duplicateSettlement: true as const,
         confirmed: false as const,
@@ -2156,16 +1808,17 @@ async function applyFlashPayment(opts: {
       where: { bookingId },
       _sum: { amountCents: true },
     });
-    const reviewRequired = mismatchReasons.length > 0;
     await tx.booking.update({
       where: { id: bookingId },
-      data: {
-        amountPaidCents: _sum.amountCents ?? 0,
-        bookingStatus: reviewRequired
-          ? BookingStatus.UNDER_REVIEW
-          : BookingStatus.CONFIRMED,
-      },
+      data: { amountPaidCents: _sum.amountCents ?? 0 },
     });
+
+    const reviewRequired = mismatchReasons.length > 0;
+    mustMove(
+      reviewRequired
+        ? await lifecycle.flagForReview(bookingId)
+        : await lifecycle.confirmByPayment(bookingId),
+    );
 
     return {
       confirmed: !reviewRequired,
@@ -2174,21 +1827,18 @@ async function applyFlashPayment(opts: {
       previousStatus: booking.bookingStatus,
       mismatchReasons,
     };
-  }, {
-    timeout: 30000,
-    isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
-  });
+  }, { serializable: true, retries: 3 });
 
   let settled;
   try {
-    settled = await withBookingSettlementRetry(runSettlement);
+    settled = await runSettlement();
   } catch (error) {
     // The database-level one-settlement-per-booking constraint is the final
     // race guard. If another settlement won concurrently, distinguish a true
     // redelivery from a second charge by re-entering the same serializable
     // decision path after the winning transaction has committed.
     if ((error as { code?: string })?.code !== "P2002") throw error;
-    settled = await withBookingSettlementRetry(runSettlement);
+    settled = await runSettlement();
   }
 
   if ("missing" in settled) {
@@ -2197,82 +1847,14 @@ async function applyFlashPayment(opts: {
   }
   if ("duplicate" in settled) return settled;
 
-  // After the commit, and never throwing: reporting must not make Flash retry
-  // a payment that is already recorded.
-  if ("previousStatus" in settled) {
-    const toStatus = settled.reviewRequired
-      ? BookingStatus.UNDER_REVIEW
-      : BookingStatus.CONFIRMED;
-    if (settled.previousStatus !== toStatus) {
-      await logBookingEvents([
-        {
-          bookingId,
-          source: BookingEventSource.PAYMENT,
-          fromStatus: settled.previousStatus,
-          toStatus,
-        },
-      ]);
-    }
-    if (settled.confirmed) await assignPaymentConfirmedOwner(bookingId);
-  }
-
   if (settled.reviewRequired) {
     console.warn("Flash settlement routed to review", {
       bookingId,
       transactionId: idempotencyKey,
       mismatchReasons: settled.mismatchReasons,
     });
-  } else {
-    try {
-      await autoCloseConfirmedBookingDate(settled.bookingDate);
-    } catch (error) {
-      // Settlement is already committed. A capacity-maintenance failure must
-      // not make Flash retry a payment that was safely recorded.
-      console.error("Confirmed booking capacity update error:", error);
-    }
-    await sendBookingConfirmedEmailOnce(bookingId);
   }
-  revalidatePath('/bookings', 'layout');
-  revalidatePath('/reception');
-  revalidatePath(`/bookings/${bookingId}`);
-
   return settled;
-}
-
-/**
- * A payment confirmed this booking, so no person did. If it has no owner, it
- * goes to the staff member who last sent it to WAITING_PAYMENT; a booking no
- * staff member moved stays ownerless and is reported as self-serve.
- */
-async function assignPaymentConfirmedOwner(bookingId: string) {
-  try {
-    const request = await prisma.bookingEvent.findFirst({
-      where: {
-        bookingId,
-        source: BookingEventSource.STAFF,
-        toStatus: BookingStatus.WAITING_PAYMENT,
-        actorId: { not: null },
-      },
-      orderBy: { createdAt: "desc" },
-      select: { actorId: true },
-    });
-    if (!request?.actorId) return;
-    const { count } = await prisma.booking.updateMany({
-      where: { id: bookingId, agentId: null },
-      data: { agentId: request.actorId },
-    });
-    if (count > 0) {
-      await logBookingEvents([
-        {
-          bookingId,
-          source: BookingEventSource.PAYMENT,
-          toAgentId: request.actorId,
-        },
-      ]);
-    }
-  } catch (error) {
-    console.error("Payment-confirmed owner assignment error:", error);
-  }
 }
 
 /**
@@ -2385,12 +1967,16 @@ export async function payBookingDeposit(bookingId: string, data: BookingDepositD
     const session = await getServerSession(authOptions);
     const user = session?.user as { id?: string; role?: Role } | undefined;
     if (!roleHasCapability(user?.role, "bookings:manage")) {
-      return { success: false, message: "Not authorized." };
+      return { success: false as const, message: "Not authorized." };
     }
 
     const validated = bookingDepositSchema.parse(data);
 
-    const amountPaidCents = await prisma.$transaction(async (tx) => {
+    // The money and the status move commit together. Any staff payment
+    // confirms an open, cancelled or expired booking; an arrived guest paying
+    // their balance stays ARRIVED. Ownership, the capacity check and the
+    // once-only confirmation email run after commit.
+    const { amountPaidCents, move } = await lifecycleTransaction(async (lifecycle, tx) => {
       await tx.bookingPayment.create({
         data: {
           bookingId,
@@ -2412,20 +1998,21 @@ export async function payBookingDeposit(bookingId: string, data: BookingDepositD
         data: { amountPaidCents: total },
       });
 
-      return total;
+      return { amountPaidCents: total, move: await lifecycle.paymentRecorded(bookingId, user?.id) };
     });
-
-    // Reuse the CONFIRMED side-effects (agent assignment, revalidation, 80-person auto-close).
-    await updateBookingStatus(bookingId, BookingStatus.CONFIRMED);
-    // After the status change, so the email reads the booking in its settled
-    // state — amountPaidCents is already re-aggregated above.
-    await sendBookingConfirmedEmailOnce(bookingId);
     revalidatePath(`/bookings/${bookingId}`);
 
-    return { success: true, amountPaidCents };
+    return {
+      success: true as const,
+      amountPaidCents,
+      confirmed: move.success && move.to === BookingStatus.CONFIRMED,
+      // The money is recorded either way; a lost race only means the status
+      // didn't move with it.
+      ...(move.success ? {} : { warning: move.message }),
+    };
   } catch (error) {
     console.error('Booking deposit error:', error);
-    return { success: false, message: `Failed to record deposit. Error: ${error instanceof Error ? error.message : String(error)}` };
+    return { success: false as const, message: `Failed to record deposit. Error: ${error instanceof Error ? error.message : String(error)}` };
   }
 }
 
@@ -2588,8 +2175,11 @@ export async function createDayUseBookingAdmin(data: {
   try {
     const creatorId = await currentUserId();
     const quote = calculateDayUsePrice(data.date, data.numberOfPeople, data.numberOfKids);
-    const booking = await prisma.booking.create({
-      data: {
+    // The lifecycle only creates PENDING, WAITING_PAYMENT, CONFIRMED or
+    // ARRIVED bookings, opens the payment window for WAITING_PAYMENT and
+    // checks capacity for CONFIRMED/ARRIVED.
+    const admitted = await admit(
+      {
         agentId: creatorId,
         name: data.name,
         email: data.email,
@@ -2603,25 +2193,13 @@ export async function createDayUseBookingAdmin(data: {
         // than being blocked as an unsnapshotted legacy row.
         totalPriceCents: quote.totalCents,
         ...snapshotFromRate(quote),
-        bookingStatus: data.bookingStatus,
         amountPaidCents: data.amountPaidCents,
-        ...(data.bookingStatus === BookingStatus.WAITING_PAYMENT
-          ? { waitingPaymentAt: new Date() }
-          : {}),
       },
-    });
-    await logBookingEvents([
-      {
-        bookingId: booking.id,
-        source: BookingEventSource.STAFF,
-        actorId: creatorId,
-        toStatus: booking.bookingStatus,
-        toAgentId: creatorId,
-      },
-    ]);
-    if (booking.bookingStatus === BookingStatus.WAITING_PAYMENT) {
-      await openPaymentWindow(booking.id, booking.date);
-    }
+      data.bookingStatus,
+      { source: BookingEventSource.STAFF, actorId: creatorId },
+    );
+    if (!admitted.success) return { success: false, message: admitted.message };
+    const { booking } = admitted;
     revalidatePath("/bookings");
     revalidatePath("/bookings/day-use");
     return { success: true, bookingId: booking.id };
@@ -2636,8 +2214,10 @@ export async function createCorporateBooking(data: CorporateBookingData) {
   try {
     const validated = corporateBookingSchema.parse(data);
     const creatorId = await currentUserId();
-    const booking = await prisma.booking.create({
-      data: {
+    // Payment-window emails skip corporate bookings (sendsPaymentWindowEmails),
+    // so the lifecycle's WAITING_PAYMENT effects send nothing here.
+    const admitted = await admit(
+      {
         agentId: creatorId,
         service: "corporate",
         name: validated.name,
@@ -2649,19 +2229,12 @@ export async function createCorporateBooking(data: CorporateBookingData) {
         // the deposit is collected via PayDepositDialog / payBookingDeposit.
         totalPriceCents: validated.depositCents,
         amountPaidCents: 0,
-        bookingStatus: BookingStatus.WAITING_PAYMENT,
-        waitingPaymentAt: new Date(),
       },
-    });
-    await logBookingEvents([
-      {
-        bookingId: booking.id,
-        source: BookingEventSource.STAFF,
-        actorId: creatorId,
-        toStatus: booking.bookingStatus,
-        toAgentId: creatorId,
-      },
-    ]);
+      BookingStatus.WAITING_PAYMENT,
+      { source: BookingEventSource.STAFF, actorId: creatorId },
+    );
+    if (!admitted.success) return { success: false, message: admitted.message };
+    const { booking } = admitted;
     revalidatePath("/bookings");
     return { success: true, bookingId: booking.id };
   } catch (error) {
@@ -2811,7 +2384,7 @@ export async function getReceptionDashboard(): Promise<ReceptionDashboardData> {
   await requireCapability("bookings:manage");
 
   // Sweep expired payment windows first so every queue starts from live state.
-  await cancelExpiredWaitingPayments();
+  await cancelLapsedHolds();
 
   const todayStart = cairoBusinessDayStart();
   const todayEnd = new Date(todayStart.getTime() + 24 * 60 * 60 * 1000 - 1);
@@ -2976,24 +2549,9 @@ export async function logBookingContact(
       select: { id: true, createdAt: true },
     });
 
-    // The first contact moves a new booking to CONTACTED. Guarded on PENDING
-    // so a contact on any later status never moves it backwards.
-    const { count } = await prisma.booking.updateMany({
-      where: { id: bookingId, bookingStatus: BookingStatus.PENDING },
-      data: { bookingStatus: BookingStatus.CONTACTED },
-    });
-    if (count > 0) {
-      await logBookingEvents([
-        {
-          bookingId,
-          source: BookingEventSource.STAFF,
-          actorId: actorId ?? null,
-          fromStatus: BookingStatus.PENDING,
-          toStatus: BookingStatus.CONTACTED,
-        },
-      ]);
-      revalidatePath("/bookings", "layout");
-    }
+    // The first contact moves a new booking to CONTACTED; a contact on any
+    // later status never moves it backwards.
+    await markContacted(bookingId, actorId);
     revalidatePath("/reception");
     return { success: true as const, contact };
   } catch (error) {
@@ -3016,7 +2574,7 @@ export async function getBookingForDesk(id: string) {
   try {
     // Same idempotent single-row expiry as the public read, so the desk never
     // shows a live countdown for a booking the cron has already let lapse.
-    await expireWaitingPayments({ id });
+    await cancelLapsedHolds({ id });
 
     return await prisma.booking.findUnique({
       where: { id },
