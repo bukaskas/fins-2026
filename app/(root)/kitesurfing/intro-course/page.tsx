@@ -30,9 +30,9 @@ function IntroCoursePage() {
   return (
     <main className="bg-neu-base min-h-screen font-[family-name:var(--font-raleway)] text-neu-fg">
       <CourseHero
-        eyebrow="Try it in one session"
-        titleLight="Intro"
-        titleBold="Session"
+        title={course.name}
+        course="intro"
+        bookLabel="Book intro session"
         description="A focused two-hour introduction to kitesurfing — safety, kite control, and the knowledge you need before getting on the board."
         image={introPhoto}
         imageAlt="Intro kitesurfing session at Fins"
@@ -62,7 +62,6 @@ function IntroCoursePage() {
         }
       >
         <CourseIntro
-          eyebrow="Intro Kitesurfing Session"
           title="Try kitesurfing in one focused session."
           description="The intro course is designed for those planning to try kitesurfing for one session — to experience what we need to learn to become a kitesurfer. We focus on kite control, safety, and the basic knowledge required before getting on the board."
         />

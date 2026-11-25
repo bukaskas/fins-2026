@@ -30,9 +30,9 @@ function RefresherCoursePage() {
   return (
     <main className="bg-neu-base min-h-screen font-[family-name:var(--font-raleway)] text-neu-fg">
       <CourseHero
-        eyebrow="Get back on the water"
-        titleLight="Refresher"
-        titleBold="Course"
+        title={course.name}
+        course="refresher"
+        bookLabel="Book refresher course"
         description="Refresh the skills from your last course and keep progressing toward riding independently — controlling your speed and riding upwind."
         image={refresherPhoto}
         imageAlt="Refresher kitesurfing course at Fins"
@@ -62,7 +62,6 @@ function RefresherCoursePage() {
         }
       >
         <CourseIntro
-          eyebrow="Refresher Kitesurfing Course"
           title="Pick up where you left off and ride independently."
           description="The refresher course is for riders who have already taken a course before. We refresh the last skills you worked on, then continue your progress toward the independent skills that let you ride on your own — like controlling your speed and riding upwind."
         />

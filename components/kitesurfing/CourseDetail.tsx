@@ -1,6 +1,5 @@
 import Image, { StaticImageData } from "next/image";
 import Link from "next/link";
-import Reveal from "@/components/kitesurfing/Reveal";
 import BookCourseLink from "@/components/kitesurfing/BookCourseLink";
 import type { CourseSlug } from "@/lib/booking-url";
 
@@ -10,89 +9,75 @@ import type { CourseSlug } from "@/lib/booking-url";
  * kitesurfing page — see .claude/design-system/MASTER.md.
  */
 
+/*
+ * The course hero mirrors the /kitesurfing hero: one sentence-case title at one
+ * weight, a line of description, and the photo without a raised frame. It is
+ * not wrapped in Reveal — it is on screen at load, so it is simply there.
+ */
 export function CourseHero({
-  eyebrow,
-  titleLight,
-  titleBold,
+  title,
   description,
   image,
   imageAlt,
+  course,
+  bookLabel,
 }: {
-  eyebrow: string;
-  titleLight: string;
-  titleBold: string;
+  title: string;
   description: string;
   image: StaticImageData;
   imageAlt: string;
+  /** Sent to the school app so the guest arrives with this course chosen. */
+  course: CourseSlug;
+  bookLabel: string;
 }) {
   return (
     <section className="bg-neu-base overflow-hidden">
-      <div className="max-w-7xl mx-auto px-6 md:px-14 lg:px-20 pt-24 md:pt-32 pb-12 md:pb-16 grid lg:grid-cols-[1fr_1.1fr] gap-10 lg:gap-14 items-center">
+      <div className="max-w-7xl mx-auto px-6 md:px-14 lg:px-20 pt-10 md:pt-16 pb-10 md:pb-14 grid lg:grid-cols-[1fr_1.1fr] gap-8 lg:gap-14 items-center">
         <div>
-          <Reveal>
-            <div className="flex items-center gap-3 mb-6">
-              <span
-                aria-hidden="true"
-                className="h-px w-7 flex-shrink-0 bg-neu-primary"
-              />
-              <span className="text-[0.75rem] tracking-[0.3em] uppercase font-[family-name:var(--font-raleway)] font-[600] text-neu-primary-ink">
-                {eyebrow}
-              </span>
-            </div>
-          </Reveal>
-
-          <Reveal delay={0.1}>
-            <h1 className="font-[family-name:var(--font-raleway)] leading-none mb-6">
-              <span className="block text-[clamp(2.6rem,5.5vw,4.8rem)] font-[300] tracking-[-0.02em] text-neu-fg leading-[0.95]">
-                {titleLight}
-              </span>
-              <span className="block text-[clamp(2.6rem,5.5vw,4.8rem)] font-[800] tracking-[-0.02em] text-neu-primary-ink leading-[0.95]">
-                {titleBold}
-              </span>
-            </h1>
-          </Reveal>
-
-          <Reveal delay={0.2}>
-            <p className="text-[0.95rem] md:text-[1.05rem] text-neu-muted font-[family-name:var(--font-raleway)] font-[400] max-w-md leading-relaxed">
-              {description}
-            </p>
-          </Reveal>
+          <h1 className="font-[family-name:var(--font-raleway)] text-[clamp(2.5rem,5vw,4.25rem)] font-[700] leading-[1.02] tracking-[-0.02em] text-neu-fg">
+            {title}
+          </h1>
+          <p className="mt-6 max-w-[34em] font-[family-name:var(--font-raleway)] text-[1.0625rem] font-[400] leading-[1.6] text-neu-fg">
+            {description}
+          </p>
+          {/* The CourseAside's Book button is below the first screen at every
+              width (about 1,200px down on desktop, 3,200px on a phone, where
+              the aside stacks under all the content), so the hero carries the
+              action too. The two are never on screen together. */}
+          <BookCourseLink
+            course={course}
+            className="neu-btn mt-8 inline-flex min-h-[48px] items-center gap-2 rounded-2xl bg-neu-primary px-6 text-[0.9375rem] font-[600] text-neu-fg shadow-neu-sm"
+          >
+            {bookLabel}
+          </BookCourseLink>
         </div>
 
-        <Reveal delay={0.15}>
-          <div className="neu-raised rounded-[2rem] p-3">
-            <div className="relative aspect-[4/3] overflow-hidden rounded-[1.5rem]">
-              <Image
-                src={image}
-                alt={imageAlt}
-                fill
-                priority
-                className="object-cover"
-                sizes="(max-width: 1024px) 100vw, 55vw"
-              />
-            </div>
-          </div>
-        </Reveal>
+        <div className="relative aspect-[4/3] overflow-hidden rounded-[1.75rem]">
+          <Image
+            src={image}
+            alt={imageAlt}
+            fill
+            priority
+            placeholder="blur"
+            className="object-cover"
+            sizes="(max-width: 1024px) 100vw, 55vw"
+          />
+        </div>
       </div>
     </section>
   );
 }
 
 export function CourseIntro({
-  eyebrow,
   title,
   description,
 }: {
-  eyebrow: string;
   title: string;
   description: string;
 }) {
   return (
     <div className="space-y-4">
-      <p className="text-[0.75rem] font-[600] uppercase tracking-[0.3em] text-neu-primary-ink">
-        {eyebrow}
-      </p>
-      <h2 className="max-w-3xl text-3xl md:text-4xl font-[600] leading-tight tracking-[-0.01em] text-neu-fg">
+      <h2 className="max-w-3xl text-3xl md:text-4xl font-[700] leading-tight tracking-[-0.02em] text-neu-fg">
         {title}
       </h2>
       <p className="max-w-3xl text-base md:text-lg leading-8 text-neu-muted font-[400]">
@@ -134,8 +119,8 @@ export function CourseFlow({
       <div className="mt-6 grid gap-4 md:grid-cols-3">
         {steps.map(({ step, title: stepTitle, description }) => (
           <div key={step} className="rounded-2xl bg-neu-inset/45 p-5">
-            <p className="text-[0.75rem] font-[600] tracking-[0.3em] text-neu-primary-ink">
-              {step}
+            <p className="text-[0.8125rem] font-[600] text-neu-primary-ink">
+              Step {Number(step)}
             </p>
             <h3 className="mt-3 text-lg font-[600] text-neu-fg">{stepTitle}</h3>
             <p className="mt-2 text-sm leading-7 text-neu-muted font-[400]">
@@ -182,13 +167,13 @@ export function CourseAside({
       <div className="mt-8 flex flex-col gap-3">
         <BookCourseLink
           course={course}
-          className="neu-btn inline-flex items-center justify-center gap-2 rounded-2xl bg-neu-primary text-neu-fg text-[0.8rem] font-[700] tracking-[0.1em] uppercase px-6 py-3.5 shadow-neu-sm"
+          className="neu-btn inline-flex min-h-[48px] items-center justify-center gap-2 rounded-2xl bg-neu-primary px-6 text-[0.9375rem] font-[600] text-neu-fg shadow-neu-sm"
         >
           {bookLabel}
         </BookCourseLink>
         <Link
           href="/kitesurfing"
-          className="neu-btn neu-raised-sm inline-flex items-center justify-center rounded-2xl text-neu-fg text-[0.8rem] font-[600] tracking-[0.1em] uppercase px-6 py-3.5"
+          className="neu-btn neu-raised-sm inline-flex min-h-[48px] items-center justify-center rounded-2xl px-6 text-[0.9375rem] font-[600] text-neu-fg"
         >
           Back to kitesurfing
         </Link>

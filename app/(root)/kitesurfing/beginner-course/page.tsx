@@ -31,9 +31,9 @@ function BeginnerCoursePage() {
   return (
     <main className="bg-neu-base min-h-screen font-[family-name:var(--font-raleway)] text-neu-fg">
       <CourseHero
-        eyebrow="Learn from zero"
-        titleLight="Beginner"
-        titleBold="Course"
+        title={course.name}
+        course="beginner"
+        bookLabel="Book beginner course"
         description="A structured first step into kitesurfing with focused coaching, safety-first progression, and enough water time to start riding."
         image={beginnerPhoto}
         imageAlt="Beginner kitesurfing lesson at Fins"
@@ -70,7 +70,6 @@ function BeginnerCoursePage() {
         }
       >
         <CourseIntro
-          eyebrow="Beginner Kitesurfing Course"
           title="Build the skills to get your first rides."
           description="The beginner course is aimed at helping students experience their first water starts. It is the best option for anyone who wants to get the feeling of getting on the board and starting their first rides with the support of an instructor."
         />

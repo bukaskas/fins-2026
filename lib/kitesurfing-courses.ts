@@ -21,19 +21,19 @@ export type KiteCourseFacts = {
 
 export const KITE_COURSES = {
   beginner: {
-    name: "Beginner Course",
+    name: "Beginner course",
     length: "2–3 days",
     groupPriceCents: 2_200_000,
     privatePriceCents: 2_550_000,
   },
   intro: {
-    name: "Intro Session",
+    name: "Intro session",
     length: "2 hours",
     groupPriceCents: 550_000,
     privatePriceCents: 850_000,
   },
   refresher: {
-    name: "Refresher Course",
+    name: "Refresher course",
     length: "2 hours",
     groupPriceCents: 550_000,
     privatePriceCents: 850_000,
