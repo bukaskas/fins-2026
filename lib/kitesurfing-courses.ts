@@ -63,3 +63,10 @@ export function inKiteSeason(month: number): boolean {
 export function formatCourseEGP(cents: number): string {
   return `${(cents / 100).toLocaleString("en-US")} EGP`;
 }
+
+/**
+ * Day pass for riders bringing their own kit. Deliberately its own figure, not
+ * KITE_COMMUNITY_PRICE_CENTS from lib/pricing.ts: that one is the Pharaoh
+ * Airstyle event registration rate and the two can change independently.
+ */
+export const KITER_DAY_PASS_CENTS = 80_000;

@@ -14,6 +14,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import Reveal from "@/components/kitesurfing/Reveal";
+import SectionHeader from "@/components/kitesurfing/SectionHeader";
 import BookCourseLink from "@/components/kitesurfing/BookCourseLink";
 import { KITE_COURSES, formatCourseEGP } from "@/lib/kitesurfing-courses";
 
@@ -324,35 +325,16 @@ function ContentSection() {
   return (
     <section
       id="courses"
-      aria-label="Courses"
+      aria-labelledby="courses-title"
       className="bg-neu-base scroll-mt-[var(--section-scroll-mt)]"
     >
       {/* Section header */}
-      <div className="max-w-7xl mx-auto px-6 md:px-14 lg:px-20 pt-16 pb-12 md:pt-20 md:pb-14">
+      <div className="max-w-7xl mx-auto px-6 md:px-14 lg:px-20 pt-20 md:pt-24">
         <Reveal>
-          <div className="flex items-center gap-3 mb-8">
-            <span
-              aria-hidden="true"
-              className="h-px w-7 flex-shrink-0 bg-neu-primary"
-            />
-            <span className="text-[0.75rem] tracking-[0.3em] uppercase font-[family-name:var(--font-raleway)] font-[600] text-neu-primary-ink">
-              IKO Certified · Sokhna Red Sea
-            </span>
-          </div>
-          <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
-            <h2 className="font-[family-name:var(--font-raleway)] leading-none">
-              <span className="block text-[clamp(2.4rem,5vw,4.5rem)] font-[300] tracking-[-0.02em] text-neu-fg leading-[0.95]">
-                Learn to{" "}
-              </span>
-              <span className="block text-[clamp(2.4rem,5vw,4.5rem)] font-[800] tracking-[-0.02em] leading-[0.95] text-neu-primary-ink">
-                kitesurf
-              </span>
-            </h2>
-            <p className="text-[0.85rem] text-neu-muted font-[family-name:var(--font-raleway)] font-[400] max-w-xs leading-relaxed">
-              From your very first session to riding solo — choose the course
-              that fits where you are right now.
-            </p>
-          </div>
+          <SectionHeader id="courses-title" title="Choose a course">
+            From your very first session to riding solo — choose the course
+            that fits where you are right now.
+          </SectionHeader>
         </Reveal>
       </div>
 

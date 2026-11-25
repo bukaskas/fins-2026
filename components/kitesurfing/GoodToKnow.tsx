@@ -1,4 +1,5 @@
 import Reveal from "@/components/kitesurfing/Reveal";
+import SectionHeader from "@/components/kitesurfing/SectionHeader";
 
 /**
  * The practical questions a guest has before committing to a course, answered
@@ -82,35 +83,14 @@ function GoodToKnow() {
   return (
     <section
       id="good-to-know"
-      aria-label="Good to know"
+      aria-labelledby="good-to-know-title"
       className="bg-neu-base scroll-mt-[var(--section-scroll-mt)]"
     >
       <div className="max-w-7xl mx-auto px-6 md:px-14 lg:px-20 py-20 md:py-24">
         <Reveal>
-          <div className="flex items-center gap-3 mb-8">
-            <span
-              aria-hidden="true"
-              className="h-px w-7 flex-shrink-0 bg-neu-primary"
-            />
-            <span className="text-[0.75rem] tracking-[0.3em] uppercase font-[family-name:var(--font-raleway)] font-[600] text-neu-primary-ink">
-              Before you book
-            </span>
-          </div>
-
-          <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4 mb-14">
-            <h2 className="font-[family-name:var(--font-raleway)] leading-none">
-              <span className="block text-[clamp(2.2rem,4.5vw,4rem)] font-[300] tracking-[-0.02em] text-neu-fg leading-[0.95]">
-                Good to{" "}
-              </span>
-              <span className="block text-[clamp(2.2rem,4.5vw,4rem)] font-[800] tracking-[-0.02em] text-neu-primary-ink leading-[0.95]">
-                know
-              </span>
-            </h2>
-            <p className="text-[0.85rem] text-neu-muted font-[family-name:var(--font-raleway)] font-[400] max-w-xs leading-relaxed">
-              The practical details — conditions, kit, and what happens to your
-              booking once you pay.
-            </p>
-          </div>
+          <SectionHeader id="good-to-know-title" title="Before you book">
+            Conditions, kit, and what happens to your booking once you pay.
+          </SectionHeader>
         </Reveal>
 
         <Reveal delay={0.1}>
@@ -118,7 +98,7 @@ function GoodToKnow() {
             <dl className="grid gap-x-12 gap-y-7 md:grid-cols-2">
               {visible.map(({ term, detail, needs }) => (
                 <div key={term} className="flex flex-col gap-2">
-                  <dt className="text-[0.75rem] tracking-[0.24em] uppercase font-[family-name:var(--font-raleway)] font-[600] text-neu-primary-ink">
+                  <dt className="text-[0.9375rem] font-[family-name:var(--font-raleway)] font-[700] text-neu-fg">
                     {term}
                   </dt>
                   <dd className="text-[0.9rem] font-[family-name:var(--font-raleway)] font-[400] leading-relaxed text-neu-fg">

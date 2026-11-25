@@ -57,7 +57,8 @@ Neumorphism needs a single mid-tone base so both light and dark shadows are visi
 - **Heading font:** Raleway (already loaded as `--font-raleway`) — keep it; don't introduce a new display font.
 - **Body font:** Raleway, weights 400–600. **Minimum body weight is 400** — the current site's 100/300 weights are too thin against a low-contrast neumorphic base.
 - **Sizes:** Display `clamp(2.2rem, 5vw, 4rem)`, H2 `1.5rem`, body `1rem/0.95rem`, caption `0.8rem`. **Nothing below 0.75rem (12px).**
-- Uppercase-tracked eyebrow labels: keep, but at ≥ `0.75rem` and weight 600. (This previously read `0.7rem`, which is 11.2px and contradicts the 12px floor two lines above; the floor wins.)
+- **Section headings are one sentence-case H2 at one weight** (700, `clamp(2rem, 3.6vw, 3rem)`), with an optional one-line description beside it — see `components/kitesurfing/SectionHeader.tsx`. Don't split a heading into a thin line plus a bold blue word, and don't put an uppercase-tracked eyebrow above every section: repeated on each section, both make the page read as a template and leave the hero nothing to stand out against. Use an eyebrow only when it adds information the heading doesn't carry, at ≥ `0.75rem`, weight 600.
+- Buttons, tabs, table headers and item labels are sentence case (≥ `0.8125rem`, weight 600), not uppercase-tracked.
 
 ### Spacing
 

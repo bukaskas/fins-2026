@@ -20,6 +20,11 @@ import { WHATSAPP_PHONE } from "@/lib/constants";
 
 const WHATSAPP_HREF = "https://wa.me/20" + WHATSAPP_PHONE.replace(/^0/, "");
 
+/** A chat with the centre, opened with `message` already typed. */
+export function centreWhatsAppHref(message: string): string {
+  return `${WHATSAPP_HREF}?text=${encodeURIComponent(message)}`;
+}
+
 function AskOnWhatsApp({
   label,
   message,
@@ -38,10 +43,10 @@ function AskOnWhatsApp({
         {children}
       </p>
       <a
-        href={`${WHATSAPP_HREF}?text=${encodeURIComponent(message)}`}
+        href={centreWhatsAppHref(message)}
         target="_blank"
         rel="noopener noreferrer"
-        className="neu-btn inline-flex min-h-[44px] w-fit items-center gap-2.5 rounded-2xl bg-neu-primary px-6 text-[0.75rem] font-[700] uppercase tracking-[0.12em] text-neu-fg shadow-neu-sm font-[family-name:var(--font-raleway)]"
+        className="neu-btn inline-flex min-h-[48px] w-fit items-center gap-2.5 rounded-2xl bg-neu-primary px-6 text-[0.9375rem] font-[600] text-neu-fg shadow-neu-sm font-[family-name:var(--font-raleway)]"
       >
         <FaWhatsapp aria-hidden="true" className="h-4 w-4" />
         {label}
