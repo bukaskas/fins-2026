@@ -18,6 +18,14 @@ import {
   InfoCard,
 } from "@/components/kitesurfing/CourseDetail";
 
+import {
+  GROUP_SIZE_LABEL,
+  KITE_COURSES,
+  formatCourseEGP,
+} from "@/lib/kitesurfing-courses";
+
+const course = KITE_COURSES.refresher;
+
 function RefresherCoursePage() {
   return (
     <main className="bg-neu-base min-h-screen font-[family-name:var(--font-raleway)] text-neu-fg">
@@ -35,11 +43,17 @@ function RefresherCoursePage() {
           <CourseAside
             title="Course details"
             rows={[
-              { label: "Duration", value: "2 hours" },
+              { label: "Duration", value: course.length },
               { label: "Format", value: "One session" },
-              { label: "Private price", value: "8,500 EGP" },
-              { label: "Group price", value: "5,500 EGP per person" },
-              { label: "Group size", value: "2 to 4 students" },
+              {
+                label: "Private price",
+                value: formatCourseEGP(course.privatePriceCents),
+              },
+              {
+                label: "Group price",
+                value: `${formatCourseEGP(course.groupPriceCents)} per person`,
+              },
+              { label: "Group size", value: GROUP_SIZE_LABEL },
             ]}
             note="We check your current skills and work on exactly what you need to ride safely and independently — the pace depends on wind conditions and where you are in your progression."
             course="refresher"

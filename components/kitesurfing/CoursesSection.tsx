@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/dialog";
 import Reveal from "@/components/kitesurfing/Reveal";
 import BookCourseLink from "@/components/kitesurfing/BookCourseLink";
+import { KITE_COURSES, formatCourseEGP } from "@/lib/kitesurfing-courses";
 
 const accent = "#0ea5e9";
 
@@ -262,11 +263,14 @@ const courses: CourseCardProps[] = [
   {
     index: "01",
     tag: "IKO Level 1 & 2",
-    title: "Beginner Course",
+    title: KITE_COURSES.beginner.name,
     subtitle: "Learn to control the kite and get on the board",
     facts: [
-      { label: "Duration", value: "2–3 days" },
-      { label: "Price", value: "From 22,000 EGP" },
+      { label: "Duration", value: KITE_COURSES.beginner.length },
+      {
+        label: "Price",
+        value: `From ${formatCourseEGP(KITE_COURSES.beginner.groupPriceCents)}`,
+      },
     ],
     image: beginnerPhoto,
     moreInfoHref: "/kitesurfing/beginner-course",
@@ -274,11 +278,14 @@ const courses: CourseCardProps[] = [
   {
     index: "02",
     tag: "2 hours",
-    title: "Intro Session",
+    title: KITE_COURSES.intro.name,
     subtitle: "One session to get a taste of kitesurfing",
     facts: [
-      { label: "Duration", value: "2 hours" },
-      { label: "Price", value: "From 5,500 EGP" },
+      { label: "Duration", value: KITE_COURSES.intro.length },
+      {
+        label: "Price",
+        value: `From ${formatCourseEGP(KITE_COURSES.intro.groupPriceCents)}`,
+      },
     ],
     image: privateCourse,
     moreInfoHref: "/kitesurfing/intro-course",
@@ -286,11 +293,14 @@ const courses: CourseCardProps[] = [
   {
     index: "03",
     tag: "2 hours",
-    title: "Refresher Course",
+    title: KITE_COURSES.refresher.name,
     subtitle: "Finished the beginner course? Polish your skills to ride solo",
     facts: [
-      { label: "Duration", value: "2 hours" },
-      { label: "Price", value: "From 5,500 EGP" },
+      { label: "Duration", value: KITE_COURSES.refresher.length },
+      {
+        label: "Price",
+        value: `From ${formatCourseEGP(KITE_COURSES.refresher.groupPriceCents)}`,
+      },
     ],
     image: refresher,
     moreInfoHref: "/kitesurfing/refresher-course",
