@@ -18,13 +18,21 @@ import {
   InfoCard,
 } from "@/components/kitesurfing/CourseDetail";
 
+import {
+  GROUP_SIZE_LABEL,
+  KITE_COURSES,
+  formatCourseEGP,
+} from "@/lib/kitesurfing-courses";
+
+const course = KITE_COURSES.intro;
+
 function IntroCoursePage() {
   return (
     <main className="bg-neu-base min-h-screen font-[family-name:var(--font-raleway)] text-neu-fg">
       <CourseHero
-        eyebrow="Try it in one session"
-        titleLight="Intro"
-        titleBold="Session"
+        title={course.name}
+        course="intro"
+        bookLabel="Book intro session"
         description="A focused two-hour introduction to kitesurfing — safety, kite control, and the knowledge you need before getting on the board."
         image={introPhoto}
         imageAlt="Intro kitesurfing session at Fins"
@@ -35,11 +43,17 @@ function IntroCoursePage() {
           <CourseAside
             title="Session details"
             rows={[
-              { label: "Duration", value: "2 hours" },
+              { label: "Duration", value: course.length },
               { label: "Format", value: "One session" },
-              { label: "Private price", value: "8,500 EGP" },
-              { label: "Group price", value: "5,500 EGP per person" },
-              { label: "Group size", value: "2 to 4 students" },
+              {
+                label: "Private price",
+                value: formatCourseEGP(course.privatePriceCents),
+              },
+              {
+                label: "Group price",
+                value: `${formatCourseEGP(course.groupPriceCents)} per person`,
+              },
+              { label: "Group size", value: GROUP_SIZE_LABEL },
             ]}
             note="The intro session is not designed to get you riding the board — its goal is to give you the knowledge and feel needed to decide if you want to continue with a full beginner course."
             course="intro"
@@ -48,7 +62,6 @@ function IntroCoursePage() {
         }
       >
         <CourseIntro
-          eyebrow="Intro Kitesurfing Session"
           title="Try kitesurfing in one focused session."
           description="The intro course is designed for those planning to try kitesurfing for one session — to experience what we need to learn to become a kitesurfer. We focus on kite control, safety, and the basic knowledge required before getting on the board."
         />

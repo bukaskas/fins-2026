@@ -18,13 +18,22 @@ import {
   InfoCard,
 } from "@/components/kitesurfing/CourseDetail";
 
+import {
+  BEGINNER_HOURS,
+  GROUP_SIZE_LABEL,
+  KITE_COURSES,
+  formatCourseEGP,
+} from "@/lib/kitesurfing-courses";
+
+const course = KITE_COURSES.beginner;
+
 function BeginnerCoursePage() {
   return (
     <main className="bg-neu-base min-h-screen font-[family-name:var(--font-raleway)] text-neu-fg">
       <CourseHero
-        eyebrow="Learn from zero"
-        titleLight="Beginner"
-        titleBold="Course"
+        title={course.name}
+        course="beginner"
+        bookLabel="Book beginner course"
         description="A structured first step into kitesurfing with focused coaching, safety-first progression, and enough water time to start riding."
         image={beginnerPhoto}
         imageAlt="Beginner kitesurfing lesson at Fins"
@@ -35,12 +44,24 @@ function BeginnerCoursePage() {
           <CourseAside
             title="Course details"
             rows={[
-              { label: "Private duration", value: "6 hours" },
-              { label: "Group duration", value: "8 hours" },
-              { label: "Course length", value: "2 to 3 days" },
-              { label: "Private price", value: "25,500 EGP" },
-              { label: "Group price", value: "22,000 EGP per person" },
-              { label: "Group size", value: "2 to 4 students" },
+              {
+                label: "Private duration",
+                value: `${BEGINNER_HOURS.private} hours`,
+              },
+              {
+                label: "Group duration",
+                value: `${BEGINNER_HOURS.group} hours`,
+              },
+              { label: "Course length", value: course.length },
+              {
+                label: "Private price",
+                value: formatCourseEGP(course.privatePriceCents),
+              },
+              {
+                label: "Group price",
+                value: `${formatCourseEGP(course.groupPriceCents)} per person`,
+              },
+              { label: "Group size", value: GROUP_SIZE_LABEL },
             ]}
             note="The exact pace depends on wind conditions and student progress. The goal is not to rush through the hours, but to build the right habits and confidence step by step."
             course="beginner"
@@ -49,7 +70,6 @@ function BeginnerCoursePage() {
         }
       >
         <CourseIntro
-          eyebrow="Beginner Kitesurfing Course"
           title="Build the skills to get your first rides."
           description="The beginner course is aimed at helping students experience their first water starts. It is the best option for anyone who wants to get the feeling of getting on the board and starting their first rides with the support of an instructor."
         />

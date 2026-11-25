@@ -29,9 +29,9 @@ import { isPlainLeftClick, scrollToSection } from "@/lib/smooth-scroll";
 
 const SECTIONS = [
   { id: "courses", label: "Courses" },
-  { id: "rental", label: "Gear Rental" },
-  { id: "storage", label: "Storage" },
-  { id: "member", label: "Beach Access" },
+  { id: "good-to-know", label: "Before you book" },
+  { id: "rental", label: "Gear & storage" },
+  { id: "member", label: "Beach access" },
 ] as const;
 
 const IDS = SECTIONS.map((s) => s.id) as readonly string[];
@@ -147,8 +147,10 @@ function SectionNav() {
      the scroll reveals have settled, so the browser's own hash scroll can end up
      well short. Re-assert the position once layout is stable. */
   useEffect(() => {
+    // Any anchor on the page, not only the tabs: the footer also links to
+    // #storage, which now sits inside the Gear & storage section.
     const id = window.location.hash.slice(1);
-    if (!IDS.includes(id)) return;
+    if (!id || !document.getElementById(id)) return;
 
     const timer = window.setTimeout(() => {
       scrollToSection(id, { instant: true });
@@ -178,17 +180,17 @@ function SectionNav() {
       className="sticky top-[var(--header-h)] z-40 bg-neu-base/90 backdrop-blur-md shadow-neu-sm"
     >
       <div className="max-w-7xl mx-auto px-6 md:px-14 lg:px-20 flex items-center justify-between gap-6 py-1.5">
-        <span className="hidden md:block text-[0.85rem] font-[family-name:var(--font-raleway)] font-[600] tracking-[-0.01em] text-neu-fg">
+        <span className="hidden lg:block text-[0.85rem] font-[family-name:var(--font-raleway)] font-[600] tracking-[-0.01em] text-neu-fg">
           Kitesurfing
         </span>
 
-        {/* Below md the four tabs need 433px in a 212px rail, so the list always
-            scrolls there and previously gave no sign of it — the last tab simply
-            ended at the edge. The fade says there is more to the right; from md
-            the rail fits and the mask is removed so nothing is dimmed for show. */}
+        {/* On phones the four tabs need more room than the rail has, so the list
+            scrolls and the fade says there is more to the right. The page label
+            is held back until lg so the tabs fit a tablet-width bar; from lg the
+            rail fits and the mask is removed so nothing is dimmed for show. */}
         <ul
           ref={listRef}
-          className="flex items-center gap-6 overflow-x-auto [mask-image:linear-gradient(to_right,black_calc(100%-28px),transparent)] md:gap-9 md:[mask-image:none]"
+          className="flex items-center gap-6 overflow-x-auto [mask-image:linear-gradient(to_right,black_calc(100%-28px),transparent)] lg:gap-9 lg:[mask-image:none]"
         >
           {SECTIONS.map(({ id, label }) => {
             const isActive = activeId === id;
@@ -199,7 +201,7 @@ function SectionNav() {
                   data-section={id}
                   aria-current={isActive ? "location" : undefined}
                   onClick={(event) => handleClick(event, id)}
-                  className={`group flex min-h-[44px] flex-col justify-center gap-0.5 text-[0.75rem] tracking-[0.18em] uppercase font-[family-name:var(--font-raleway)] font-[600] transition-colors duration-200 ${
+                  className={`group flex min-h-[44px] flex-col justify-center gap-0.5 text-[0.875rem] font-[family-name:var(--font-raleway)] font-[600] transition-colors duration-200 ${
                     isActive
                       ? "text-neu-primary-ink"
                       : "text-neu-muted hover:text-neu-primary-ink"
@@ -221,7 +223,7 @@ function SectionNav() {
         {/* "Book a course" is 185px against 82px for "Book". In a 390px bar the
             tab scroller only has ~239px to begin with, so the long form is held
             back until there is room for it. */}
-        <BookCourseLink className="neu-btn inline-flex min-h-[44px] flex-shrink-0 items-center gap-2 rounded-full bg-neu-primary text-neu-fg text-[0.75rem] font-[600] tracking-[0.16em] uppercase px-5 font-[family-name:var(--font-raleway)] shadow-neu-sm">
+        <BookCourseLink className="neu-btn inline-flex min-h-[44px] flex-shrink-0 items-center gap-2 rounded-full bg-neu-primary text-neu-fg text-[0.875rem] font-[600] px-5 font-[family-name:var(--font-raleway)] shadow-neu-sm">
           <span>
             Book<span className="hidden sm:inline"> a course</span>
           </span>

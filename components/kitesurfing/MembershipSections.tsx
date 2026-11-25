@@ -1,29 +1,50 @@
-import Link from "next/link";
+import { FaWhatsapp } from "react-icons/fa";
 import Reveal from "@/components/kitesurfing/Reveal";
+import SectionHeader from "@/components/kitesurfing/SectionHeader";
+import { centreWhatsAppHref } from "@/components/kitesurfing/AskOnWhatsApp";
+import { KITER_DAY_PASS_CENTS } from "@/lib/kitesurfing-courses";
+
+/**
+ * Beach access for riders: a day pass and the two annual memberships.
+ *
+ * Every card used to end at "Reserve beach access" → /day-use/booking. That
+ * form sells ordinary day use at a different price (1,100 EGP weekdays, see
+ * lib/config/pricing.json), so the 800 EGP card sent riders to a checkout that
+ * quoted them more, and the memberships sent people wanting a 25,000 EGP annual
+ * plan to a single-day form. None of these has an online checkout, so each card
+ * now opens WhatsApp with the offer already named.
+ */
 
 const tiers = [
   {
-    name: "Beach Access",
-    price: "800",
+    name: "Day pass for kiters",
+    price: (KITER_DAY_PASS_CENTS / 100).toLocaleString("en-US"),
     period: "per day",
-    description: "Full day access to the beach, lagoon, and facilities.",
+    description:
+      "For riders with their own kit. Full day access to the beach, lagoon, and facilities.",
     features: ["Lagoon swimming", "Sun loungers", "Facilities access"],
+    action: "Ask about a day pass",
+    message: "Hello, I would like to ask about a kiter day pass at Fins.",
     featured: false,
   },
   {
-    name: "Family Membership",
+    name: "Family membership",
     price: "30,000",
     period: "per year",
     description: "2 adults and up to 2 children under 18.",
     features: ["Unlimited beach access", "Rental discounts", "Priority booking"],
+    action: "Ask about family membership",
+    message: "Hello, I would like to ask about the family membership at Fins.",
     featured: true,
   },
   {
-    name: "Private Membership",
+    name: "Private membership",
     price: "25,000",
     period: "per year",
     description: "1 adult. Priority access and exclusive perks.",
     features: ["Unlimited beach access", "Rental discounts", "Priority booking"],
+    action: "Ask about private membership",
+    message: "Hello, I would like to ask about the private membership at Fins.",
     featured: false,
   },
 ];
@@ -32,106 +53,74 @@ function MembershipSections() {
   return (
     <section
       id="member"
-      aria-label="Memberships and beach access"
+      aria-labelledby="member-title"
       className="bg-neu-base scroll-mt-[var(--section-scroll-mt)]"
     >
       <div className="max-w-7xl mx-auto px-6 md:px-14 lg:px-20 py-20 md:py-28">
         <Reveal>
-          {/* Header */}
-          <div className="flex items-center gap-3 mb-8">
-            <span
-              aria-hidden="true"
-              className="h-px w-7 flex-shrink-0 bg-neu-primary"
-            />
-            <span className="text-[0.75rem] tracking-[0.3em] uppercase font-[family-name:var(--font-raleway)] font-[600] text-neu-primary-ink">
-              Beach Access
-            </span>
-          </div>
-
-          <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4 mb-16">
-            <h2 className="font-[family-name:var(--font-raleway)] leading-none">
-              <span className="block text-[clamp(2.2rem,4.5vw,4rem)] font-[300] tracking-[-0.02em] text-neu-fg leading-[0.95]">
-                Memberships &amp;{" "}
-              </span>
-              <span className="block text-[clamp(2.2rem,4.5vw,4rem)] font-[800] tracking-[-0.02em] text-neu-primary-ink leading-[0.95]">
-                Beach Access
-              </span>
-            </h2>
-            <p className="text-[0.85rem] text-neu-muted font-[family-name:var(--font-raleway)] font-[400] max-w-xs leading-relaxed">
-              Both memberships include unlimited beach access, discounts on
-              rentals and storage, and priority booking.
-            </p>
-          </div>
+          <SectionHeader id="member-title" title="Beach access and memberships">
+            Both memberships include unlimited beach access, discounts on
+            rentals, and priority booking.
+          </SectionHeader>
         </Reveal>
 
-        {/* Tier cards */}
         <div className="grid md:grid-cols-3 gap-6">
           {tiers.map(
-            ({ name, price, period, description, features, featured }, i) => (
-              <Reveal key={name} delay={i * 0.1} className="flex">
+            (
+              {
+                name,
+                price,
+                period,
+                description,
+                features,
+                action,
+                message,
+                featured,
+              },
+              i
+            ) => (
+              <Reveal key={name} delay={i * 0.06} className="flex">
                 <div
-                  className={`flex flex-col flex-1 rounded-[2rem] p-8 transition-shadow duration-300 ${
+                  className={`flex flex-col flex-1 rounded-[2rem] p-8 transition-shadow duration-200 ${
                     featured
                       ? "bg-neu-primary text-neu-fg shadow-neu"
                       : "neu-raised-sm hover:shadow-neu"
                   }`}
                 >
-                  {/* Tier name */}
-                  <p
-                    className={`text-[0.75rem] tracking-[0.28em] uppercase font-[family-name:var(--font-raleway)] font-[600] mb-7 ${
-                      featured ? "text-neu-fg" : "text-neu-muted"
-                    }`}
-                  >
+                  <h3 className="mb-6 font-[family-name:var(--font-raleway)] text-[1.125rem] font-[700] tracking-[-0.01em] text-neu-fg">
                     {name}
-                  </p>
+                  </h3>
 
-                  {/* Price */}
-                  <div className="mb-6">
-                    <span
-                      className={`font-[family-name:var(--font-raleway)] text-[2.8rem] font-[300] leading-none tracking-tight ${
-                        featured ? "text-neu-fg" : "text-neu-fg"
-                      }`}
-                    >
+                  <p className="mb-6">
+                    <span className="font-[family-name:var(--font-raleway)] text-[2.6rem] font-[600] leading-none tracking-tight tabular-nums text-neu-fg">
                       {price}
                     </span>
                     <span
-                      className={`text-[0.75rem] tracking-wide font-[family-name:var(--font-raleway)] font-[400] ml-2 ${
+                      className={`ml-2 font-[family-name:var(--font-raleway)] text-[0.875rem] font-[500] ${
                         featured ? "text-neu-fg" : "text-neu-muted"
                       }`}
                     >
                       EGP {period}
                     </span>
-                  </div>
+                  </p>
 
-                  {/* Rule */}
-                  <div
-                    aria-hidden="true"
-                    className={`h-px w-8 mb-5 ${
-                      featured ? "bg-neu-fg/30" : "bg-[#8898aa]/30"
-                    }`}
-                  />
-
-                  {/* Description */}
                   <p
-                    className={`text-[0.85rem] font-[family-name:var(--font-raleway)] font-[400] leading-relaxed mb-6 ${
+                    className={`mb-6 font-[family-name:var(--font-raleway)] text-[0.9rem] font-[400] leading-relaxed ${
                       featured ? "text-neu-fg" : "text-neu-muted"
                     }`}
                   >
                     {description}
                   </p>
 
-                  {/* Features */}
-                  <ul className="flex flex-col gap-2 mb-8">
+                  <ul className="mb-8 flex flex-col gap-2">
                     {features.map((f) => (
                       <li
                         key={f}
-                        className={`flex items-center gap-2.5 text-[0.8rem] font-[family-name:var(--font-raleway)] font-[400] ${
-                          featured ? "text-neu-fg" : "text-neu-fg"
-                        }`}
+                        className="flex items-center gap-2.5 font-[family-name:var(--font-raleway)] text-[0.875rem] font-[400] text-neu-fg"
                       >
                         <span
                           aria-hidden="true"
-                          className={`w-[5px] h-[5px] rounded-full flex-shrink-0 ${
+                          className={`h-[5px] w-[5px] flex-shrink-0 rounded-full ${
                             featured ? "bg-neu-fg" : "bg-neu-primary"
                           }`}
                         />
@@ -140,23 +129,20 @@ function MembershipSections() {
                     ))}
                   </ul>
 
-                  {/* CTA */}
-                  <div className="mt-auto">
-                    <Link
-                      href="/day-use/booking"
-                      className={`group inline-flex items-center gap-2 text-[0.75rem] tracking-[0.18em] uppercase font-[family-name:var(--font-raleway)] font-[600] transition-opacity duration-200 hover:opacity-70 ${
-                        featured ? "text-neu-fg" : "text-neu-primary-ink"
-                      }`}
-                    >
-                      Reserve beach access
-                      <span
-                        aria-hidden="true"
-                        className="group-hover:translate-x-1 transition-transform duration-200"
-                      >
-                        →
-                      </span>
-                    </Link>
-                  </div>
+                  <a
+                    href={centreWhatsAppHref(message)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={`mt-auto inline-flex min-h-[44px] w-fit items-center gap-2 rounded-sm font-[family-name:var(--font-raleway)] text-[0.9375rem] font-[600] underline underline-offset-[6px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neu-focus ${
+                      featured
+                        ? "text-neu-fg decoration-neu-fg/50 hover:decoration-neu-fg"
+                        : "text-neu-primary-ink decoration-neu-primary-ink/40 hover:decoration-neu-primary-ink"
+                    }`}
+                  >
+                    <FaWhatsapp aria-hidden="true" className="h-4 w-4" />
+                    {action}
+                    <span className="sr-only">(opens WhatsApp)</span>
+                  </a>
                 </div>
               </Reveal>
             )

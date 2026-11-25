@@ -18,13 +18,21 @@ import {
   InfoCard,
 } from "@/components/kitesurfing/CourseDetail";
 
+import {
+  GROUP_SIZE_LABEL,
+  KITE_COURSES,
+  formatCourseEGP,
+} from "@/lib/kitesurfing-courses";
+
+const course = KITE_COURSES.refresher;
+
 function RefresherCoursePage() {
   return (
     <main className="bg-neu-base min-h-screen font-[family-name:var(--font-raleway)] text-neu-fg">
       <CourseHero
-        eyebrow="Get back on the water"
-        titleLight="Refresher"
-        titleBold="Course"
+        title={course.name}
+        course="refresher"
+        bookLabel="Book refresher course"
         description="Refresh the skills from your last course and keep progressing toward riding independently — controlling your speed and riding upwind."
         image={refresherPhoto}
         imageAlt="Refresher kitesurfing course at Fins"
@@ -35,11 +43,17 @@ function RefresherCoursePage() {
           <CourseAside
             title="Course details"
             rows={[
-              { label: "Duration", value: "2 hours" },
+              { label: "Duration", value: course.length },
               { label: "Format", value: "One session" },
-              { label: "Private price", value: "8,500 EGP" },
-              { label: "Group price", value: "5,500 EGP per person" },
-              { label: "Group size", value: "2 to 4 students" },
+              {
+                label: "Private price",
+                value: formatCourseEGP(course.privatePriceCents),
+              },
+              {
+                label: "Group price",
+                value: `${formatCourseEGP(course.groupPriceCents)} per person`,
+              },
+              { label: "Group size", value: GROUP_SIZE_LABEL },
             ]}
             note="We check your current skills and work on exactly what you need to ride safely and independently — the pace depends on wind conditions and where you are in your progression."
             course="refresher"
@@ -48,7 +62,6 @@ function RefresherCoursePage() {
         }
       >
         <CourseIntro
-          eyebrow="Refresher Kitesurfing Course"
           title="Pick up where you left off and ride independently."
           description="The refresher course is for riders who have already taken a course before. We refresh the last skills you worked on, then continue your progress toward the independent skills that let you ride on your own — like controlling your speed and riding upwind."
         />
